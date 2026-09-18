@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "com.bloodconnect"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.bloodconnect"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
