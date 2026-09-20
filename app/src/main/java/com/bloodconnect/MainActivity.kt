@@ -5,14 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.navigation.compose.rememberNavController
-import com.bloodconnect.navigation.BloodConnectNavHost
-import com.bloodconnect.ui.theme.BloodConnectTheme
+import com.bloodconnect.app.navigation.BloodConnectNavGraph
+import com.bloodconnect.app.ui.theme.BloodConnectTheme
 import dagger.hilt.android.AndroidEntryPoint
 
-/**
- * Main launcher Activity for BloodConnect.
- * Annotated with @AndroidEntryPoint to enable Hilt dependency injection in Compose screens.
- */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,7 +17,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             BloodConnectTheme {
                 val navController = rememberNavController()
-                BloodConnectNavHost(navController = navController)
+                BloodConnectNavGraph(navController = navController)
             }
         }
     }
