@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/logo.png" alt="BloodConnect Logo" width="120" height="120" />
+<img src="docs/BloodConnect.png" alt="BloodConnect Logo" width="120" height="120" />
 
 # 🩸 BloodConnect — Blood Donation & Emergency Management App
 
