@@ -5,8 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.navigation.compose.rememberNavController
-import com.bloodconnect.app.navigation.BloodConnectNavGraph
-import com.bloodconnect.app.ui.theme.BloodConnectTheme
+import com.bloodconnect.navigation.BloodConnectNavHost
+import com.bloodconnect.ui.theme.BloodConnectTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -17,7 +17,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             BloodConnectTheme {
                 val navController = rememberNavController()
-                BloodConnectNavGraph(navController = navController)
+                BloodConnectNavHost(navController = navController)
             }
         }
     }

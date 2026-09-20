@@ -1,4 +1,4 @@
-package com.bloodconnect.app.di
+package com.bloodconnect.di
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth

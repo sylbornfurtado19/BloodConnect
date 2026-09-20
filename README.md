@@ -61,17 +61,17 @@ The core app skeleton is fully established using modern Android best practices:
 ## 📂 Project Structure
 
 ```text
-com.bloodconnect.app/
+com.bloodconnect/
 ├── data/
 │   ├── model/         # Data classes (User, BloodRequest)
 │   └── repository/    # Firebase & local data repositories
 ├── di/
 │   └── FirebaseModule # Hilt module providing FirebaseAuth & FirebaseFirestore
 ├── navigation/
-│   ├── NavGraph.kt    # Compose NavHost routing definition
+│   ├── NavGraph.kt    # Compose NavHost routing definition (BloodConnectNavHost)
 │   └── Screen.kt      # Sealed class defining app navigation routes
 ├── ui/
-│   ├── auth/          # Login & Registration screens (In Progress)
+│   ├── auth/          # Login & Registration screens
 │   ├── components/    # Reusable UI components
 │   ├── donor/         # Donor search & matching screens
 │   ├── home/          # Home dashboard

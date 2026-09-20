@@ -1,4 +1,4 @@
-package com.bloodconnect.app
+package com.bloodconnect
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
