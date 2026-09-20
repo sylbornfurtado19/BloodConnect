@@ -1,16 +1,18 @@
 <div align="center">
 
-# 🩸 Blood Donation Network
+<img src="docs/logo.png" alt="BloodConnect Logo" width="120" height="120" />
+
+# 🩸 BloodConnect — Blood Donation & Emergency Management App
 
 ### *Because "I need blood NOW" shouldn't depend on a lucky WhatsApp forward.*
 
-An Android app that turns blood donation from a panic-driven scramble into a **real-time, intelligent, life-saving network.**
+An Android app engineered to turn blood donation from a panic-driven scramble into a **real-time, intelligent, life-saving network.**
 
 [![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](#)
 [![Backend](https://img.shields.io/badge/Backend-Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](#)
-[![Status](https://img.shields.io/badge/Status-In%20Development-orange?style=for-the-badge)](#)
+[![Status](https://img.shields.io/badge/Status-Base%20Architecture%20Ready-blue?style=for-the-badge)](#)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](#)
-[![Lives](https://img.shields.io/badge/Impact-1%20donation%20%3D%203%20lives-crimson?style=for-the-badge)](#)
+[![Impact](https://img.shields.io/badge/Impact-1%20donation%20%3D%203%20lives-crimson?style=for-the-badge)](#)
 
 </div>
 
@@ -21,103 +23,109 @@ An Android app that turns blood donation from a panic-driven scramble into a **r
 > Every **2 seconds**, someone needs blood. Yet finding the *right* donor, at the *right* time, in the *right* place — still runs on phone trees and hope.
 
 - 🩸 Donor discovery is slow and manual
-- 📱 Requests scatter across WhatsApp/Instagram, causing duplication & panic
+- 📱 Requests scatter across chat apps, causing duplication & panic
 - 😮‍💨 First-time donors rarely become *repeat* donors — no visibility, no incentive
-- 🏥 Hospitals have no verified, real-time channel to broadcast urgent needs
+- 🏥 Hospitals need verified, real-time channels to broadcast urgent needs
 
-**We built the fix.**
-
----
-
-## 🚀 What This App Actually Does
-
-<table>
-<tr>
-<td width="50%" valign="top">
-
-### 🔍 Smart Matching
-Not just "nearest donor." A **composite score** — distance + reliability + response history + donor tier — surfaces the *best* match, not just the closest one.
-
-### 🆘 SOS Critical Alert Mode
-Life-threatening shortage? This isn't a polite ping. It's a high-priority alert engineered to cut through — even past silent mode.
-
-### 🤖 AI Eligibility Pre-Screen
-A conversational flow filters out ineligible donors *before* dispatch — saving precious minutes hospitals don't have.
-
-</td>
-<td width="50%" valign="top">
-
-### 🏆 Donor Tiers & Streaks
-Bronze → Silver → Gold → **Platinum**. Donate, level up, get recognized. Gamification that actually retains donors.
-
-### 🪪 Digital Donor Passport
-A QR-verifiable, shareable card of your donation history. Flex it, scan it, trust it.
-
-### 📊 "Lives Saved" Counter
-Every donation ≈ up to 3 lives. We show you the number. It hits different.
-
-</td>
-</tr>
-</table>
+**We are building the fix.**
 
 ---
 
-## 🧠 How It Works
+## 🏗️ Current Architecture & Foundation
 
-```
-   DONOR                    MATCHING ENGINE                RECIPIENT / HOSPITAL
-┌───────────┐         ┌──────────────────────┐         ┌───────────────────┐
-│ Register  │────────▶│  Smart Ranking Algo   │◀────────│  Raise Request     │
-│ Blood Grp │         │  (distance+reliability│         │  (urgency-tagged)  │
-│ Location  │         │   +response history)  │         │                    │
-│ Available?│         └──────────┬───────────┘         └─────────┬──────────┘
-└───────────┘                    │                                │
-                                  ▼                                ▼
-                         🔔 FCM Push / SOS Alert  ──────▶  Live ETA Tracking
-                                  │
-                                  ▼
-                     ✅ Accept → Donate → Passport Updated → Tier Progress
-```
+The core app skeleton is fully established using modern Android best practices:
+- **MVVM Architecture** with Jetpack Compose & Material 3
+- **Dependency Injection** via Dagger Hilt
+- **Navigation & Routing** setup with Jetpack Navigation Compose
+- **Backend Foundations** prepared with Firebase (Auth, Firestore, Cloud Messaging) and Location services
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Tech |
+| Layer | Technology |
 |---|---|
-| **Frontend** | Android (Kotlin) / Flutter |
-| **Backend** | Firebase — Auth, Firestore, Cloud Functions |
+| **Language** | Kotlin |
+| **UI Framework** | Jetpack Compose & Material 3 |
+| **Dependency Injection** | Dagger Hilt & Hilt Navigation Compose |
+| **Navigation** | Navigation Compose |
+| **Backend & Database** | Firebase Auth & Firebase Firestore |
 | **Notifications** | Firebase Cloud Messaging (FCM) |
-| **Location** | Google Maps SDK, FusedLocationProvider |
-| **AI Screening** | Dialogflow / rule-based conversational engine |
-| **Verification** | QR-based Donor Passport scan-to-verify |
+| **Location Services** | Google Play Services Location (`play-services-location`, `kotlinx-coroutines-play-services`) |
+| **Permissions** | Accompanist Permissions |
+
+> *Future Considerations:* AI conversational pre-screening, QR-based digital donor passport verification, and advanced smart-matching algorithms are slated for upcoming phases.
 
 ---
 
-## ✨ Feature Roadmap
+## 📂 Project Structure
 
-- [x] Donor registration + blood group & location capture
-- [x] Location-radius, blood-group-based search
-- [x] Emergency request broadcasting via FCM
-- [x] Smart donor ranking engine
-- [ ] SOS Critical Alert Mode
-- [ ] Digital Donor Passport (QR)
-- [ ] Donor tiers, streaks & "Lives Saved" counter
-- [ ] Hospital verification dashboard
-- [ ] Blood drive / camp event organizer
-- [ ] WhatsApp bot bridge for low-connectivity access
+```text
+com.bloodconnect.app/
+├── data/
+│   ├── model/         # Data classes (User, BloodRequest)
+│   └── repository/    # Firebase & local data repositories
+├── di/
+│   └── FirebaseModule # Hilt module providing FirebaseAuth & FirebaseFirestore
+├── navigation/
+│   ├── NavGraph.kt    # Compose NavHost routing definition
+│   └── Screen.kt      # Sealed class defining app navigation routes
+├── ui/
+│   ├── auth/          # Login & Registration screens (In Progress)
+│   ├── components/    # Reusable UI components
+│   ├── donor/         # Donor search & matching screens
+│   ├── home/          # Home dashboard
+│   ├── profile/       # User profile & donor passport
+│   ├── request/       # Blood request creation & management
+│   └── theme/         # Material 3 Theme, Color, and Typography
+└── util/              # Helper utilities & location wrappers
+```
+
+---
+
+## ✨ Feature Status
+
+### ✅ Implemented (Base Skeleton & Architecture)
+- [x] Project architecture & Hilt dependency injection setup (`BloodConnectApp`, `FirebaseModule`)
+- [x] Material 3 custom blood-red theme with light/dark mode support (`Theme.kt`, `Color.kt`, `Type.kt`)
+- [x] Navigation Compose scaffolding with sealed route definitions (`Screen.kt`, `NavGraph.kt`)
+- [x] AndroidManifest configuration with internet, location, and notification permissions
+- [x] Base Gradle dependencies for Compose, Hilt, Firebase, and Location services
+
+### 🚧 In Progress & Planned Features
+- [ ] User authentication (Login & Register screens with Firebase Auth)
+- [ ] Real-time donor registration & profile management
+- [ ] Location-radius and blood-group-based donor search
+- [ ] Emergency blood request creation and FCM broadcast
+- [ ] SOS Critical Alert Mode & Live ETA tracking
+- [ ] Digital Donor Passport with QR verification
+- [ ] Donor tiers, streaks & "Lives Saved" counter dashboard
 
 ---
 
 ## 📲 Getting Started
 
-```bash
-git clone https://github.com/<your-username>/blood-donation-network.git
-cd blood-donation-network
-# open in Android Studio, sync Gradle, hit run ▶️
-```
+### Prerequisites
+- Android Studio (Narwhal / Koala or newer recommended)
+- JDK 17
+- A Firebase Project with **Authentication**, **Firestore**, and **Cloud Messaging** enabled.
 
-You'll need a Firebase project with Authentication, Firestore, and Cloud Messaging enabled — drop your `google-services.json` in `app/`.
+### Installation & Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/sylbornfurtado19/BloodConnect.git
+   cd BloodConnect
+   ```
+
+2. **Add Firebase configuration:**
+   - Download your `google-services.json` file from your Firebase Console.
+   - Place it directly inside the `app/` directory (`app/google-services.json`).
+
+3. **Build & Run:**
+   - Open the project in Android Studio.
+   - Sync Gradle files.
+   - Run the app on an emulator or physical device (`▶️`).
 
 ---
 
