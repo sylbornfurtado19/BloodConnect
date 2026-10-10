@@ -1,6 +1,7 @@
 package com.bloodconnect.ui.home
 
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -74,7 +75,8 @@ fun HomeScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         },
@@ -213,7 +215,9 @@ fun HomeScreen(
                         BloodGroupBadge(
                             bloodGroup = group,
                             size = 54.dp,
-                            modifier = Modifier.clickable(onClick = onNavigateToDonorSearch)
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable(onClick = onNavigateToDonorSearch)
                         )
                     }
                 }
@@ -226,7 +230,9 @@ fun HomeScreen(
                         BloodGroupBadge(
                             bloodGroup = group,
                             size = 54.dp,
-                            modifier = Modifier.clickable(onClick = onNavigateToDonorSearch)
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable(onClick = onNavigateToDonorSearch)
                         )
                     }
                 }

@@ -187,7 +187,8 @@ fun DonorSearchScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         },
@@ -318,6 +319,7 @@ fun DonorSearchScreen(
 
                         OutlinedButton(
                             onClick = { clearFilters() },
+                            modifier = Modifier.height(50.dp),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text("Clear")
