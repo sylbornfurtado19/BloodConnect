@@ -10,6 +10,7 @@ import com.bloodconnect.ui.auth.RegisterScreen
 import com.bloodconnect.ui.home.HomeScreen
 import com.bloodconnect.ui.search.DonorSearchScreen
 import com.bloodconnect.ui.request.BloodRequestsScreen
+import com.bloodconnect.ui.profile.ProfileScreen
 
 /**
  * Top-level Navigation Graph for BloodConnect.
@@ -99,9 +100,15 @@ fun BloodConnectNavHost(
         }
 
         composable(route = Screen.Profile.route) {
-            ProfilePlaceholderScreen(
+            ProfileScreen(
                 onNavigateBack = {
                     navController.popBackStack()
+                },
+                onSignOut = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Home.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
                 }
             )
         }
