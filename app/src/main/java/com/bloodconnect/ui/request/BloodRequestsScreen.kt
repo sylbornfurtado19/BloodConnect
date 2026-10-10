@@ -162,16 +162,16 @@ fun BloodRequestsScreen(
             bloodGroupError = null
         }
 
-        // Units required validation (allowed range: 1 - 20)
+        // Units needed validation (allowed range: 1 - 20)
         val parsedUnits = trimmedUnits.toIntOrNull()
         if (trimmedUnits.isBlank()) {
-            unitsError = "Units required cannot be empty"
+            unitsError = "Units needed cannot be empty"
             isValid = false
         } else if (parsedUnits == null || parsedUnits <= 0) {
             unitsError = "Please enter a valid positive number of units (1 to 20)"
             isValid = false
         } else if (parsedUnits > 20) {
-            unitsError = "Units requested cannot exceed 20 pints"
+            unitsError = "Units needed cannot exceed 20 units"
             isValid = false
         } else {
             unitsError = null
@@ -336,14 +336,14 @@ fun BloodRequestsScreen(
                         }
                     }
 
-                    // 2. Units Required
+                    // 2. Units Needed
                     BloodConnectTextField(
                         value = unitsRequired,
                         onValueChange = {
                             unitsRequired = it
                             unitsError = null
                         },
-                        label = "Units Required (Pints: 1 to 20) *",
+                        label = "Units Needed (1 to 20) *",
                         placeholder = "e.g., 1, 2, 3",
                         isError = unitsError != null,
                         errorMessage = unitsError,
@@ -539,7 +539,7 @@ fun BloodRequestsScreen(
                                         fontWeight = FontWeight.Bold
                                     )
                                     Text(
-                                        text = "${req.units} Unit(s) (Pints)",
+                                        text = "${req.units} Unit(s) Needed",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary,
                                         fontWeight = FontWeight.SemiBold
@@ -641,7 +641,7 @@ fun BloodRequestsScreen(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "• Blood Group: ${req.bloodGroup} (${req.units} Unit(s))",
+                                text = "• Blood Group: ${req.bloodGroup} (${req.units} Unit(s) Needed)",
                                 style = MaterialTheme.typography.bodySmall
                             )
                             Text(
