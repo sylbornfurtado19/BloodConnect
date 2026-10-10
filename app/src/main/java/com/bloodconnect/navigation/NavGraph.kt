@@ -24,14 +24,28 @@ fun BloodConnectNavHost(
         startDestination = startDestination,
         modifier = modifier
     ) {
+        composable(route = Screen.Splash.route) {
+            SplashPlaceholderScreen(
+                onSplashFinished = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
         composable(route = Screen.Login.route) {
             LoginScreen(
                 onNavigateToRegister = {
-                    navController.navigate(Screen.Register.route)
+                    navController.navigate(Screen.Register.route) {
+                        launchSingleTop = true
+                    }
                 },
                 onNavigateToHome = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
@@ -45,6 +59,7 @@ fun BloodConnectNavHost(
                 onNavigateToHome = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
@@ -55,9 +70,35 @@ fun BloodConnectNavHost(
                 onSignOut = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }
+                        launchSingleTop = true
                     }
+                }
+            )
+        }
+
+        composable(route = Screen.DonorSearch.route) {
+            DonorSearchPlaceholderScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(route = Screen.BloodRequests.route) {
+            BloodRequestsPlaceholderScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(route = Screen.Profile.route) {
+            ProfilePlaceholderScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }
     }
 }
+
