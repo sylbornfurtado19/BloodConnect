@@ -13,6 +13,7 @@ import com.bloodconnect.ui.home.HomeScreen
 import com.bloodconnect.ui.search.DonorDetailScreen
 import com.bloodconnect.ui.search.DonorSearchScreen
 import com.bloodconnect.ui.request.BloodRequestsScreen
+import com.bloodconnect.ui.request.MyRequestsScreen
 import com.bloodconnect.ui.profile.ProfileScreen
 
 /**
@@ -78,6 +79,11 @@ fun BloodConnectNavHost(
                         launchSingleTop = true
                     }
                 },
+                onNavigateToMyRequests = {
+                    navController.navigate(Screen.MyRequests.route) {
+                        launchSingleTop = true
+                    }
+                },
                 onNavigateToProfile = {
                     navController.navigate(Screen.Profile.route) {
                         launchSingleTop = true
@@ -118,6 +124,14 @@ fun BloodConnectNavHost(
 
         composable(route = Screen.BloodRequests.route) {
             BloodRequestsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(route = Screen.MyRequests.route) {
+            MyRequestsScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 }

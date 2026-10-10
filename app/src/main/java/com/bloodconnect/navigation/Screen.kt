@@ -12,5 +12,6 @@ sealed class Screen(val route: String) {
         fun createRoute(donorId: String): String = "donor_detail/$donorId"
     }
     data object BloodRequests : Screen("blood_requests")
+    data object MyRequests : Screen("my_requests")
     data object Profile : Screen("profile")
 }

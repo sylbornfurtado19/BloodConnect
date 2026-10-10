@@ -1,8 +1,9 @@
 package com.bloodconnect.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,9 +16,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AddAlert
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,6 +36,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -52,6 +56,7 @@ fun HomeScreen(
     onNavigateToDonorSearch: () -> Unit = {},
     onNavigateToBloodRequests: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
+    onNavigateToMyRequests: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -193,6 +198,57 @@ fun HomeScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
                             )
                         }
+                    }
+                }
+
+                // Action 3: My Requests (Request History)
+                OutlinedCard(
+                    onClick = onNavigateToMyRequests,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.secondaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "My Requests",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "View your blood request history & demo statuses",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Open My Requests",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }
@@ -347,7 +403,8 @@ private fun HomeScreenPreview() {
             onSignOut = {},
             onNavigateToDonorSearch = {},
             onNavigateToBloodRequests = {},
-            onNavigateToProfile = {}
+            onNavigateToProfile = {},
+            onNavigateToMyRequests = {}
         )
     }
 }
