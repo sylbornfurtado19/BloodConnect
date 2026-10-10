@@ -23,47 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
  * implementation will be developed in future project phases.
  */
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DonorSearchPlaceholderScreen(
-    onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Donor Search", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        },
-        modifier = modifier
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Donor Search (Placeholder)",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

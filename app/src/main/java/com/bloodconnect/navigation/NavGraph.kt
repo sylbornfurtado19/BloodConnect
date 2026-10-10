@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import com.bloodconnect.ui.auth.LoginScreen
 import com.bloodconnect.ui.auth.RegisterScreen
 import com.bloodconnect.ui.home.HomeScreen
+import com.bloodconnect.ui.search.DonorSearchScreen
 
 /**
  * Top-level Navigation Graph for BloodConnect.
@@ -81,7 +82,7 @@ fun BloodConnectNavHost(
         }
 
         composable(route = Screen.DonorSearch.route) {
-            DonorSearchPlaceholderScreen(
+            DonorSearchScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
