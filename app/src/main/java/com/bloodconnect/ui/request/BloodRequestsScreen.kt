@@ -149,14 +149,14 @@ fun BloodRequestsScreen(
             unitsError = null
         }
 
-        if (hospitalName.isBlank()) {
+        if (hospitalName.trim().isBlank()) {
             hospitalError = "Hospital/facility name is required"
             isValid = false
         } else {
             hospitalError = null
         }
 
-        if (cityLocality.isBlank()) {
+        if (cityLocality.trim().isBlank()) {
             cityError = "City or locality is required"
             isValid = false
         } else {
@@ -166,6 +166,19 @@ fun BloodRequestsScreen(
         if (isValid) {
             showConfirmationDialog = true
         }
+    }
+
+    fun resetForm() {
+        selectedBloodGroup = null
+        unitsRequired = "1"
+        hospitalName = ""
+        cityLocality = ""
+        selectedUrgency = "Urgent"
+        additionalNotes = ""
+        bloodGroupError = null
+        unitsError = null
+        hospitalError = null
+        cityError = null
     }
 
     Scaffold(
@@ -401,7 +414,10 @@ fun BloodRequestsScreen(
     // Confirmation Dialog
     if (showConfirmationDialog) {
         AlertDialog(
-            onDismissRequest = { showConfirmationDialog = false },
+            onDismissRequest = {
+                showConfirmationDialog = false
+                resetForm()
+            },
             icon = {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
@@ -425,7 +441,7 @@ fun BloodRequestsScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Summary: $selectedBloodGroup (${unitsRequired.trim()} unit(s)) at $hospitalName, $cityLocality [Urgency: $selectedUrgency]",
+                        text = "Summary: $selectedBloodGroup (${unitsRequired.trim()} unit(s)) at ${hospitalName.trim()}, ${cityLocality.trim()} [Urgency: $selectedUrgency]",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -441,13 +457,7 @@ fun BloodRequestsScreen(
                 TextButton(
                     onClick = {
                         showConfirmationDialog = false
-                        // Reset form fields
-                        selectedBloodGroup = null
-                        unitsRequired = "1"
-                        hospitalName = ""
-                        cityLocality = ""
-                        selectedUrgency = "Urgent"
-                        additionalNotes = ""
+                        resetForm()
                     }
                 ) {
                     Text("OK")

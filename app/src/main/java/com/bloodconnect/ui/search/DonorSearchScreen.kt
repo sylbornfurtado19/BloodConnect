@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Place
@@ -148,14 +151,18 @@ fun DonorSearchScreen(
     // Local filter states
     var selectedBloodGroup by remember { mutableStateOf<String?>(null) }
     var locationInput by remember { mutableStateOf("") }
-    var selectedDistanceKm by remember { mutableIntStateOf(25) }
+    var selectedDistanceKm by remember { mutableIntStateOf(50) }
     var displayedDonors by remember { mutableStateOf(defaultSampleDonors) }
 
-    fun applyFilters() {
+    fun applyFilters(
+        group: String? = selectedBloodGroup,
+        location: String = locationInput,
+        distance: Int = selectedDistanceKm
+    ) {
         displayedDonors = defaultSampleDonors.filter { donor ->
-            val matchesBlood = selectedBloodGroup == null || donor.bloodGroup.equals(selectedBloodGroup, ignoreCase = true)
-            val matchesLocation = locationInput.isBlank() || donor.location.contains(locationInput.trim(), ignoreCase = true)
-            val matchesDistance = donor.distanceKm <= selectedDistanceKm
+            val matchesBlood = group == null || donor.bloodGroup.equals(group, ignoreCase = true)
+            val matchesLocation = location.isBlank() || donor.location.contains(location.trim(), ignoreCase = true)
+            val matchesDistance = donor.distanceKm <= distance
             matchesBlood && matchesLocation && matchesDistance
         }
     }
@@ -163,7 +170,7 @@ fun DonorSearchScreen(
     fun clearFilters() {
         selectedBloodGroup = null
         locationInput = ""
-        selectedDistanceKm = 25
+        selectedDistanceKm = 50
         displayedDonors = defaultSampleDonors
     }
 
@@ -244,7 +251,10 @@ fun DonorSearchScreen(
                         ) {
                             FilterChip(
                                 selected = selectedBloodGroup == null,
-                                onClick = { selectedBloodGroup = null },
+                                onClick = {
+                                    selectedBloodGroup = null
+                                    applyFilters(group = null)
+                                },
                                 label = { Text("All") },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -256,7 +266,9 @@ fun DonorSearchScreen(
                                 FilterChip(
                                     selected = selectedBloodGroup == group,
                                     onClick = {
-                                        selectedBloodGroup = if (selectedBloodGroup == group) null else group
+                                        val newGroup = if (selectedBloodGroup == group) null else group
+                                        selectedBloodGroup = newGroup
+                                        applyFilters(group = newGroup)
                                     },
                                     label = { Text(group) },
                                     colors = FilterChipDefaults.filterChipColors(
@@ -274,7 +286,9 @@ fun DonorSearchScreen(
                         onValueChange = { locationInput = it },
                         label = "Location / Locality",
                         placeholder = "e.g., Central, Metro, Eastside",
-                        leadingIcon = Icons.Default.Place
+                        leadingIcon = Icons.Default.Place,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { applyFilters() })
                     )
 
                     // Distance Radius Selector
@@ -293,7 +307,10 @@ fun DonorSearchScreen(
                             distanceOptions.forEach { radius ->
                                 FilterChip(
                                     selected = selectedDistanceKm == radius,
-                                    onClick = { selectedDistanceKm = radius },
+                                    onClick = {
+                                        selectedDistanceKm = radius
+                                        applyFilters(distance = radius)
+                                    },
                                     label = { Text("${radius} km") },
                                     modifier = Modifier.weight(1f),
                                     colors = FilterChipDefaults.filterChipColors(

@@ -108,6 +108,16 @@ fun ProfileScreen(
         isEditing = true
     }
 
+    fun cancelEditing() {
+        editName = displayName
+        editBloodGroup = bloodGroup
+        editCity = cityLocality
+        editContact = contactInfo
+        nameError = null
+        cityError = null
+        isEditing = false
+    }
+
     fun validateAndSave() {
         var isValid = true
 
@@ -300,7 +310,7 @@ fun ProfileScreen(
                                 color = if (isDonorAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = if (isDonorAvailable) "Your status is marked active for emergency requests." else "Status marked inactive. You will not receive donor alerts.",
+                                text = if (isDonorAvailable) "Your status is marked active for emergency requests (local demo state)." else "Status marked inactive in local demo state. You will not receive donor alerts.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -427,7 +437,7 @@ fun ProfileScreen(
                         ) {
                             BloodConnectOutlinedButton(
                                 text = "Cancel",
-                                onClick = { isEditing = false },
+                                onClick = { cancelEditing() },
                                 modifier = Modifier.weight(1f)
                             )
 
