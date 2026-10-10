@@ -9,6 +9,7 @@ import com.bloodconnect.ui.auth.LoginScreen
 import com.bloodconnect.ui.auth.RegisterScreen
 import com.bloodconnect.ui.home.HomeScreen
 import com.bloodconnect.ui.search.DonorSearchScreen
+import com.bloodconnect.ui.request.BloodRequestsScreen
 
 /**
  * Top-level Navigation Graph for BloodConnect.
@@ -90,7 +91,7 @@ fun BloodConnectNavHost(
         }
 
         composable(route = Screen.BloodRequests.route) {
-            BloodRequestsPlaceholderScreen(
+            BloodRequestsScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 }
