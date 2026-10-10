@@ -18,23 +18,26 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -53,6 +56,18 @@ import com.bloodconnect.ui.components.BloodConnectTextField
 import com.bloodconnect.ui.components.BloodGroupBadge
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
+
+/**
+ * Validated blood request data model used for review and confirmation.
+ */
+private data class PendingBloodRequest(
+    val bloodGroup: String,
+    val units: Int,
+    val hospital: String,
+    val city: String,
+    val urgency: String,
+    val notes: String
+)
 
 /**
  * Fictional sample request data structure for demonstration purposes.
@@ -103,7 +118,7 @@ private val urgencyLevels = listOf("Routine", "Urgent", "Critical")
 
 /**
  * Screen for creating new emergency blood requests and viewing recent illustrative requests.
- * Uses local Compose state for interactive form validation and demo feedback.
+ * Uses local Compose state for interactive form validation, review, and demo confirmation.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,46 +140,75 @@ fun BloodRequestsScreen(
     var hospitalError by remember { mutableStateOf<String?>(null) }
     var cityError by remember { mutableStateOf<String?>(null) }
 
-    // Dialog state
+    // Review & Confirmation dialog states
+    var pendingRequest by remember { mutableStateOf<PendingBloodRequest?>(null) }
+    var confirmedRequest by remember { mutableStateOf<PendingBloodRequest?>(null) }
+    var showReviewDialog by remember { mutableStateOf(false) }
     var showConfirmationDialog by remember { mutableStateOf(false) }
 
     fun validateAndSubmit() {
+        val trimmedHospital = hospitalName.trim()
+        val trimmedCity = cityLocality.trim()
+        val trimmedUnits = unitsRequired.trim()
+        val trimmedNotes = additionalNotes.trim()
+
         var isValid = true
 
+        // Blood group validation
         if (selectedBloodGroup == null) {
-            bloodGroupError = "Please select a blood group"
+            bloodGroupError = "Please select a required blood group"
             isValid = false
         } else {
             bloodGroupError = null
         }
 
-        val parsedUnits = unitsRequired.trim().toIntOrNull()
-        if (parsedUnits == null || parsedUnits <= 0) {
-            unitsError = "Please enter a valid positive number of units"
+        // Units required validation (allowed range: 1 - 20)
+        val parsedUnits = trimmedUnits.toIntOrNull()
+        if (trimmedUnits.isBlank()) {
+            unitsError = "Units required cannot be empty"
+            isValid = false
+        } else if (parsedUnits == null || parsedUnits <= 0) {
+            unitsError = "Please enter a valid positive number of units (1 to 20)"
             isValid = false
         } else if (parsedUnits > 20) {
-            unitsError = "Units cannot exceed 20 for a single request"
+            unitsError = "Units requested cannot exceed 20 pints"
             isValid = false
         } else {
             unitsError = null
         }
 
-        if (hospitalName.trim().isBlank()) {
-            hospitalError = "Hospital/facility name is required"
+        // Hospital name validation
+        if (trimmedHospital.isBlank()) {
+            hospitalError = "Hospital or facility name is required"
+            isValid = false
+        } else if (trimmedHospital.length < 3) {
+            hospitalError = "Hospital name must be at least 3 characters"
             isValid = false
         } else {
             hospitalError = null
         }
 
-        if (cityLocality.trim().isBlank()) {
+        // City / locality validation
+        if (trimmedCity.isBlank()) {
             cityError = "City or locality is required"
+            isValid = false
+        } else if (trimmedCity.length < 2) {
+            cityError = "City or locality must be at least 2 characters"
             isValid = false
         } else {
             cityError = null
         }
 
         if (isValid) {
-            showConfirmationDialog = true
+            pendingRequest = PendingBloodRequest(
+                bloodGroup = selectedBloodGroup!!,
+                units = parsedUnits!!,
+                hospital = trimmedHospital,
+                city = trimmedCity,
+                urgency = selectedUrgency,
+                notes = trimmedNotes
+            )
+            showReviewDialog = true
         }
     }
 
@@ -179,6 +223,7 @@ fun BloodRequestsScreen(
         unitsError = null
         hospitalError = null
         cityError = null
+        pendingRequest = null
     }
 
     Scaffold(
@@ -225,13 +270,13 @@ fun BloodRequestsScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Post an emergency blood request form for hospital verification and donor notification.",
+                    text = "Fill in the emergency request details below for demonstration verification and donor notification.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            // SECTION A: Create a Blood Request Form
+            // SECTION A: Create a Blood Request Form Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -298,7 +343,7 @@ fun BloodRequestsScreen(
                             unitsRequired = it
                             unitsError = null
                         },
-                        label = "Units Required (Pints) *",
+                        label = "Units Required (Pints: 1 to 20) *",
                         placeholder = "e.g., 1, 2, 3",
                         isError = unitsError != null,
                         errorMessage = unitsError,
@@ -327,7 +372,7 @@ fun BloodRequestsScreen(
                             cityError = null
                         },
                         label = "City / Locality *",
-                        placeholder = "e.g., Central District, Downtown",
+                        placeholder = "e.g., Central Sector, Downtown",
                         leadingIcon = Icons.Default.LocationCity,
                         isError = cityError != null,
                         errorMessage = cityError
@@ -367,6 +412,17 @@ fun BloodRequestsScreen(
                                 )
                             }
                         }
+
+                        Text(
+                            text = when (selectedUrgency) {
+                                "Critical" -> "• Critical: Immediate emergency transfusion needed"
+                                "Urgent" -> "• Urgent: Transfusion required within 2 to 6 hours"
+                                else -> "• Routine: Planned surgery or scheduled procedure"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            modifier = Modifier.padding(start = 2.dp, top = 2.dp)
+                        )
                     }
 
                     // 6. Additional Notes (Optional)
@@ -374,17 +430,30 @@ fun BloodRequestsScreen(
                         value = additionalNotes,
                         onValueChange = { additionalNotes = it },
                         label = "Additional Notes (Optional)",
-                        placeholder = "e.g., Contact Blood Bank desk, Patient Bed #12",
+                        placeholder = "e.g., Patient Bed #12, Blood bank contact desk",
                         singleLine = false
                     )
 
-                    // Submit Button
-                    BloodConnectButton(
-                        text = "Submit Blood Request",
-                        icon = Icons.Default.AddAlert,
-                        onClick = { validateAndSubmit() },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    // Action Buttons (Review & Reset)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        BloodConnectButton(
+                            text = "Review Request",
+                            icon = Icons.Default.AddAlert,
+                            onClick = { validateAndSubmit() },
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        OutlinedButton(
+                            onClick = { resetForm() },
+                            modifier = Modifier.height(50.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Reset")
+                        }
+                    }
                 }
             }
 
@@ -411,12 +480,122 @@ fun BloodRequestsScreen(
         }
     }
 
-    // Confirmation Dialog
-    if (showConfirmationDialog) {
+    // REVIEW DIALOG: Shows entered details and allows user to go back to edit or confirm
+    if (showReviewDialog && pendingRequest != null) {
+        val req = pendingRequest!!
+        AlertDialog(
+            onDismissRequest = { showReviewDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(36.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Review Blood Request",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Please verify your request details before confirming:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    OutlinedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.outlinedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                BloodGroupBadge(
+                                    bloodGroup = req.bloodGroup,
+                                    size = 40.dp
+                                )
+                                Column {
+                                    Text(
+                                        text = "${req.bloodGroup} Blood Required",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "${req.units} Unit(s) (Pints)",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                            ReviewDetailRow(label = "Hospital", value = req.hospital)
+                            ReviewDetailRow(label = "Locality", value = req.city)
+                            ReviewDetailRow(label = "Urgency", value = req.urgency)
+                            if (req.notes.isNotBlank()) {
+                                ReviewDetailRow(label = "Notes", value = req.notes)
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = "* Local demonstration mode. No live broadcast or notification will be transmitted.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        confirmedRequest = pendingRequest
+                        showReviewDialog = false
+                        showConfirmationDialog = true
+                        resetForm()
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Confirm Request (Demo)")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showReviewDialog = false },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Back to Edit")
+                }
+            }
+        )
+    }
+
+    // CONFIRMATION DIALOG: Explains local demo confirmation and acknowledges recorded request
+    if (showConfirmationDialog && confirmedRequest != null) {
+        val req = confirmedRequest!!
         AlertDialog(
             onDismissRequest = {
                 showConfirmationDialog = false
-                resetForm()
+                confirmedRequest = null
             },
             icon = {
                 Icon(
@@ -428,41 +607,101 @@ fun BloodRequestsScreen(
             },
             title = {
                 Text(
-                    text = "Demo Request Validated",
+                    text = "Demo Request Confirmed",
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Text(
-                        text = "Demo request validated successfully. Backend submission will be available after integration.",
+                        text = "Your sample emergency blood request has been successfully validated and recorded for local demonstration.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+
+                    OutlinedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.outlinedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Summary of Confirmed Demo Request:",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "• Blood Group: ${req.bloodGroup} (${req.units} Unit(s))",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                text = "• Facility: ${req.hospital}, ${req.city}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                text = "• Urgency: ${req.urgency}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+
                     Text(
-                        text = "Summary: $selectedBloodGroup (${unitsRequired.trim()} unit(s)) at ${hospitalName.trim()}, ${cityLocality.trim()} [Urgency: $selectedUrgency]",
+                        text = "Note: BloodConnect is currently running in demonstration mode. In a production release, verified blood banks broadcast requests directly to registered donors via automated emergency alerts. No real SMS or call was placed.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Note: No real broadcast was transmitted.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
                     )
                 }
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         showConfirmationDialog = false
-                        resetForm()
-                    }
+                        confirmedRequest = null
+                    },
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("OK")
+                    Text("Done")
                 }
             }
+        )
+    }
+}
+
+/**
+ * Row displaying key-value pair in the review dialog.
+ */
+@Composable
+private fun ReviewDetailRow(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
