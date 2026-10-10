@@ -1,0 +1,7 @@
+{
+  "git.openRepositoryInParentFolders": "always",
+  "git.scanRepositories": [
+    "/Users/yugamoldhaigude/Desktop/BloodConnect-main"
+  ],
+  "git.autoRepositoryDetection": true
+}
