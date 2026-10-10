@@ -1,5 +1,6 @@
 package com.bloodconnect.ui.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,11 +9,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.AddAlert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -21,17 +33,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.bloodconnect.ui.components.BloodConnectOutlinedButton
+import com.bloodconnect.ui.components.BloodGroupBadge
+import com.bloodconnect.ui.components.SectionHeader
+import com.bloodconnect.ui.theme.BloodConnectTheme
 
 /**
- * Placeholder Home Screen for Phase 1.
- * Demonstrates successful navigation into the app's main landing experience.
+ * Main Home & Dashboard screen for BloodConnect.
+ * Displays quick actions, blood group shortcuts, and sample urgent requests.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onSignOut: () -> Unit,
+    onNavigateToDonorSearch: () -> Unit = {},
+    onNavigateToBloodRequests: () -> Unit = {},
+    onNavigateToProfile: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -42,6 +61,16 @@ fun HomeScreen(
                         text = "BloodConnect",
                         fontWeight = FontWeight.Bold
                     )
+                },
+                actions = {
+                    IconButton(onClick = onNavigateToProfile) {
+                        Icon(
+                            imageVector = Icons.Default.AccountCircle,
+                            contentDescription = "My Profile",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -55,94 +84,264 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            // A. Top Area - Welcome Header
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+                ),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.Start
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "Project Foundation Active",
+                        text = "Welcome to BloodConnect",
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
                     Text(
-                        text = "Phase 1: Project Foundation is successfully configured with Jetpack Compose, Material 3, Hilt Dependency Injection, and Jetpack Navigation.",
+                        text = "Every donation can save up to three lives. Discover available donors or broadcast emergency blood requests.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+            // B. Main Actions - Find Donors & Request Blood
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Quick Actions",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = "Upcoming Phases",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    // Action 1: Find Donors
+                    Card(
+                        onClick = onNavigateToDonorSearch,
+                        modifier = Modifier.weight(1f),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Text(
+                                text = "Find Donors",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = "Search donors by group & radius",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                            )
+                        }
+                    }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    StatusItem(phase = "Phase 2", title = "Firebase Authentication & User Roles")
-                    StatusItem(phase = "Phase 3", title = "Donor Profiles & Blood Group Database")
-                    StatusItem(phase = "Phase 4", title = "Emergency Broadcasts & Smart Matching")
+                    // Action 2: Request Blood
+                    Card(
+                        onClick = onNavigateToBloodRequests,
+                        modifier = Modifier.weight(1f),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AddAlert,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Text(
+                                text = "Request Blood",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Broadcast emergency blood needs",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                            )
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            // C. Blood Group Shortcuts
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SectionHeader(
+                    title = "Blood Group Shortcuts",
+                    subtitle = "Tap any group to search donors"
+                )
 
-            Button(
+                val row1 = listOf("A+", "A-", "B+", "B-")
+                val row2 = listOf("AB+", "AB-", "O+", "O-")
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    row1.forEach { group ->
+                        BloodGroupBadge(
+                            bloodGroup = group,
+                            size = 54.dp,
+                            modifier = Modifier.clickable(onClick = onNavigateToDonorSearch)
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    row2.forEach { group ->
+                        BloodGroupBadge(
+                            bloodGroup = group,
+                            size = 54.dp,
+                            modifier = Modifier.clickable(onClick = onNavigateToDonorSearch)
+                        )
+                    }
+                }
+            }
+
+            // D. Recent Blood Requests (Sample Content)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SectionHeader(
+                    title = "Recent Requests (Sample)",
+                    subtitle = "Illustrative emergency feeds",
+                    actionText = "View All",
+                    onActionClick = onNavigateToBloodRequests
+                )
+
+                // Sample Request 1
+                SampleRequestCard(
+                    bloodGroup = "O+",
+                    hospitalName = "City General Hospital (Central)",
+                    urgencyStatus = "Critical · 2 Units needed",
+                    onClick = onNavigateToBloodRequests
+                )
+
+                // Sample Request 2
+                SampleRequestCard(
+                    bloodGroup = "A-",
+                    hospitalName = "Metro Care Medical Center",
+                    urgencyStatus = "Urgent · 1 Unit needed",
+                    onClick = onNavigateToBloodRequests
+                )
+
+                // Sample Request 3
+                SampleRequestCard(
+                    bloodGroup = "B+",
+                    hospitalName = "St. Jude Regional Clinic",
+                    urgencyStatus = "Needed within 24h · 1 Unit",
+                    onClick = onNavigateToBloodRequests
+                )
+
+                Text(
+                    text = "* Sample demonstration data. Real requests will load in upcoming phases.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // E. Sign-Out Action
+            BloodConnectOutlinedButton(
+                text = "Sign Out",
+                icon = Icons.AutoMirrored.Filled.ExitToApp,
                 onClick = onSignOut,
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Sign Out (Return to Login)")
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+/**
+ * Compact illustrative card for sample blood request entries.
+ */
+@Composable
+private fun SampleRequestCard(
+    bloodGroup: String,
+    hospitalName: String,
+    urgencyStatus: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OutlinedCard(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            BloodGroupBadge(
+                bloodGroup = bloodGroup,
+                size = 46.dp
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = hospitalName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = urgencyStatus,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
 }
 
+@Preview(showBackground = true)
 @Composable
-private fun StatusItem(
-    phase: String,
-    title: String,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = phase,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.End
+private fun HomeScreenPreview() {
+    BloodConnectTheme {
+        HomeScreen(
+            onSignOut = {},
+            onNavigateToDonorSearch = {},
+            onNavigateToBloodRequests = {},
+            onNavigateToProfile = {}
         )
     }
 }

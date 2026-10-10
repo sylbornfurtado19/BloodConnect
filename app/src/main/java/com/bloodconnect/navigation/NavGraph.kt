@@ -61,6 +61,21 @@ fun BloodConnectNavHost(
                         popUpTo(Screen.Home.route) { inclusive = true }
                         launchSingleTop = true
                     }
+                },
+                onNavigateToDonorSearch = {
+                    navController.navigate(Screen.DonorSearch.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToBloodRequests = {
+                    navController.navigate(Screen.BloodRequests.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToProfile = {
+                    navController.navigate(Screen.Profile.route) {
+                        launchSingleTop = true
+                    }
                 }
             )
         }
