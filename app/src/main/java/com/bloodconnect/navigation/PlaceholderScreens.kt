@@ -148,21 +148,3 @@ fun ProfilePlaceholderScreen(
         }
     }
 }
-
-@Composable
-fun SplashPlaceholderScreen(
-    onSplashFinished: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "BloodConnect",
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}

@@ -24,17 +24,6 @@ fun BloodConnectNavHost(
         startDestination = startDestination,
         modifier = modifier
     ) {
-        composable(route = Screen.Splash.route) {
-            SplashPlaceholderScreen(
-                onSplashFinished = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                }
-            )
-        }
-
         composable(route = Screen.Login.route) {
             LoginScreen(
                 onNavigateToRegister = {
