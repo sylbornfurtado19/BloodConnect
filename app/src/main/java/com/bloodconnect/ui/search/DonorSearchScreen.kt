@@ -3,6 +3,7 @@ package com.bloodconnect.ui.search
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,9 +16,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
@@ -35,6 +37,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -46,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bloodconnect.ui.components.BloodConnectButton
@@ -56,84 +60,12 @@ import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
 
 /**
- * Fictional sample donor representation for UI demonstration.
- * Note: These do not represent real individuals, phone numbers, or medical records.
+ * Sorting orders available for distance filtering.
  */
-private data class SampleDonor(
-    val id: String,
-    val label: String,
-    val bloodGroup: String,
-    val location: String,
-    val distanceKm: Int,
-    val status: String
-)
-
-private val defaultSampleDonors = listOf(
-    SampleDonor(
-        id = "D1",
-        label = "Volunteer Donor #101",
-        bloodGroup = "O+",
-        location = "Central City District",
-        distanceKm = 4,
-        status = "Available"
-    ),
-    SampleDonor(
-        id = "D2",
-        label = "Volunteer Donor #102",
-        bloodGroup = "A+",
-        location = "Metro West Medical Park",
-        distanceKm = 8,
-        status = "Available"
-    ),
-    SampleDonor(
-        id = "D3",
-        label = "Volunteer Donor #103",
-        bloodGroup = "B+",
-        location = "Northside Civic Zone",
-        distanceKm = 12,
-        status = "Available"
-    ),
-    SampleDonor(
-        id = "D4",
-        label = "Volunteer Donor #104",
-        bloodGroup = "AB+",
-        location = "Downtown Health Center",
-        distanceKm = 18,
-        status = "Available"
-    ),
-    SampleDonor(
-        id = "D5",
-        label = "Volunteer Donor #105",
-        bloodGroup = "O-",
-        location = "Eastside Community Ward",
-        distanceKm = 22,
-        status = "Available"
-    ),
-    SampleDonor(
-        id = "D6",
-        label = "Volunteer Donor #106",
-        bloodGroup = "A-",
-        location = "South Bay Regional Sector",
-        distanceKm = 28,
-        status = "Available"
-    ),
-    SampleDonor(
-        id = "D7",
-        label = "Volunteer Donor #107",
-        bloodGroup = "B-",
-        location = "Highland Suburban Area",
-        distanceKm = 35,
-        status = "Available"
-    ),
-    SampleDonor(
-        id = "D8",
-        label = "Volunteer Donor #108",
-        bloodGroup = "AB-",
-        location = "University Campus Area",
-        distanceKm = 42,
-        status = "Available"
-    )
-)
+enum class DistanceSortOrder {
+    NEAREST,
+    FARTHEST
+}
 
 private val bloodGroupsList = listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-")
 private val distanceOptions = listOf(5, 10, 25, 50)
@@ -146,24 +78,31 @@ private val distanceOptions = listOf(5, 10, 25, 50)
 @Composable
 fun DonorSearchScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToDonorDetail: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // Local filter states
+    // Local filter and sort states
     var selectedBloodGroup by remember { mutableStateOf<String?>(null) }
     var locationInput by remember { mutableStateOf("") }
     var selectedDistanceKm by remember { mutableIntStateOf(50) }
+    var sortOrder by remember { mutableStateOf(DistanceSortOrder.NEAREST) }
     var displayedDonors by remember { mutableStateOf(defaultSampleDonors) }
 
     fun applyFilters(
         group: String? = selectedBloodGroup,
         location: String = locationInput,
-        distance: Int = selectedDistanceKm
+        distance: Int = selectedDistanceKm,
+        sort: DistanceSortOrder = sortOrder
     ) {
-        displayedDonors = defaultSampleDonors.filter { donor ->
+        val filtered = defaultSampleDonors.filter { donor ->
             val matchesBlood = group == null || donor.bloodGroup.equals(group, ignoreCase = true)
             val matchesLocation = location.isBlank() || donor.location.contains(location.trim(), ignoreCase = true)
             val matchesDistance = donor.distanceKm <= distance
             matchesBlood && matchesLocation && matchesDistance
+        }
+        displayedDonors = when (sort) {
+            DistanceSortOrder.NEAREST -> filtered.sortedBy { it.distanceKm }
+            DistanceSortOrder.FARTHEST -> filtered.sortedByDescending { it.distanceKm }
         }
     }
 
@@ -171,7 +110,8 @@ fun DonorSearchScreen(
         selectedBloodGroup = null
         locationInput = ""
         selectedDistanceKm = 50
-        displayedDonors = defaultSampleDonors
+        sortOrder = DistanceSortOrder.NEAREST
+        displayedDonors = defaultSampleDonors.sortedBy { it.distanceKm }
     }
 
     Scaffold(
@@ -345,7 +285,7 @@ fun DonorSearchScreen(
                 }
             }
 
-            // Results Section
+            // Results Section Header
             SectionHeader(
                 title = "Donor Results (Sample)",
                 subtitle = if (displayedDonors.isNotEmpty()) {
@@ -354,6 +294,69 @@ fun DonorSearchScreen(
                     "No results found"
                 }
             )
+
+            // Distance Sorting Control
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = "Sort Options",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Sort:",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(
+                            selected = sortOrder == DistanceSortOrder.NEAREST,
+                            onClick = {
+                                sortOrder = DistanceSortOrder.NEAREST
+                                applyFilters(sort = DistanceSortOrder.NEAREST)
+                            },
+                            label = { Text("Nearest first", style = MaterialTheme.typography.labelSmall) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        )
+
+                        FilterChip(
+                            selected = sortOrder == DistanceSortOrder.FARTHEST,
+                            onClick = {
+                                sortOrder = DistanceSortOrder.FARTHEST
+                                applyFilters(sort = DistanceSortOrder.FARTHEST)
+                            },
+                            label = { Text("Farthest first", style = MaterialTheme.typography.labelSmall) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        )
+                    }
+                }
+            }
 
             if (displayedDonors.isEmpty()) {
                 EmptyState(
@@ -366,7 +369,10 @@ fun DonorSearchScreen(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     displayedDonors.forEach { donor ->
-                        DonorResultCard(donor = donor)
+                        DonorResultCard(
+                            donor = donor,
+                            onViewDetails = { onNavigateToDonorDetail(donor.id) }
+                        )
                     }
                 }
             }
@@ -388,69 +394,110 @@ fun DonorSearchScreen(
 @Composable
 private fun DonorResultCard(
     donor: SampleDonor,
+    onViewDetails: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     OutlinedCard(
+        onClick = onViewDetails,
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            BloodGroupBadge(
-                bloodGroup = donor.bloodGroup,
-                size = 48.dp
-            )
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = donor.label,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                BloodGroupBadge(
+                    bloodGroup = donor.bloodGroup,
+                    size = 48.dp
                 )
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Place,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp)
-                    )
                     Text(
-                        text = donor.location,
+                        text = donor.label,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Place,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = donor.location,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Text(
+                        text = "Approx. ${donor.distanceKm} km away",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
                     )
                 }
 
-                Text(
-                    text = "Approx. ${donor.distanceKm} km away",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
+                SuggestionChip(
+                    onClick = onViewDetails,
+                    label = { Text(donor.status) },
+                    colors = SuggestionChipDefaults.suggestionChipColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
+                        labelColor = MaterialTheme.colorScheme.tertiary
+                    ),
+                    shape = RoundedCornerShape(8.dp)
                 )
             }
 
-            SuggestionChip(
-                onClick = {},
-                label = { Text(donor.status) },
-                colors = SuggestionChipDefaults.suggestionChipColors(
-                    containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
-                    labelColor = MaterialTheme.colorScheme.tertiary
-                ),
-                shape = RoundedCornerShape(8.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Sample Volunteer Record",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+
+                TextButton(
+                    onClick = onViewDetails,
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        text = "View Details",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.size(4.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "View Details for ${donor.label}",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -459,6 +506,9 @@ private fun DonorResultCard(
 @Composable
 private fun DonorSearchScreenPreview() {
     BloodConnectTheme {
-        DonorSearchScreen(onNavigateBack = {})
+        DonorSearchScreen(
+            onNavigateBack = {},
+            onNavigateToDonorDetail = {}
+        )
     }
 }

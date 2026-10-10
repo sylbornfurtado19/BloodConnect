@@ -3,11 +3,14 @@ package com.bloodconnect.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.bloodconnect.ui.auth.LoginScreen
 import com.bloodconnect.ui.auth.RegisterScreen
 import com.bloodconnect.ui.home.HomeScreen
+import com.bloodconnect.ui.search.DonorDetailScreen
 import com.bloodconnect.ui.search.DonorSearchScreen
 import com.bloodconnect.ui.request.BloodRequestsScreen
 import com.bloodconnect.ui.profile.ProfileScreen
@@ -85,6 +88,28 @@ fun BloodConnectNavHost(
 
         composable(route = Screen.DonorSearch.route) {
             DonorSearchScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToDonorDetail = { donorId ->
+                    navController.navigate(Screen.DonorDetail.createRoute(donorId)) {
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Screen.DonorDetail.route,
+            arguments = listOf(
+                navArgument("donorId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val donorId = backStackEntry.arguments?.getString("donorId")
+            DonorDetailScreen(
+                donorId = donorId,
                 onNavigateBack = {
                     navController.popBackStack()
                 }
