@@ -35,11 +35,14 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -54,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -119,26 +123,35 @@ fun ProfileScreen(
     }
 
     fun validateAndSave() {
+        val trimmedName = editName.trim()
+        val trimmedCity = editCity.trim()
+
         var isValid = true
 
-        if (editName.trim().isBlank()) {
+        if (trimmedName.isBlank()) {
             nameError = "Display name cannot be empty"
+            isValid = false
+        } else if (trimmedName.length < 2) {
+            nameError = "Display name must be at least 2 characters"
             isValid = false
         } else {
             nameError = null
         }
 
-        if (editCity.trim().isBlank()) {
+        if (trimmedCity.isBlank()) {
             cityError = "City/locality cannot be empty"
+            isValid = false
+        } else if (trimmedCity.length < 2) {
+            cityError = "City/locality must be at least 2 characters"
             isValid = false
         } else {
             cityError = null
         }
 
         if (isValid) {
-            displayName = editName.trim()
+            displayName = trimmedName
             bloodGroup = editBloodGroup
-            cityLocality = editCity.trim()
+            cityLocality = trimmedCity
             contactInfo = editContact.trim()
             isEditing = false
             showSuccessDialog = true
@@ -229,7 +242,7 @@ fun ProfileScreen(
                         .fillMaxWidth()
                         .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // Avatar Placeholder with Initials
                     val initials = displayName
@@ -242,7 +255,7 @@ fun ProfileScreen(
 
                     Box(
                         modifier = Modifier
-                            .size(80.dp)
+                            .size(76.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
@@ -271,59 +284,105 @@ fun ProfileScreen(
                             size = 36.dp
                         )
                         Text(
-                            text = "Registered Blood Group",
+                            text = "Registered Blood Group ($bloodGroup)",
                             style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+
+                    // Status Chip
+                    SuggestionChip(
+                        onClick = {},
+                        label = {
+                            Text(if (isDonorAvailable) "Active Donor (Demo)" else "Inactive (Demo)")
+                        },
+                        colors = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = if (isDonorAvailable) {
+                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+                            } else {
+                                MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                            },
+                            labelColor = if (isDonorAvailable) {
+                                MaterialTheme.colorScheme.tertiary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            }
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
                 }
             }
 
-            // 2. Donor Availability Toggle Card (Immediate local UI state)
+            // 2. Donor Availability Status Card
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp)
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Row(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(
-                            imageVector = if (isDonorAvailable) Icons.Default.Favorite else Icons.Default.Info,
-                            contentDescription = null,
-                            tint = if (isDonorAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Column {
-                            Text(
-                                text = if (isDonorAvailable) "Available to Donate" else "Not Available",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isDonorAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isDonorAvailable) Icons.Default.Favorite else Icons.Default.Info,
+                                contentDescription = null,
+                                tint = if (isDonorAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.size(28.dp)
                             )
-                            Text(
-                                text = if (isDonorAvailable) "Your status is marked active for emergency requests (local demo state)." else "Status marked inactive in local demo state. You will not receive donor alerts.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Column {
+                                Text(
+                                    text = if (isDonorAvailable) "Available to Donate" else "Currently Unavailable",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDonorAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (isDonorAvailable) "Status: Active Demo Donor" else "Status: Inactive / On Cooldown",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (isDonorAvailable) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+                                )
+                            }
                         }
+
+                        Switch(
+                            checked = isDonorAvailable,
+                            onCheckedChange = { isDonorAvailable = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
                     }
 
-                    Switch(
-                        checked = isDonorAvailable,
-                        onCheckedChange = { isDonorAvailable = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary
-                        )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                    Text(
+                        text = if (isDonorAvailable) {
+                            "You are currently marked as an active volunteer donor in local demonstration state. You would be eligible to receive emergency blood requests."
+                        } else {
+                            "You are currently marked as unavailable in local demonstration state. Requests and emergency alerts are paused while inactive."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Text(
+                        text = "* Note: This toggle controls local demonstration state only. No live backend synchronization, remote database updates, or donor network broadcasts occur.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
                     )
                 }
             }
@@ -430,7 +489,7 @@ fun ProfileScreen(
                             leadingIcon = Icons.Default.Email
                         )
 
-                        // Action Buttons: Save & Cancel
+                        // Action Buttons: Cancel & Save
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -449,23 +508,69 @@ fun ProfileScreen(
                             )
                         }
                     } else {
-                        // Read-Only Summary Display
-                        ProfileDetailRow(
-                            label = "Full Name",
-                            value = displayName
-                        )
-                        ProfileDetailRow(
-                            label = "Blood Group",
-                            value = bloodGroup
-                        )
-                        ProfileDetailRow(
-                            label = "City / Locality",
-                            value = cityLocality
-                        )
-                        ProfileDetailRow(
-                            label = "Contact",
-                            value = contactInfo.ifBlank { "Not provided" }
-                        )
+                        // Read-Only Summary Display (clean & visually distinct)
+                        OutlinedCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.outlinedCardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                ProfileInfoItem(
+                                    icon = Icons.Default.Person,
+                                    label = "Full Name",
+                                    value = displayName
+                                )
+
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    BloodGroupBadge(
+                                        bloodGroup = bloodGroup,
+                                        size = 40.dp
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Blood Group",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "$bloodGroup Donor",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                                ProfileInfoItem(
+                                    icon = Icons.Default.LocationCity,
+                                    label = "City / Locality",
+                                    value = cityLocality
+                                )
+
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                                ProfileInfoItem(
+                                    icon = Icons.Default.Email,
+                                    label = "Contact Info (Demo)",
+                                    value = contactInfo.ifBlank { "Not provided" }
+                                )
+                            }
+                        }
 
                         BloodConnectOutlinedButton(
                             text = "Edit Profile Information",
@@ -561,7 +666,7 @@ fun ProfileScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Demo profile updated locally.",
+                        text = "Demo profile updated successfully.",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -572,7 +677,7 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "Note: These changes are retained in local session state only and are not synced to an account or remote database.",
+                        text = "Note: These changes are retained in local demonstration state only and are not synced to an account or remote database.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -588,27 +693,44 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileDetailRow(
+private fun ProfileInfoItem(
+    icon: ImageVector,
     label: String,
     value: String,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
 }
 
