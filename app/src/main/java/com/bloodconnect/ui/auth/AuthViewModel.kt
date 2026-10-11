@@ -62,15 +62,19 @@ class AuthViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO) {
             updateState(AuthUiState.Loading)
-            val result = authRepository.signIn(trimmedEmail, pass)
-            if (result.isSuccess) {
-                updateState(AuthUiState.Success)
-                withContext(Dispatchers.Main) {
-                    onSuccess()
+            try {
+                val result = authRepository.signIn(trimmedEmail, pass)
+                if (result.isSuccess) {
+                    updateState(AuthUiState.Success)
+                    withContext(Dispatchers.Main) {
+                        onSuccess()
+                    }
+                } else {
+                    val errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Sign in failed"
+                    updateState(AuthUiState.Error(errorMessage))
                 }
-            } else {
-                val errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Sign in failed"
-                updateState(AuthUiState.Error(errorMessage))
+            } catch (e: Exception) {
+                updateState(AuthUiState.Error(e.localizedMessage ?: "Sign in failed"))
             }
         }
     }
@@ -98,35 +102,39 @@ class AuthViewModel @Inject constructor(
 
         viewModelScope.launch(Dispatchers.IO) {
             updateState(AuthUiState.Loading)
-            val authResult = authRepository.signUp(trimmedEmail, pass)
-            if (authResult.isSuccess) {
-                val firebaseUser = authResult.getOrNull()
-                if (firebaseUser != null) {
-                    val user = User(
-                        uid = firebaseUser.uid,
-                        id = firebaseUser.uid,
-                        email = trimmedEmail,
-                        fullName = trimmedFullName,
-                        displayName = trimmedFullName,
-                        bloodGroup = trimmedBloodGroup,
-                        phone = trimmedPhone
-                    )
-                    val saveResult = userRepository.saveUser(user)
-                    if (saveResult.isSuccess) {
-                        updateState(AuthUiState.Success)
-                        withContext(Dispatchers.Main) {
-                            onSuccess()
+            try {
+                val authResult = authRepository.signUp(trimmedEmail, pass)
+                if (authResult.isSuccess) {
+                    val firebaseUser = authResult.getOrNull()
+                    if (firebaseUser != null) {
+                        val user = User(
+                            uid = firebaseUser.uid,
+                            id = firebaseUser.uid,
+                            email = trimmedEmail,
+                            fullName = trimmedFullName,
+                            displayName = trimmedFullName,
+                            bloodGroup = trimmedBloodGroup,
+                            phone = trimmedPhone
+                        )
+                        val saveResult = userRepository.saveUser(user)
+                        if (saveResult.isSuccess) {
+                            updateState(AuthUiState.Success)
+                            withContext(Dispatchers.Main) {
+                                onSuccess()
+                            }
+                        } else {
+                            val errorMessage = saveResult.exceptionOrNull()?.localizedMessage ?: "Failed to save profile"
+                            updateState(AuthUiState.Error(errorMessage))
                         }
                     } else {
-                        val errorMessage = saveResult.exceptionOrNull()?.localizedMessage ?: "Failed to save profile"
-                        updateState(AuthUiState.Error(errorMessage))
+                        updateState(AuthUiState.Error("User creation failed"))
                     }
                 } else {
-                    updateState(AuthUiState.Error("User creation failed"))
+                    val errorMessage = authResult.exceptionOrNull()?.localizedMessage ?: "Sign up failed"
+                    updateState(AuthUiState.Error(errorMessage))
                 }
-            } else {
-                val errorMessage = authResult.exceptionOrNull()?.localizedMessage ?: "Sign up failed"
-                updateState(AuthUiState.Error(errorMessage))
+            } catch (e: Exception) {
+                updateState(AuthUiState.Error(e.localizedMessage ?: "Sign up failed"))
             }
         }
     }
@@ -137,31 +145,36 @@ class AuthViewModel @Inject constructor(
     fun signInWithGoogle(idToken: String, onSuccess: () -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
             updateState(AuthUiState.Loading)
-            val authResult = authRepository.signInWithGoogle(idToken)
-            if (authResult.isSuccess) {
-                val firebaseUser = authResult.getOrNull()
-                if (firebaseUser != null) {
-                    val existingUser = userRepository.getUser(firebaseUser.uid)
-                    if (existingUser.isSuccess && existingUser.getOrNull() == null) {
-                        val newUser = User(
-                            uid = firebaseUser.uid,
-                            id = firebaseUser.uid,
-                            email = firebaseUser.email ?: "",
-                            fullName = firebaseUser.displayName ?: "Google User",
-                            displayName = firebaseUser.displayName ?: "Google User"
-                        )
-                        userRepository.saveUser(newUser)
-                    }
-                    updateState(AuthUiState.Success)
-                    withContext(Dispatchers.Main) {
-                        onSuccess()
+            try {
+                val authResult = authRepository.signInWithGoogle(idToken)
+                if (authResult.isSuccess) {
+                    val firebaseUser = authResult.getOrNull()
+                    if (firebaseUser != null) {
+                        val existingUserResult = userRepository.getUser(firebaseUser.uid)
+                        val existingUser = existingUserResult.getOrNull()
+                        if (existingUser == null) {
+                            val newUser = User(
+                                uid = firebaseUser.uid,
+                                id = firebaseUser.uid,
+                                email = firebaseUser.email ?: "",
+                                fullName = firebaseUser.displayName ?: "Google User",
+                                displayName = firebaseUser.displayName ?: "Google User"
+                            )
+                            userRepository.saveUser(newUser)
+                        }
+                        updateState(AuthUiState.Success)
+                        withContext(Dispatchers.Main) {
+                            onSuccess()
+                        }
+                    } else {
+                        updateState(AuthUiState.Error("Google Sign-In failed: User object was null"))
                     }
                 } else {
-                    updateState(AuthUiState.Error("Google Sign-In failed"))
+                    val errorMessage = authResult.exceptionOrNull()?.localizedMessage ?: "Google Sign-In failed"
+                    updateState(AuthUiState.Error(errorMessage))
                 }
-            } else {
-                val errorMessage = authResult.exceptionOrNull()?.localizedMessage ?: "Google Sign-In failed"
-                updateState(AuthUiState.Error(errorMessage))
+            } catch (e: Exception) {
+                updateState(AuthUiState.Error(e.localizedMessage ?: "Google Sign-In failed due to an exception"))
             }
         }
     }
