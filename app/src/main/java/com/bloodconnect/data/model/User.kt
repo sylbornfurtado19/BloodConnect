@@ -1,22 +1,18 @@
 package com.bloodconnect.data.model
 
-/**
- * Immutable user account model representing a registered donor or recipient.
- *
- * @property id Unique user identifier (e.g. Firebase Auth UID).
- * @property email Registered email address.
- * @property displayName User's full or preferred display name.
- * @property bloodGroup ABO/Rh blood group of the user.
- * @property isAvailable Current donor readiness/availability status.
- * @property locality City, district, or neighborhood of the user.
- * @property fcmToken Optional Firebase Cloud Messaging device registration token for push alerts.
- */
 data class User(
-    val id: String,
-    val email: String,
-    val displayName: String,
-    val bloodGroup: BloodGroup,
+    val uid: String = "",
+    val id: String = "",
+    val email: String = "",
+    val fullName: String = "",
+    val displayName: String = "",
+    val bloodGroup: String = "",
+    val phone: String = "",
+    val locality: String = "",
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
     val isAvailable: Boolean = true,
-    val locality: String,
+    val livesSaved: Int = 0,
+    val donorTier: String = "Bronze",
     val fcmToken: String? = null
 )
