@@ -14,7 +14,15 @@
       },
       "oauth_client": [
         {
-          "client_id": "928966163583-3d87uegiv2cntog626dp3o9v6nir6d11.apps.googleusercontent.com",
+          "client_id": "928966163583-ntouoc3a3ncovddjeh97qt2t3tq76qrg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bloodconnect",
+            "certificate_hash": "8d9b4d477d6377f55b18d91562271688e35d4d5f"
+          }
+        },
+        {
+          "client_id": "928966163583-8vuu7m6052fbqpg5k77q89mg08thc3du.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
