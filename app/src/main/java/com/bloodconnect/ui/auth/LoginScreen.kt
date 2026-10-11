@@ -66,11 +66,18 @@ fun LoginScreen(
                 if (idToken != null) {
                     authViewModel.signInWithGoogle(idToken, onNavigateToHome)
                 } else {
-                    authViewModel.signInWithGoogle("null_google_id_token", onNavigateToHome)
+                    authViewModel.setError("Google Sign-In failed: ID Token was null.")
                 }
             } catch (e: ApiException) {
-                authViewModel.signInWithGoogle("google_api_exception_${e.statusCode}", onNavigateToHome)
+                val msg = when (e.statusCode) {
+                    10 -> "Google Sign-In Error (10): Developer Error. Please add your debug SHA-1 fingerprint in Firebase Console."
+                    12500 -> "Google Sign-In Error (12500): Sign-in failed. Check OAuth Web Client ID."
+                    else -> "Google Sign-In failed with status code ${e.statusCode}"
+                }
+                authViewModel.setError(msg)
             }
+        } else if (result.resultCode != Activity.RESULT_CANCELED) {
+            authViewModel.setError("Google Sign-In returned result code ${result.resultCode}")
         }
     }
 
