@@ -1,5 +1,8 @@
 package com.bloodconnect.ui.auth
 
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -25,11 +28,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 
 /**
  * Login Screen connected to [AuthViewModel].
@@ -46,6 +53,26 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val uiState by authViewModel.uiStateFlow.collectAsState()
+    val context = LocalContext.current
+
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                val idToken = account?.idToken
+                if (idToken != null) {
+                    authViewModel.signInWithGoogle(idToken, onNavigateToHome)
+                } else {
+                    authViewModel.signInWithGoogle("null_google_id_token", onNavigateToHome)
+                }
+            } catch (e: ApiException) {
+                authViewModel.signInWithGoogle("google_api_exception_${e.statusCode}", onNavigateToHome)
+            }
+        }
+    }
 
     Column(
         modifier = modifier
@@ -152,7 +179,14 @@ fun LoginScreen(
 
                 OutlinedButton(
                     onClick = {
-                        authViewModel.signInWithGoogle("google_id_token_placeholder", onNavigateToHome)
+                        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken("928966163583-3d87uegiv2cntog626dp3o9v6nir6d11.apps.googleusercontent.com")
+                            .requestEmail()
+                            .build()
+                        val googleSignInClient = GoogleSignIn.getClient(context, gso)
+                        googleSignInClient.signOut().addOnCompleteListener {
+                            googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                        }
                     },
                     enabled = uiState !is AuthUiState.Loading,
                     modifier = Modifier.fillMaxWidth()
