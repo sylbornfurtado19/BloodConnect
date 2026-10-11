@@ -167,6 +167,13 @@ class AuthViewModel @Inject constructor(
     }
 
     /**
+     * Sets a custom error message on the UI state.
+     */
+    fun setError(message: String) {
+        updateState(AuthUiState.Error(message))
+    }
+
+    /**
      * Alias for [signUp] for API consistency.
      */
     fun register(
