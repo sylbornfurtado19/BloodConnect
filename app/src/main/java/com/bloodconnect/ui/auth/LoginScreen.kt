@@ -1,6 +1,7 @@
 package com.bloodconnect.ui.auth
 
 import android.app.Activity
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bloodconnect.R
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
@@ -66,18 +68,23 @@ fun LoginScreen(
                 if (idToken != null) {
                     authViewModel.signInWithGoogle(idToken, onNavigateToHome)
                 } else {
-                    authViewModel.setError("Google Sign-In failed: ID Token was null.")
+                    val errorMsg = "Google Sign-In Error: ID Token was null. Ensure Google Sign-In is enabled in Firebase Console and Web Client ID is configured."
+                    authViewModel.setError(errorMsg)
+                    Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
                 }
             } catch (e: ApiException) {
                 val msg = when (e.statusCode) {
                     10 -> "Google Sign-In Error (10): Developer Error. Please add your debug SHA-1 fingerprint in Firebase Console."
-                    12500 -> "Google Sign-In Error (12500): Sign-in failed. Check OAuth Web Client ID."
+                    12500 -> "Google Sign-In Error (12500): Sign-in failed. Check OAuth Web Client ID in Firebase."
                     else -> "Google Sign-In failed with status code ${e.statusCode}"
                 }
                 authViewModel.setError(msg)
+                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             }
         } else if (result.resultCode != Activity.RESULT_CANCELED) {
-            authViewModel.setError("Google Sign-In returned result code ${result.resultCode}")
+            val msg = "Google Sign-In returned result code ${result.resultCode}"
+            authViewModel.setError(msg)
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -186,8 +193,14 @@ fun LoginScreen(
 
                 OutlinedButton(
                     onClick = {
+                        val webClientId = try {
+                            context.getString(R.string.default_web_client_id)
+                        } catch (e: Exception) {
+                            "928966163583-3d87uegiv2cntog626dp3o9v6nir6d11.apps.googleusercontent.com"
+                        }
+
                         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                            .requestIdToken("928966163583-3d87uegiv2cntog626dp3o9v6nir6d11.apps.googleusercontent.com")
+                            .requestIdToken(webClientId)
                             .requestEmail()
                             .build()
                         val googleSignInClient = GoogleSignIn.getClient(context, gso)
@@ -198,7 +211,7 @@ fun LoginScreen(
                     enabled = uiState !is AuthUiState.Loading,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Sign in with Google")
+                    Text("Sign in with Google Account")
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
