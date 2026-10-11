@@ -268,7 +268,7 @@ class DonorSearchViewModel @Inject constructor(
         }
     }
 
-    private fun applyFiltersAndSort(
+    fun applyFiltersAndSort(
         donors: List<Donor>,
         bloodGroup: BloodGroup?,
         locationQuery: String,
@@ -276,79 +276,104 @@ class DonorSearchViewModel @Inject constructor(
         sortOrder: DistanceSortOrder,
         userLocation: UserLocation?
     ): Pair<List<Donor>, Map<String, Double>> {
-        val distances = mutableMapOf<String, Double>()
-        if (userLocation != null) {
-            for (donor in donors) {
-                if (donor.latitude != null && donor.longitude != null) {
-                    val dist = calculateDistanceKm(
-                        userLat = userLocation.latitude,
-                        userLon = userLocation.longitude,
-                        donorLat = donor.latitude,
-                        donorLon = donor.longitude
-                    )
-                    distances[donor.id] = dist
-                }
+        return filterAndSortDonors(
+            donors = donors,
+            bloodGroup = bloodGroup,
+            locationQuery = locationQuery,
+            maxDistanceKm = maxDistanceKm,
+            sortOrder = sortOrder,
+            userLocation = userLocation
+        )
+    }
+}
+
+/**
+ * Pure function executing donor filtering by blood group, locality query,
+ * and distance radius, as well as distance-aware sorting.
+ */
+fun filterAndSortDonors(
+    donors: List<Donor>,
+    bloodGroup: BloodGroup? = null,
+    locationQuery: String = "",
+    maxDistanceKm: Int = 50,
+    sortOrder: DistanceSortOrder = DistanceSortOrder.NEAREST,
+    userLocation: UserLocation? = null
+): Pair<List<Donor>, Map<String, Double>> {
+    val distances = mutableMapOf<String, Double>()
+    if (userLocation != null) {
+        for (donor in donors) {
+            if (donor.latitude != null && donor.longitude != null) {
+                val dist = calculateDistanceKm(
+                    userLat = userLocation.latitude,
+                    userLon = userLocation.longitude,
+                    donorLat = donor.latitude,
+                    donorLon = donor.longitude
+                )
+                distances[donor.id] = dist
             }
         }
+    }
 
-        val filtered = donors.filter { donor ->
-            val matchesBlood = bloodGroup == null || donor.bloodGroup == bloodGroup
-            val matchesLocation = locationQuery.isBlank() || donor.locality.contains(locationQuery.trim(), ignoreCase = true)
+    val filtered = donors.filter { donor ->
+        val matchesBlood = bloodGroup == null || donor.bloodGroup == bloodGroup
+        val matchesLocation = locationQuery.isBlank() || donor.locality.contains(locationQuery.trim(), ignoreCase = true)
 
-            val matchesDistance = if (userLocation == null) {
-                // If location is unavailable, distance filtering is disabled
-                true
+        val matchesDistance = if (userLocation == null) {
+            // If location is unavailable, distance filtering is disabled
+            true
+        } else {
+            val dist = distances[donor.id]
+            if (dist != null) {
+                dist <= maxDistanceKm
             } else {
-                val dist = distances[donor.id]
-                if (dist != null) {
-                    dist <= maxDistanceKm
-                } else {
-                    // Gracefully retain donors with missing coordinates without claiming fake distances
-                    true
-                }
-            }
-            matchesBlood && matchesLocation && matchesDistance
-        }
-
-        val sorted = when (sortOrder) {
-            DistanceSortOrder.NEAREST -> {
-                if (userLocation == null) {
-                    filtered
-                } else {
-                    filtered.sortedWith(
-                        compareBy<Donor> { distances[it.id] == null }
-                            .thenBy { distances[it.id] ?: Double.MAX_VALUE }
-                    )
-                }
-            }
-            DistanceSortOrder.FARTHEST -> {
-                if (userLocation == null) {
-                    filtered
-                } else {
-                    filtered.sortedWith(
-                        compareBy<Donor> { distances[it.id] == null }
-                            .thenByDescending { distances[it.id] ?: Double.MIN_VALUE }
-                    )
-                }
+                // Gracefully retain donors with missing coordinates without claiming fake distances
+                true
             }
         }
-
-        return Pair(sorted, distances)
+        matchesBlood && matchesLocation && matchesDistance
     }
 
-    private fun calculateDistanceKm(
-        userLat: Double,
-        userLon: Double,
-        donorLat: Double,
-        donorLon: Double
-    ): Double {
-        val earthRadiusKm = 6371.0
-        val dLat = Math.toRadians(donorLat - userLat)
-        val dLon = Math.toRadians(donorLon - userLon)
-        val a = sin(dLat / 2) * sin(dLat / 2) +
-                cos(Math.toRadians(userLat)) * cos(Math.toRadians(donorLat)) *
-                sin(dLon / 2) * sin(dLon / 2)
-        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-        return earthRadiusKm * c
+    val sorted = when (sortOrder) {
+        DistanceSortOrder.NEAREST -> {
+            if (userLocation == null) {
+                filtered
+            } else {
+                filtered.sortedWith(
+                    compareBy<Donor> { distances[it.id] == null }
+                        .thenBy { distances[it.id] ?: Double.MAX_VALUE }
+                )
+            }
+        }
+        DistanceSortOrder.FARTHEST -> {
+            if (userLocation == null) {
+                filtered
+            } else {
+                filtered.sortedWith(
+                    compareBy<Donor> { distances[it.id] == null }
+                        .thenByDescending { distances[it.id] ?: Double.MIN_VALUE }
+                )
+            }
+        }
     }
+
+    return Pair(sorted, distances)
+}
+
+/**
+ * Calculates spherical distance in kilometers between two coordinate pairs using Haversine formula.
+ */
+fun calculateDistanceKm(
+    userLat: Double,
+    userLon: Double,
+    donorLat: Double,
+    donorLon: Double
+): Double {
+    val earthRadiusKm = 6371.0
+    val dLat = Math.toRadians(donorLat - userLat)
+    val dLon = Math.toRadians(donorLon - userLon)
+    val a = sin(dLat / 2) * sin(dLat / 2) +
+            cos(Math.toRadians(userLat)) * cos(Math.toRadians(donorLat)) *
+            sin(dLon / 2) * sin(dLon / 2)
+    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+    return earthRadiusKm * c
 }

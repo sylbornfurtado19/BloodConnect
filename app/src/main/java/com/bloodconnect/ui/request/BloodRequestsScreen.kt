@@ -152,52 +152,20 @@ fun BloodRequestsScreen(
         val trimmedUnits = unitsRequired.trim()
         val trimmedNotes = additionalNotes.trim()
 
-        var isValid = true
+        // Validation via extracted pure validator
+        val bgErr = BloodRequestValidator.validateBloodGroup(selectedBloodGroup)
+        val unitsErr = BloodRequestValidator.validateUnits(trimmedUnits)
+        val hospErr = BloodRequestValidator.validateHospital(trimmedHospital)
+        val cityErr = BloodRequestValidator.validateCity(trimmedCity)
 
-        // Blood group validation
-        if (selectedBloodGroup == null) {
-            bloodGroupError = "Please select a required blood group"
-            isValid = false
-        } else {
-            bloodGroupError = null
-        }
+        bloodGroupError = bgErr
+        unitsError = unitsErr
+        hospitalError = hospErr
+        cityError = cityErr
 
-        // Units needed validation (allowed range: 1 - 20)
+        val isValid = bgErr == null && unitsErr == null && hospErr == null && cityErr == null
+
         val parsedUnits = trimmedUnits.toIntOrNull()
-        if (trimmedUnits.isBlank()) {
-            unitsError = "Units needed cannot be empty"
-            isValid = false
-        } else if (parsedUnits == null || parsedUnits <= 0) {
-            unitsError = "Please enter a valid positive number of units (1 to 20)"
-            isValid = false
-        } else if (parsedUnits > 20) {
-            unitsError = "Units needed cannot exceed 20 units"
-            isValid = false
-        } else {
-            unitsError = null
-        }
-
-        // Hospital name validation
-        if (trimmedHospital.isBlank()) {
-            hospitalError = "Hospital or facility name is required"
-            isValid = false
-        } else if (trimmedHospital.length < 3) {
-            hospitalError = "Hospital name must be at least 3 characters"
-            isValid = false
-        } else {
-            hospitalError = null
-        }
-
-        // City / locality validation
-        if (trimmedCity.isBlank()) {
-            cityError = "City or locality is required"
-            isValid = false
-        } else if (trimmedCity.length < 2) {
-            cityError = "City or locality must be at least 2 characters"
-            isValid = false
-        } else {
-            cityError = null
-        }
 
         if (isValid) {
             pendingRequest = PendingBloodRequest(
