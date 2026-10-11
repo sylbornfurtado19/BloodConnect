@@ -3,21 +3,23 @@ package com.bloodconnect.data.repository
 import com.bloodconnect.data.model.BloodGroup
 import com.bloodconnect.data.model.Donor
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Implementation of [DonorRepository] that retrieves volunteer donors,
- * falling back to curated demonstration donor records with realistic coordinates
- * and missing-coordinate edge cases.
+ * Implementation of [DonorRepository] that queries Firestore for registered donors
+ * and provides fallback demonstration records with coordinates and edge-case null coordinates.
  */
 @Singleton
 class DonorRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : DonorRepository {
+
+    private val usersCollection = firestore.collection("users")
 
     private val sampleDonors = listOf(
         Donor(
@@ -97,52 +99,144 @@ class DonorRepositoryImpl @Inject constructor(
     override suspend fun getDonors(bloodGroup: BloodGroup?): Result<List<Donor>> {
         return try {
             val query = if (bloodGroup != null) {
-                firestore.collection("donors")
+                usersCollection
                     .whereEqualTo("bloodGroup", bloodGroup.displayName)
                     .whereEqualTo("isAvailable", true)
                     .get()
                     .await()
             } else {
-                firestore.collection("donors")
+                usersCollection
                     .whereEqualTo("isAvailable", true)
                     .get()
                     .await()
             }
 
-            val fetched = query.toObjects(Donor::class.java)
-            if (fetched.isNotEmpty()) {
-                Result.success(fetched)
+            val donors = query.documents.mapNotNull { doc ->
+                val uid = doc.getString("uid") ?: doc.id
+                val name = doc.getString("fullName") ?: doc.getString("displayName") ?: "Anonymous"
+                val bgStr = doc.getString("bloodGroup") ?: "O+"
+                val bg = BloodGroup.fromString(bgStr) ?: BloodGroup.O_POSITIVE
+                val locality = doc.getString("locality") ?: "City Center"
+                val lat = doc.getDouble("latitude")
+                val lon = doc.getDouble("longitude")
+                val available = doc.getBoolean("isAvailable") ?: true
+
+                Donor(
+                    id = uid,
+                    name = name,
+                    bloodGroup = bg,
+                    locality = locality,
+                    latitude = lat,
+                    longitude = lon,
+                    isAvailable = available
+                )
+            }
+
+            if (donors.isNotEmpty()) {
+                Result.success(donors)
             } else {
-                // Fallback to demonstration donor set
-                val filtered = if (bloodGroup != null) {
+                val sampleFiltered = if (bloodGroup != null) {
                     sampleDonors.filter { it.bloodGroup == bloodGroup }
                 } else {
                     sampleDonors
                 }
-                Result.success(filtered)
+                Result.success(sampleFiltered)
             }
         } catch (_: Exception) {
-            // Offline or uninitialized Firebase: return local demonstration donors
-            val filtered = if (bloodGroup != null) {
+            val sampleFiltered = if (bloodGroup != null) {
                 sampleDonors.filter { it.bloodGroup == bloodGroup }
             } else {
                 sampleDonors
             }
-            Result.success(filtered)
+            Result.success(sampleFiltered)
         }
     }
 
-    override fun observeDonors(bloodGroup: BloodGroup?): Flow<List<Donor>> {
-        val filtered = if (bloodGroup != null) {
-            sampleDonors.filter { it.bloodGroup == bloodGroup }
+    override fun observeDonors(bloodGroup: BloodGroup?): Flow<List<Donor>> = callbackFlow {
+        val query = if (bloodGroup != null) {
+            usersCollection
+                .whereEqualTo("bloodGroup", bloodGroup.displayName)
+                .whereEqualTo("isAvailable", true)
         } else {
-            sampleDonors
+            usersCollection
+                .whereEqualTo("isAvailable", true)
         }
-        return flowOf(filtered)
+
+        val listener = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                val sampleFiltered = if (bloodGroup != null) {
+                    sampleDonors.filter { it.bloodGroup == bloodGroup }
+                } else {
+                    sampleDonors
+                }
+                trySend(sampleFiltered)
+                return@addSnapshotListener
+            }
+            val donors = snapshot?.documents?.mapNotNull { doc ->
+                val uid = doc.getString("uid") ?: doc.id
+                val name = doc.getString("fullName") ?: doc.getString("displayName") ?: "Anonymous"
+                val bgStr = doc.getString("bloodGroup") ?: "O+"
+                val bg = BloodGroup.fromString(bgStr) ?: BloodGroup.O_POSITIVE
+                val locality = doc.getString("locality") ?: "City Center"
+                val lat = doc.getDouble("latitude")
+                val lon = doc.getDouble("longitude")
+                val available = doc.getBoolean("isAvailable") ?: true
+
+                Donor(
+                    id = uid,
+                    name = name,
+                    bloodGroup = bg,
+                    locality = locality,
+                    latitude = lat,
+                    longitude = lon,
+                    isAvailable = available
+                )
+            } ?: emptyList()
+
+            if (donors.isNotEmpty()) {
+                trySend(donors)
+            } else {
+                val sampleFiltered = if (bloodGroup != null) {
+                    sampleDonors.filter { it.bloodGroup == bloodGroup }
+                } else {
+                    sampleDonors
+                }
+                trySend(sampleFiltered)
+            }
+        }
+        awaitClose { listener.remove() }
     }
 
     override suspend fun getDonorById(donorId: String): Result<Donor?> {
-        val found = sampleDonors.find { it.id.equals(donorId, ignoreCase = true) }
-        return Result.success(found)
+        return try {
+            val doc = usersCollection.document(donorId).get().await()
+            if (doc.exists()) {
+                val uid = doc.getString("uid") ?: doc.id
+                val name = doc.getString("fullName") ?: doc.getString("displayName") ?: "Anonymous"
+                val bgStr = doc.getString("bloodGroup") ?: "O+"
+                val bg = BloodGroup.fromString(bgStr) ?: BloodGroup.O_POSITIVE
+                val locality = doc.getString("locality") ?: "City Center"
+                val lat = doc.getDouble("latitude")
+                val lon = doc.getDouble("longitude")
+                val available = doc.getBoolean("isAvailable") ?: true
+
+                val donor = Donor(
+                    id = uid,
+                    name = name,
+                    bloodGroup = bg,
+                    locality = locality,
+                    latitude = lat,
+                    longitude = lon,
+                    isAvailable = available
+                )
+                Result.success(donor)
+            } else {
+                val found = sampleDonors.find { it.id.equals(donorId, ignoreCase = true) }
+                Result.success(found)
+            }
+        } catch (_: Exception) {
+            val found = sampleDonors.find { it.id.equals(donorId, ignoreCase = true) }
+            Result.success(found)
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.bloodconnect.data.repository
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,6 +29,16 @@ class AuthRepository @Inject constructor(
     suspend fun signUp(email: String, pass: String): Result<FirebaseUser?> {
         return try {
             val authResult = auth.createUserWithEmailAndPassword(email, pass).await()
+            Result.success(authResult.user)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun signInWithGoogle(idToken: String): Result<FirebaseUser?> {
+        return try {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            val authResult = auth.signInWithCredential(credential).await()
             Result.success(authResult.user)
         } catch (e: Exception) {
             Result.failure(e)

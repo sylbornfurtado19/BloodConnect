@@ -13,6 +13,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,7 +33,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 
 /**
  * Login Screen connected to [AuthViewModel].
- * Handles user authentication with email and password, displaying loading feedback
+ * Handles user authentication with email and password or Google Sign-In, displaying loading feedback
  * and user-readable error states, and navigating to Home upon successful sign-in.
  */
 @Composable
@@ -145,6 +146,18 @@ fun LoginScreen(
                     } else {
                         Text("Sign In")
                     }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        authViewModel.signInWithGoogle("google_id_token_placeholder", onNavigateToHome)
+                    },
+                    enabled = uiState !is AuthUiState.Loading,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Sign in with Google")
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))

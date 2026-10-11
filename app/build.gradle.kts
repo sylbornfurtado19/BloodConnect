@@ -70,6 +70,7 @@ dependencies {
     
     // Utils
     implementation(libs.play.services.location)
+    implementation(libs.play.services.auth)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.accompanist.permissions)
 
