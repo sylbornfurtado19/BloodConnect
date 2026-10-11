@@ -1,26 +1,36 @@
 {
   "project_info": {
-    "project_number": "123456789012",
-    "project_id": "bloodconnect-dummy",
-    "storage_bucket": "bloodconnect-dummy.appspot.com"
+    "project_number": "928966163583",
+    "project_id": "bloodconnect-7d5dd",
+    "storage_bucket": "bloodconnect-7d5dd.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789012:android:abcdef1234567890",
+        "mobilesdk_app_id": "1:928966163583:android:1632a1ddcc07488998134a",
         "android_client_info": {
           "package_name": "com.bloodconnect"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "928966163583-3d87uegiv2cntog626dp3o9v6nir6d11.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "dummy-api-key-123456789"
+          "current_key": "AIzaSyBCuiJ2C7yqj8q2I_5iPKNxmbLiBB-PjPE"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "928966163583-3d87uegiv2cntog626dp3o9v6nir6d11.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
