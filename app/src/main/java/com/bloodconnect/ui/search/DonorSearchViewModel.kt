@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.bloodconnect.data.model.BloodGroup
 import com.bloodconnect.data.model.Donor
 import com.bloodconnect.data.repository.DonorRepository
+import com.bloodconnect.utils.UserLocation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +25,10 @@ import kotlin.math.sqrt
  * @property isLoading Indicates whether a donor retrieval request is in progress.
  * @property allDonors Complete unfiltered list of donors retrieved from [DonorRepository].
  * @property donors Filtered and sorted donor results ready for UI display.
+ * @property donorDistances Map of donor ID to calculated proximity distance in kilometers.
+ * @property userLocation Current geographic coordinates obtained from LocationHelper, or null if unavailable.
+ * @property isLocationPermissionGranted True if location permission was granted by user.
+ * @property isDistanceFilterAvailable True when device coordinates are available for distance filtering.
  * @property selectedBloodGroup Active blood group filter, or null if all groups are included.
  * @property locationQuery Active locality text query filter.
  * @property maxDistanceKm Maximum proximity distance threshold in kilometers.
@@ -35,6 +40,10 @@ data class DonorSearchUiState(
     val isLoading: Boolean = false,
     val allDonors: List<Donor> = emptyList(),
     val donors: List<Donor> = emptyList(),
+    val donorDistances: Map<String, Double> = emptyMap(),
+    val userLocation: UserLocation? = null,
+    val isLocationPermissionGranted: Boolean = false,
+    val isDistanceFilterAvailable: Boolean = false,
     val selectedBloodGroup: BloodGroup? = null,
     val locationQuery: String = "",
     val maxDistanceKm: Int = 50,
@@ -69,18 +78,20 @@ class DonorSearchViewModel @Inject constructor(
             result.fold(
                 onSuccess = { fetchedDonors ->
                     val currentState = _uiState.value
-                    val filtered = applyFiltersAndSort(
+                    val (filtered, distances) = applyFiltersAndSort(
                         donors = fetchedDonors,
                         bloodGroup = currentState.selectedBloodGroup,
                         locationQuery = currentState.locationQuery,
                         maxDistanceKm = currentState.maxDistanceKm,
-                        sortOrder = currentState.sortOrder
+                        sortOrder = currentState.sortOrder,
+                        userLocation = currentState.userLocation
                     )
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             allDonors = fetchedDonors,
                             donors = filtered,
+                            donorDistances = distances,
                             isEmpty = filtered.isEmpty(),
                             errorMessage = null
                         )
@@ -100,19 +111,57 @@ class DonorSearchViewModel @Inject constructor(
     }
 
     /**
+     * Updates device user location coordinates obtained through LocationHelper.
+     * Recalculates donor distances and reapplies radius filtering and distance sorting.
+     */
+    fun setUserLocation(location: UserLocation?) {
+        _uiState.update { state ->
+            val (filtered, distances) = applyFiltersAndSort(
+                donors = state.allDonors,
+                bloodGroup = state.selectedBloodGroup,
+                locationQuery = state.locationQuery,
+                maxDistanceKm = state.maxDistanceKm,
+                sortOrder = state.sortOrder,
+                userLocation = location
+            )
+            state.copy(
+                userLocation = location,
+                isDistanceFilterAvailable = location != null,
+                donorDistances = distances,
+                donors = filtered,
+                isEmpty = filtered.isEmpty()
+            )
+        }
+    }
+
+    /**
+     * Updates permission status. If revoked, clears cached location.
+     */
+    fun setLocationPermissionGranted(isGranted: Boolean) {
+        _uiState.update { state ->
+            state.copy(isLocationPermissionGranted = isGranted)
+        }
+        if (!isGranted) {
+            setUserLocation(null)
+        }
+    }
+
+    /**
      * Updates the selected blood group filter and recalculates results.
      */
     fun setBloodGroup(bloodGroup: BloodGroup?) {
         _uiState.update { state ->
-            val filtered = applyFiltersAndSort(
+            val (filtered, distances) = applyFiltersAndSort(
                 donors = state.allDonors,
                 bloodGroup = bloodGroup,
                 locationQuery = state.locationQuery,
                 maxDistanceKm = state.maxDistanceKm,
-                sortOrder = state.sortOrder
+                sortOrder = state.sortOrder,
+                userLocation = state.userLocation
             )
             state.copy(
                 selectedBloodGroup = bloodGroup,
+                donorDistances = distances,
                 donors = filtered,
                 isEmpty = filtered.isEmpty()
             )
@@ -132,15 +181,17 @@ class DonorSearchViewModel @Inject constructor(
      */
     fun setLocationQuery(query: String) {
         _uiState.update { state ->
-            val filtered = applyFiltersAndSort(
+            val (filtered, distances) = applyFiltersAndSort(
                 donors = state.allDonors,
                 bloodGroup = state.selectedBloodGroup,
                 locationQuery = query,
                 maxDistanceKm = state.maxDistanceKm,
-                sortOrder = state.sortOrder
+                sortOrder = state.sortOrder,
+                userLocation = state.userLocation
             )
             state.copy(
                 locationQuery = query,
+                donorDistances = distances,
                 donors = filtered,
                 isEmpty = filtered.isEmpty()
             )
@@ -152,15 +203,17 @@ class DonorSearchViewModel @Inject constructor(
      */
     fun setMaxDistanceKm(distanceKm: Int) {
         _uiState.update { state ->
-            val filtered = applyFiltersAndSort(
+            val (filtered, distances) = applyFiltersAndSort(
                 donors = state.allDonors,
                 bloodGroup = state.selectedBloodGroup,
                 locationQuery = state.locationQuery,
                 maxDistanceKm = distanceKm,
-                sortOrder = state.sortOrder
+                sortOrder = state.sortOrder,
+                userLocation = state.userLocation
             )
             state.copy(
                 maxDistanceKm = distanceKm,
+                donorDistances = distances,
                 donors = filtered,
                 isEmpty = filtered.isEmpty()
             )
@@ -172,15 +225,17 @@ class DonorSearchViewModel @Inject constructor(
      */
     fun setSortOrder(sortOrder: DistanceSortOrder) {
         _uiState.update { state ->
-            val filtered = applyFiltersAndSort(
+            val (filtered, distances) = applyFiltersAndSort(
                 donors = state.allDonors,
                 bloodGroup = state.selectedBloodGroup,
                 locationQuery = state.locationQuery,
                 maxDistanceKm = state.maxDistanceKm,
-                sortOrder = sortOrder
+                sortOrder = sortOrder,
+                userLocation = state.userLocation
             )
             state.copy(
                 sortOrder = sortOrder,
+                donorDistances = distances,
                 donors = filtered,
                 isEmpty = filtered.isEmpty()
             )
@@ -192,18 +247,20 @@ class DonorSearchViewModel @Inject constructor(
      */
     fun clearFilters() {
         _uiState.update { state ->
-            val filtered = applyFiltersAndSort(
+            val (filtered, distances) = applyFiltersAndSort(
                 donors = state.allDonors,
                 bloodGroup = null,
                 locationQuery = "",
                 maxDistanceKm = 50,
-                sortOrder = DistanceSortOrder.NEAREST
+                sortOrder = DistanceSortOrder.NEAREST,
+                userLocation = state.userLocation
             )
             state.copy(
                 selectedBloodGroup = null,
                 locationQuery = "",
                 maxDistanceKm = 50,
                 sortOrder = DistanceSortOrder.NEAREST,
+                donorDistances = distances,
                 donors = filtered,
                 isEmpty = filtered.isEmpty(),
                 errorMessage = null
@@ -216,30 +273,80 @@ class DonorSearchViewModel @Inject constructor(
         bloodGroup: BloodGroup?,
         locationQuery: String,
         maxDistanceKm: Int,
-        sortOrder: DistanceSortOrder
-    ): List<Donor> {
+        sortOrder: DistanceSortOrder,
+        userLocation: UserLocation?
+    ): Pair<List<Donor>, Map<String, Double>> {
+        val distances = mutableMapOf<String, Double>()
+        if (userLocation != null) {
+            for (donor in donors) {
+                if (donor.latitude != null && donor.longitude != null) {
+                    val dist = calculateDistanceKm(
+                        userLat = userLocation.latitude,
+                        userLon = userLocation.longitude,
+                        donorLat = donor.latitude,
+                        donorLon = donor.longitude
+                    )
+                    distances[donor.id] = dist
+                }
+            }
+        }
+
         val filtered = donors.filter { donor ->
             val matchesBlood = bloodGroup == null || donor.bloodGroup == bloodGroup
             val matchesLocation = locationQuery.isBlank() || donor.locality.contains(locationQuery.trim(), ignoreCase = true)
-            val distance = estimateDistanceKm(donor)
-            val matchesDistance = distance <= maxDistanceKm
+
+            val matchesDistance = if (userLocation == null) {
+                // If location is unavailable, distance filtering is disabled
+                true
+            } else {
+                val dist = distances[donor.id]
+                if (dist != null) {
+                    dist <= maxDistanceKm
+                } else {
+                    // Gracefully retain donors with missing coordinates without claiming fake distances
+                    true
+                }
+            }
             matchesBlood && matchesLocation && matchesDistance
         }
 
-        return when (sortOrder) {
-            DistanceSortOrder.NEAREST -> filtered.sortedBy { estimateDistanceKm(it) }
-            DistanceSortOrder.FARTHEST -> filtered.sortedByDescending { estimateDistanceKm(it) }
+        val sorted = when (sortOrder) {
+            DistanceSortOrder.NEAREST -> {
+                if (userLocation == null) {
+                    filtered
+                } else {
+                    filtered.sortedWith(
+                        compareBy<Donor> { distances[it.id] == null }
+                            .thenBy { distances[it.id] ?: Double.MAX_VALUE }
+                    )
+                }
+            }
+            DistanceSortOrder.FARTHEST -> {
+                if (userLocation == null) {
+                    filtered
+                } else {
+                    filtered.sortedWith(
+                        compareBy<Donor> { distances[it.id] == null }
+                            .thenByDescending { distances[it.id] ?: Double.MIN_VALUE }
+                    )
+                }
+            }
         }
+
+        return Pair(sorted, distances)
     }
 
-    private fun estimateDistanceKm(donor: Donor, refLat: Double = 19.0760, refLon: Double = 72.8777): Double {
-        val lat = donor.latitude ?: return 10.0
-        val lon = donor.longitude ?: return 10.0
+    private fun calculateDistanceKm(
+        userLat: Double,
+        userLon: Double,
+        donorLat: Double,
+        donorLon: Double
+    ): Double {
         val earthRadiusKm = 6371.0
-        val dLat = Math.toRadians(lat - refLat)
-        val dLon = Math.toRadians(lon - refLon)
+        val dLat = Math.toRadians(donorLat - userLat)
+        val dLon = Math.toRadians(donorLon - userLon)
         val a = sin(dLat / 2) * sin(dLat / 2) +
-                cos(Math.toRadians(refLat)) * cos(Math.toRadians(lat)) *
+                cos(Math.toRadians(userLat)) * cos(Math.toRadians(donorLat)) *
                 sin(dLon / 2) * sin(dLon / 2)
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return earthRadiusKm * c

@@ -22,4 +22,8 @@ object FirebaseModule {
     @Provides
     @Singleton
     fun provideFirebaseFirestore(): FirebaseFirestore = Firebase.firestore
+
+    @Provides
+    @Singleton
+    fun provideDonorRepository(impl: com.bloodconnect.data.repository.DonorRepositoryImpl): com.bloodconnect.data.repository.DonorRepository = impl
 }

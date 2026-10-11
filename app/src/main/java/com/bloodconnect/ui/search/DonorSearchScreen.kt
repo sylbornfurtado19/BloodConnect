@@ -1,7 +1,9 @@
 package com.bloodconnect.ui.search
 
+import android.Manifest
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -20,11 +22,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -41,23 +45,30 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.bloodconnect.data.model.BloodGroup
+import com.bloodconnect.data.model.Donor
 import com.bloodconnect.ui.components.BloodConnectButton
 import com.bloodconnect.ui.components.BloodConnectTextField
 import com.bloodconnect.ui.components.BloodGroupBadge
 import com.bloodconnect.ui.components.EmptyState
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
+import com.bloodconnect.utils.LocationHelper
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 /**
  * Sorting orders available for distance filtering.
@@ -71,47 +82,48 @@ private val bloodGroupsList = listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+",
 private val distanceOptions = listOf(5, 10, 25, 50)
 
 /**
- * Screen for searching volunteer blood donors by blood type, location, and radius.
- * Powered by local Compose state with sample demonstration records.
+ * Screen for discovering and searching volunteer blood donors by blood type, location, and radius.
+ * Connected to [DonorSearchViewModel] and [LocationHelper] for location-aware filtering.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun DonorSearchScreen(
     onNavigateBack: () -> Unit,
     onNavigateToDonorDetail: (String) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: DonorSearchViewModel = hiltViewModel()
 ) {
-    // Local filter and sort states
-    var selectedBloodGroup by remember { mutableStateOf<String?>(null) }
-    var locationInput by remember { mutableStateOf("") }
-    var selectedDistanceKm by remember { mutableIntStateOf(50) }
-    var sortOrder by remember { mutableStateOf(DistanceSortOrder.NEAREST) }
-    var displayedDonors by remember { mutableStateOf(defaultSampleDonors) }
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val locationHelper = remember { LocationHelper(context) }
 
-    fun applyFilters(
-        group: String? = selectedBloodGroup,
-        location: String = locationInput,
-        distance: Int = selectedDistanceKm,
-        sort: DistanceSortOrder = sortOrder
-    ) {
-        val filtered = defaultSampleDonors.filter { donor ->
-            val matchesBlood = group == null || donor.bloodGroup.equals(group, ignoreCase = true)
-            val matchesLocation = location.isBlank() || donor.location.contains(location.trim(), ignoreCase = true)
-            val matchesDistance = donor.distanceKm <= distance
-            matchesBlood && matchesLocation && matchesDistance
-        }
-        displayedDonors = when (sort) {
-            DistanceSortOrder.NEAREST -> filtered.sortedBy { it.distanceKm }
-            DistanceSortOrder.FARTHEST -> filtered.sortedByDescending { it.distanceKm }
+    // Request runtime location permissions using Accompanist
+    val locationPermissionsState = rememberMultiplePermissionsState(
+        permissions = listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    )
+
+    val hasLocationPermission = locationPermissionsState.allPermissionsGranted ||
+            locationPermissionsState.permissions.any { it.status.isGranted }
+
+    // Request permission on initial screen entry if not granted
+    LaunchedEffect(Unit) {
+        if (!hasLocationPermission) {
+            locationPermissionsState.launchMultiplePermissionRequest()
         }
     }
 
-    fun clearFilters() {
-        selectedBloodGroup = null
-        locationInput = ""
-        selectedDistanceKm = 50
-        sortOrder = DistanceSortOrder.NEAREST
-        displayedDonors = defaultSampleDonors.sortedBy { it.distanceKm }
+    // Resolve device location when permission changes
+    LaunchedEffect(hasLocationPermission) {
+        viewModel.setLocationPermissionGranted(hasLocationPermission)
+        if (hasLocationPermission) {
+            val locationResult = locationHelper.getCurrentLocation()
+            viewModel.setUserLocation(locationResult.getOrNull())
+        } else {
+            viewModel.setUserLocation(null)
+        }
     }
 
     Scaffold(
@@ -157,10 +169,59 @@ fun DonorSearchScreen(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Filter available sample donors by blood group, locality, and search radius.",
+                text = "Filter available volunteer donors by blood group, locality, and search radius.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            // Permission / Location Unavailable Notice Banner
+            if (!uiState.isDistanceFilterAvailable) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                    ),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Location Notice",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(24.dp)
+                        )
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (!hasLocationPermission) "Location Permission Denied" else "Location Unavailable",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "Distance filtering and radius sorting are unavailable. You can still search donors by blood group and locality.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+
+                        if (!hasLocationPermission) {
+                            OutlinedButton(
+                                onClick = { locationPermissionsState.launchMultiplePermissionRequest() },
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Grant")
+                            }
+                        }
+                    }
+                }
+            }
 
             // Search Filters Card
             Card(
@@ -190,11 +251,8 @@ fun DonorSearchScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             FilterChip(
-                                selected = selectedBloodGroup == null,
-                                onClick = {
-                                    selectedBloodGroup = null
-                                    applyFilters(group = null)
-                                },
+                                selected = uiState.selectedBloodGroup == null,
+                                onClick = { viewModel.setBloodGroup(null as BloodGroup?) },
                                 label = { Text("All") },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -203,12 +261,15 @@ fun DonorSearchScreen(
                             )
 
                             bloodGroupsList.forEach { group ->
+                                val isSelected = uiState.selectedBloodGroup?.displayName == group
                                 FilterChip(
-                                    selected = selectedBloodGroup == group,
+                                    selected = isSelected,
                                     onClick = {
-                                        val newGroup = if (selectedBloodGroup == group) null else group
-                                        selectedBloodGroup = newGroup
-                                        applyFilters(group = newGroup)
+                                        if (isSelected) {
+                                            viewModel.setBloodGroup(null as BloodGroup?)
+                                        } else {
+                                            viewModel.setBloodGroup(group)
+                                        }
                                     },
                                     label = { Text(group) },
                                     colors = FilterChipDefaults.filterChipColors(
@@ -222,19 +283,23 @@ fun DonorSearchScreen(
 
                     // Location Input
                     BloodConnectTextField(
-                        value = locationInput,
-                        onValueChange = { locationInput = it },
+                        value = uiState.locationQuery,
+                        onValueChange = { viewModel.setLocationQuery(it) },
                         label = "Location / Locality",
                         placeholder = "e.g., Central, Metro, Eastside",
                         leadingIcon = Icons.Default.Place,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { applyFilters() })
+                        keyboardActions = KeyboardActions(onSearch = { viewModel.setLocationQuery(uiState.locationQuery) })
                     )
 
                     // Distance Radius Selector
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "Maximum Radius: ${selectedDistanceKm} km",
+                            text = if (uiState.isDistanceFilterAvailable) {
+                                "Maximum Radius: ${uiState.maxDistanceKm} km"
+                            } else {
+                                "Maximum Radius: ${uiState.maxDistanceKm} km (Distance filter unavailable)"
+                            },
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -246,11 +311,8 @@ fun DonorSearchScreen(
                         ) {
                             distanceOptions.forEach { radius ->
                                 FilterChip(
-                                    selected = selectedDistanceKm == radius,
-                                    onClick = {
-                                        selectedDistanceKm = radius
-                                        applyFilters(distance = radius)
-                                    },
+                                    selected = uiState.maxDistanceKm == radius,
+                                    onClick = { viewModel.setMaxDistanceKm(radius) },
                                     label = { Text("${radius} km") },
                                     modifier = Modifier.weight(1f),
                                     colors = FilterChipDefaults.filterChipColors(
@@ -270,12 +332,12 @@ fun DonorSearchScreen(
                         BloodConnectButton(
                             text = "Search Donors",
                             icon = Icons.Default.Search,
-                            onClick = { applyFilters() },
+                            onClick = { viewModel.loadDonors() },
                             modifier = Modifier.weight(1f)
                         )
 
                         OutlinedButton(
-                            onClick = { clearFilters() },
+                            onClick = { viewModel.clearFilters() },
                             modifier = Modifier.height(50.dp),
                             shape = RoundedCornerShape(12.dp)
                         ) {
@@ -287,9 +349,11 @@ fun DonorSearchScreen(
 
             // Results Section Header
             SectionHeader(
-                title = "Donor Results (Sample)",
-                subtitle = if (displayedDonors.isNotEmpty()) {
-                    "Found ${displayedDonors.size} sample matching donor(s)"
+                title = "Donor Results",
+                subtitle = if (uiState.isLoading) {
+                    "Loading available donors..."
+                } else if (uiState.donors.isNotEmpty()) {
+                    "Found ${uiState.donors.size} matching donor(s)"
                 } else {
                     "No results found"
                 }
@@ -330,11 +394,8 @@ fun DonorSearchScreen(
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
-                            selected = sortOrder == DistanceSortOrder.NEAREST,
-                            onClick = {
-                                sortOrder = DistanceSortOrder.NEAREST
-                                applyFilters(sort = DistanceSortOrder.NEAREST)
-                            },
+                            selected = uiState.sortOrder == DistanceSortOrder.NEAREST,
+                            onClick = { viewModel.setSortOrder(DistanceSortOrder.NEAREST) },
                             label = { Text("Nearest first", style = MaterialTheme.typography.labelSmall) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -343,11 +404,8 @@ fun DonorSearchScreen(
                         )
 
                         FilterChip(
-                            selected = sortOrder == DistanceSortOrder.FARTHEST,
-                            onClick = {
-                                sortOrder = DistanceSortOrder.FARTHEST
-                                applyFilters(sort = DistanceSortOrder.FARTHEST)
-                            },
+                            selected = uiState.sortOrder == DistanceSortOrder.FARTHEST,
+                            onClick = { viewModel.setSortOrder(DistanceSortOrder.FARTHEST) },
                             label = { Text("Farthest first", style = MaterialTheme.typography.labelSmall) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -358,19 +416,34 @@ fun DonorSearchScreen(
                 }
             }
 
-            if (displayedDonors.isEmpty()) {
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            } else if (uiState.donors.isEmpty()) {
                 EmptyState(
                     title = "No Matching Donors",
-                    description = "No sample donors match your current filter combination. Try expanding the search radius or resetting the filters.",
+                    description = if (!uiState.isDistanceFilterAvailable) {
+                        "No donors match your blood group and locality filter. Try clearing or broadening the search."
+                    } else {
+                        "No donors match your current filter combination. Try expanding the search radius or resetting the filters."
+                    },
                     icon = Icons.Default.SearchOff,
                     actionLabel = "Reset Filters",
-                    onActionClick = { clearFilters() }
+                    onActionClick = { viewModel.clearFilters() }
                 )
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    displayedDonors.forEach { donor ->
+                    uiState.donors.forEach { donor ->
                         DonorResultCard(
                             donor = donor,
+                            distanceKm = uiState.donorDistances[donor.id],
+                            isDistanceFilterAvailable = uiState.isDistanceFilterAvailable,
                             onViewDetails = { onNavigateToDonorDetail(donor.id) }
                         )
                     }
@@ -389,11 +462,13 @@ fun DonorSearchScreen(
 }
 
 /**
- * Result card displaying individual sample donor information.
+ * Result card displaying individual donor information with proximity distance or unavailable notice.
  */
 @Composable
 private fun DonorResultCard(
-    donor: SampleDonor,
+    donor: Donor,
+    distanceKm: Double?,
+    isDistanceFilterAvailable: Boolean,
     onViewDetails: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -417,7 +492,7 @@ private fun DonorResultCard(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 BloodGroupBadge(
-                    bloodGroup = donor.bloodGroup,
+                    bloodGroup = donor.bloodGroup.displayName,
                     size = 48.dp
                 )
 
@@ -426,7 +501,7 @@ private fun DonorResultCard(
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
-                        text = donor.label,
+                        text = donor.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -443,23 +518,33 @@ private fun DonorResultCard(
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
-                            text = donor.location,
+                            text = donor.locality,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
+                    val distanceLabel = if (isDistanceFilterAvailable && distanceKm != null) {
+                        "Approx. ${distanceKm.toInt()} km away"
+                    } else {
+                        "Distance unavailable"
+                    }
+
                     Text(
-                        text = "Approx. ${donor.distanceKm} km away",
+                        text = distanceLabel,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = if (isDistanceFilterAvailable && distanceKm != null) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                         fontWeight = FontWeight.Medium
                     )
                 }
 
                 SuggestionChip(
                     onClick = onViewDetails,
-                    label = { Text(donor.status) },
+                    label = { Text(if (donor.isAvailable) "Available" else "Unavailable") },
                     colors = SuggestionChipDefaults.suggestionChipColors(
                         containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
                         labelColor = MaterialTheme.colorScheme.tertiary
@@ -474,7 +559,7 @@ private fun DonorResultCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Sample Volunteer Record",
+                    text = "Volunteer Record",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
@@ -492,7 +577,7 @@ private fun DonorResultCard(
                     Spacer(modifier = Modifier.size(4.dp))
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "View Details for ${donor.label}",
+                        contentDescription = "View Details for ${donor.name}",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp)
                     )
