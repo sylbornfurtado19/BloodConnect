@@ -132,6 +132,41 @@ class AuthViewModel @Inject constructor(
     }
 
     /**
+     * Authenticates with Google and creates a Firestore profile if it's a new user.
+     */
+    fun signInWithGoogle(idToken: String, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            updateState(AuthUiState.Loading)
+            val authResult = authRepository.signInWithGoogle(idToken)
+            if (authResult.isSuccess) {
+                val firebaseUser = authResult.getOrNull()
+                if (firebaseUser != null) {
+                    val existingUser = userRepository.getUser(firebaseUser.uid)
+                    if (existingUser.isSuccess && existingUser.getOrNull() == null) {
+                        val newUser = User(
+                            uid = firebaseUser.uid,
+                            id = firebaseUser.uid,
+                            email = firebaseUser.email ?: "",
+                            fullName = firebaseUser.displayName ?: "Google User",
+                            displayName = firebaseUser.displayName ?: "Google User"
+                        )
+                        userRepository.saveUser(newUser)
+                    }
+                    updateState(AuthUiState.Success)
+                    withContext(Dispatchers.Main) {
+                        onSuccess()
+                    }
+                } else {
+                    updateState(AuthUiState.Error("Google Sign-In failed"))
+                }
+            } else {
+                val errorMessage = authResult.exceptionOrNull()?.localizedMessage ?: "Google Sign-In failed"
+                updateState(AuthUiState.Error(errorMessage))
+            }
+        }
+    }
+
+    /**
      * Alias for [signUp] for API consistency.
      */
     fun register(
