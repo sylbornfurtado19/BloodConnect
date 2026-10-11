@@ -9,73 +9,166 @@ import com.bloodconnect.data.model.User
 import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
+/**
+ * Represents the distinct UI states for authentication flows.
+ */
 sealed interface AuthUiState {
-    object Idle : AuthUiState
-    object Loading : AuthUiState
-    object Success : AuthUiState
+    data object Idle : AuthUiState
+    data object Loading : AuthUiState
+    data object Success : AuthUiState
     data class Error(val message: String) : AuthUiState
 }
 
+/**
+ * ViewModel managing user authentication workflows (login, registration, sign-out).
+ * Exposes observable StateFlow alongside Compose state and executes all auth operations
+ * off the main thread. Never stores or logs passwords in UI state.
+ */
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository
 ) : ViewModel() {
 
+    private val _uiStateFlow = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
+    val uiStateFlow: StateFlow<AuthUiState> = _uiStateFlow.asStateFlow()
+
     var uiState: AuthUiState by mutableStateOf(AuthUiState.Idle)
         private set
 
-    fun signIn(email: String, pass: String, onSuccess: () -> Unit) {
-        if (email.isBlank() || pass.isBlank()) {
-            uiState = AuthUiState.Error("Please fill in all fields")
+    private fun updateState(newState: AuthUiState) {
+        _uiStateFlow.value = newState
+        uiState = newState
+    }
+
+    /**
+     * Authenticates an existing user with email and password credentials.
+     * Keeps execution on Dispatchers.IO and never stores passwords in state.
+     */
+    fun signIn(email: String, pass: String, onSuccess: () -> Unit = {}) {
+        val trimmedEmail = email.trim()
+        if (trimmedEmail.isBlank() || pass.isBlank()) {
+            updateState(AuthUiState.Error("Please fill in all fields"))
             return
         }
-        viewModelScope.launch {
-            uiState = AuthUiState.Loading
-            val result = authRepository.signIn(email, pass)
+
+        viewModelScope.launch(Dispatchers.IO) {
+            updateState(AuthUiState.Loading)
+            val result = authRepository.signIn(trimmedEmail, pass)
             if (result.isSuccess) {
-                uiState = AuthUiState.Success
-                onSuccess()
+                updateState(AuthUiState.Success)
+                withContext(Dispatchers.Main) {
+                    onSuccess()
+                }
             } else {
-                uiState = AuthUiState.Error(result.exceptionOrNull()?.localizedMessage ?: "Sign in failed")
+                val errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Sign in failed"
+                updateState(AuthUiState.Error(errorMessage))
             }
         }
     }
 
-    fun signUp(fullName: String, bloodGroup: String, email: String, pass: String, phone: String, onSuccess: () -> Unit) {
-        if (fullName.isBlank() || bloodGroup.isBlank() || email.isBlank() || pass.isBlank()) {
-            uiState = AuthUiState.Error("Please fill in all required fields")
+    /**
+     * Registers a new donor account with profile details and credentials.
+     */
+    fun signUp(
+        fullName: String,
+        bloodGroup: String,
+        email: String,
+        pass: String,
+        phone: String = "",
+        onSuccess: () -> Unit = {}
+    ) {
+        val trimmedFullName = fullName.trim()
+        val trimmedBloodGroup = bloodGroup.trim()
+        val trimmedEmail = email.trim()
+        val trimmedPhone = phone.trim()
+
+        if (trimmedFullName.isBlank() || trimmedBloodGroup.isBlank() || trimmedEmail.isBlank() || pass.isBlank()) {
+            updateState(AuthUiState.Error("Please fill in all required fields"))
             return
         }
-        viewModelScope.launch {
-            uiState = AuthUiState.Loading
-            val authResult = authRepository.signUp(email, pass)
+
+        viewModelScope.launch(Dispatchers.IO) {
+            updateState(AuthUiState.Loading)
+            val authResult = authRepository.signUp(trimmedEmail, pass)
             if (authResult.isSuccess) {
                 val firebaseUser = authResult.getOrNull()
                 if (firebaseUser != null) {
                     val user = User(
                         uid = firebaseUser.uid,
-                        email = email,
-                        fullName = fullName,
-                        bloodGroup = bloodGroup,
-                        phone = phone
+                        id = firebaseUser.uid,
+                        email = trimmedEmail,
+                        fullName = trimmedFullName,
+                        displayName = trimmedFullName,
+                        bloodGroup = trimmedBloodGroup,
+                        phone = trimmedPhone
                     )
                     val saveResult = userRepository.saveUser(user)
                     if (saveResult.isSuccess) {
-                        uiState = AuthUiState.Success
-                        onSuccess()
+                        updateState(AuthUiState.Success)
+                        withContext(Dispatchers.Main) {
+                            onSuccess()
+                        }
                     } else {
-                        uiState = AuthUiState.Error(saveResult.exceptionOrNull()?.localizedMessage ?: "Failed to save profile")
+                        val errorMessage = saveResult.exceptionOrNull()?.localizedMessage ?: "Failed to save profile"
+                        updateState(AuthUiState.Error(errorMessage))
                     }
                 } else {
-                    uiState = AuthUiState.Error("User creation failed")
+                    updateState(AuthUiState.Error("User creation failed"))
                 }
             } else {
-                uiState = AuthUiState.Error(authResult.exceptionOrNull()?.localizedMessage ?: "Sign up failed")
+                val errorMessage = authResult.exceptionOrNull()?.localizedMessage ?: "Sign up failed"
+                updateState(AuthUiState.Error(errorMessage))
             }
         }
+    }
+
+    /**
+     * Alias for [signUp] for API consistency.
+     */
+    fun register(
+        fullName: String,
+        bloodGroup: String,
+        email: String,
+        pass: String,
+        phone: String = "",
+        onSuccess: () -> Unit = {}
+    ) = signUp(fullName, bloodGroup, email, pass, phone, onSuccess)
+
+    /**
+     * Signs out the currently authenticated user.
+     */
+    fun signOut(onSuccess: () -> Unit = {}) {
+        viewModelScope.launch(Dispatchers.IO) {
+            authRepository.signOut()
+            updateState(AuthUiState.Idle)
+            withContext(Dispatchers.Main) {
+                onSuccess()
+            }
+        }
+    }
+
+    /**
+     * Resets the active error state back to Idle.
+     */
+    fun clearError() {
+        if (uiState is AuthUiState.Error) {
+            updateState(AuthUiState.Idle)
+        }
+    }
+
+    /**
+     * Resets state back to Idle.
+     */
+    fun resetState() {
+        updateState(AuthUiState.Idle)
     }
 }
