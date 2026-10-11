@@ -1,51 +1,40 @@
 package com.bloodconnect.data.repository
 
-import com.bloodconnect.data.model.BloodGroup
-import com.bloodconnect.data.model.User
-import kotlinx.coroutines.flow.Flow
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
 
-/**
- * Repository interface managing user authentication, registration, and active session observation.
- */
-interface AuthRepository {
+@Singleton
+class AuthRepository @Inject constructor(
+    private val auth: FirebaseAuth
+) {
+    val currentUser: FirebaseUser?
+        get() = auth.currentUser
 
-    /**
-     * Observes the currently authenticated user session as a continuous [Flow].
-     * Emits `null` when no user is signed in.
-     */
-    fun observeCurrentUser(): Flow<User?>
+    val currentUserId: String?
+        get() = auth.currentUser?.uid
 
-    /**
-     * Signs in an existing user with email and password credentials.
-     *
-     * @param email User's registered email address.
-     * @param password User's secret password.
-     * @return [Result] enclosing the authenticated [User] on success or an error on failure.
-     */
-    suspend fun signIn(email: String, password: String): Result<User>
+    suspend fun signIn(email: String, pass: String): Result<FirebaseUser?> {
+        return try {
+            val authResult = auth.signInWithEmailAndPassword(email, pass).await()
+            Result.success(authResult.user)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
-    /**
-     * Registers a new donor or recipient account.
-     *
-     * @param email Email address for the new account.
-     * @param password Password for account security.
-     * @param displayName User's full or preferred name.
-     * @param bloodGroup Registered blood group.
-     * @param locality User's city, district, or operational area.
-     * @return [Result] enclosing the created [User] on success or an error on failure.
-     */
-    suspend fun register(
-        email: String,
-        password: String,
-        displayName: String,
-        bloodGroup: BloodGroup,
-        locality: String = ""
-    ): Result<User>
+    suspend fun signUp(email: String, pass: String): Result<FirebaseUser?> {
+        return try {
+            val authResult = auth.createUserWithEmailAndPassword(email, pass).await()
+            Result.success(authResult.user)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
-    /**
-     * Terminates the active user session and clears authentication tokens.
-     *
-     * @return [Result] indicating success or failure.
-     */
-    suspend fun signOut(): Result<Unit>
+    fun signOut() {
+        auth.signOut()
+    }
 }

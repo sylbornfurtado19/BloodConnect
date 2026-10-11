@@ -24,3 +24,9 @@ dependencyResolutionManagement {
 
 rootProject.name = "BloodConnect"
 include(":app")
+
+
+
+
+
+

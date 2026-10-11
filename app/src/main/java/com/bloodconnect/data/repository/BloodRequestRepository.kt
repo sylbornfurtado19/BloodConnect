@@ -1,51 +1,49 @@
 package com.bloodconnect.data.repository
 
 import com.bloodconnect.data.model.BloodRequest
-import com.bloodconnect.data.model.RequestStatus
-import kotlinx.coroutines.flow.Flow
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
 
-/**
- * Repository interface for creating, querying, and updating emergency blood requests.
- */
-interface BloodRequestRepository {
+@Singleton
+class BloodRequestRepository @Inject constructor(
+    private val firestore: FirebaseFirestore
+) {
+    private val requestsCollection = firestore.collection("blood_requests")
 
-    /**
-     * Submits and broadcasts a new emergency blood request.
-     *
-     * @param request Immutable [BloodRequest] entity to persist.
-     * @return [Result] containing the saved [BloodRequest] on success.
-     */
-    suspend fun createBloodRequest(request: BloodRequest): Result<BloodRequest>
+    suspend fun createRequest(request: BloodRequest): Result<String> {
+        return try {
+            val docRef = requestsCollection.document()
+            val newRequest = request.copy(requestId = docRef.id)
+            docRef.set(newRequest).await()
+            Result.success(docRef.id)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
-    /**
-     * Retrieves all blood requests submitted by a specific user.
-     *
-     * @param userId Unique identifier of the requester.
-     * @return [Result] containing the list of [BloodRequest] records.
-     */
-    suspend fun getRequestsForUser(userId: String): Result<List<BloodRequest>>
+    suspend fun getActiveRequests(): Result<List<BloodRequest>> {
+        return try {
+            val snapshot = requestsCollection
+                .whereEqualTo("status", "Active")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .get()
+                .await()
+            val list = snapshot.toObjects(BloodRequest::class.java)
+            Result.success(list)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
-    /**
-     * Observes blood requests submitted by a specific user as a continuous [Flow].
-     *
-     * @param userId Unique identifier of the requester.
-     * @return [Flow] emitting the updated list of user blood requests.
-     */
-    fun observeRequestsForUser(userId: String): Flow<List<BloodRequest>>
-
-    /**
-     * Updates the lifecycle status of an existing blood request.
-     *
-     * @param requestId Identifier of the request to update.
-     * @param status New [RequestStatus] to apply.
-     * @return [Result] indicating update outcome.
-     */
-    suspend fun updateRequestStatus(requestId: String, status: RequestStatus): Result<Unit>
-
-    /**
-     * Retrieves all active blood requests across the network.
-     *
-     * @return [Result] containing the list of all active [BloodRequest]s.
-     */
-    suspend fun getAllRequests(): Result<List<BloodRequest>>
+    suspend fun updateRequestStatus(requestId: String, status: String): Result<Unit> {
+        return try {
+            requestsCollection.document(requestId).update("status", status).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
