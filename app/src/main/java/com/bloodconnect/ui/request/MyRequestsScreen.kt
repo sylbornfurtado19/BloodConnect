@@ -47,12 +47,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.bloodconnect.data.model.RequestStatus
 import com.bloodconnect.ui.components.BloodGroupBadge
 import com.bloodconnect.ui.components.EmptyState
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
 
-private val statusFilterOptions = listOf("All", "Pending", "Fulfilled", "Cancelled")
+private val statusFilterOptions = listOf("All") + RequestStatus.entries.map { it.displayName }
 
 /**
  * Screen displaying the user's historical blood requests and their demonstration statuses.
@@ -71,7 +72,11 @@ fun MyRequestsScreen(
         if (selectedFilter == "All") {
             sampleMyRequestsList
         } else {
-            sampleMyRequestsList.filter { it.status.startsWith(selectedFilter, ignoreCase = true) }
+            val filterStatus = RequestStatus.fromString(selectedFilter)
+            sampleMyRequestsList.filter {
+                val reqStatus = RequestStatus.fromString(it.status)
+                reqStatus == filterStatus || it.status.startsWith(selectedFilter, ignoreCase = true)
+            }
         }
     }
 
@@ -305,19 +310,22 @@ fun MyRequestsScreen(
                                     }
                                 }
 
+                                val statusEnum = RequestStatus.fromString(req.status)
                                 SuggestionChip(
                                     onClick = {},
-                                    label = { Text(req.status) },
+                                    label = { Text(statusEnum?.displayName ?: req.status) },
                                     colors = SuggestionChipDefaults.suggestionChipColors(
-                                        containerColor = when {
-                                            req.status.startsWith("Pending", ignoreCase = true) -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
-                                            req.status.startsWith("Fulfilled", ignoreCase = true) -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                            else -> MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+                                        containerColor = when (statusEnum) {
+                                            RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                                            RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                            RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+                                            null -> MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
                                         },
-                                        labelColor = when {
-                                            req.status.startsWith("Pending", ignoreCase = true) -> MaterialTheme.colorScheme.tertiary
-                                            req.status.startsWith("Fulfilled", ignoreCase = true) -> MaterialTheme.colorScheme.primary
-                                            else -> MaterialTheme.colorScheme.error
+                                        labelColor = when (statusEnum) {
+                                            RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary
+                                            RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary
+                                            RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error
+                                            null -> MaterialTheme.colorScheme.error
                                         }
                                     ),
                                     shape = RoundedCornerShape(8.dp)
@@ -425,19 +433,22 @@ private fun MyRequestCard(
                     )
                 }
 
+                val statusEnum = RequestStatus.fromString(entry.status)
                 SuggestionChip(
                     onClick = onClick,
-                    label = { Text(entry.status) },
+                    label = { Text(statusEnum?.displayName ?: entry.status) },
                     colors = SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = when {
-                            entry.status.startsWith("Pending", ignoreCase = true) -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
-                            entry.status.startsWith("Fulfilled", ignoreCase = true) -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                            else -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                        containerColor = when (statusEnum) {
+                            RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+                            RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                            RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                            null -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
                         },
-                        labelColor = when {
-                            entry.status.startsWith("Pending", ignoreCase = true) -> MaterialTheme.colorScheme.tertiary
-                            entry.status.startsWith("Fulfilled", ignoreCase = true) -> MaterialTheme.colorScheme.primary
-                            else -> MaterialTheme.colorScheme.error
+                        labelColor = when (statusEnum) {
+                            RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary
+                            RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary
+                            RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error
+                            null -> MaterialTheme.colorScheme.error
                         }
                     ),
                     shape = RoundedCornerShape(8.dp)
