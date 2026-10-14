@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -50,6 +51,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +69,7 @@ import com.bloodconnect.ui.components.BloodConnectTextField
 import com.bloodconnect.ui.components.BloodGroupBadge
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
+import androidx.hilt.navigation.compose.hiltViewModel
 
 private val standardBloodGroups = listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-")
 
@@ -79,7 +82,8 @@ private val standardBloodGroups = listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "
 fun ProfileScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
-    onSignOut: (() -> Unit)? = null
+    onSignOut: (() -> Unit)? = null,
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
     // Active Profile Demo State (Fictional initial values)
     var displayName by remember { mutableStateOf("Alex Rivera") }
@@ -101,6 +105,17 @@ fun ProfileScreen(
 
     // Feedback Confirmation Dialog
     var showSuccessDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(viewModel.user) {
+        viewModel.user?.let { u ->
+            val name = u.displayName.ifBlank { u.fullName }
+            if (name.isNotBlank()) displayName = name
+            if (u.bloodGroup.isNotBlank()) bloodGroup = u.bloodGroup
+            if (u.locality.isNotBlank()) cityLocality = u.locality
+            if (u.email.isNotBlank()) contactInfo = u.email else if (u.phone.isNotBlank()) contactInfo = u.phone
+            isDonorAvailable = u.isAvailable
+        }
+    }
 
     fun startEditing() {
         editName = displayName
@@ -193,6 +208,17 @@ fun ProfileScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            if (viewModel.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            }
+
             // Demonstration Data Banner
             Card(
                 colors = CardDefaults.cardColors(

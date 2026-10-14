@@ -35,18 +35,24 @@ class ProfileViewModel @Inject constructor(
         val uid = authRepository.currentUserId
         if (uid == null) {
             errorMessage = "No authenticated user"
+            isLoading = false
             return
         }
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
-            val result = userRepository.getUser(uid)
-            if (result.isSuccess) {
-                user = result.getOrNull()
-            } else {
-                errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to load profile"
+            try {
+                val result = userRepository.getUser(uid)
+                if (result.isSuccess) {
+                    user = result.getOrNull()
+                } else {
+                    errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to load profile"
+                }
+            } catch (e: Exception) {
+                errorMessage = e.localizedMessage ?: "Failed to load profile"
+            } finally {
+                isLoading = false
             }
-            isLoading = false
         }
     }
 
