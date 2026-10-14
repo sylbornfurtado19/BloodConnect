@@ -46,7 +46,7 @@ object BloodRequestValidator {
     fun validateHospital(hospital: String): String? {
         val trimmed = hospital.trim()
         return when {
-            trimmed.isBlank() -> "Hospital or facility name is required"
+            trimmed.isBlank() -> "Hospital name is required"
             trimmed.length < 3 -> "Hospital name must be at least 3 characters"
             else -> null
         }
@@ -61,8 +61,8 @@ object BloodRequestValidator {
     fun validateCity(city: String): String? {
         val trimmed = city.trim()
         return when {
-            trimmed.isBlank() -> "City or locality is required"
-            trimmed.length < 2 -> "City or locality must be at least 2 characters"
+            trimmed.isBlank() -> "City is required"
+            trimmed.length < 2 -> "City must be at least 2 characters"
             else -> null
         }
     }

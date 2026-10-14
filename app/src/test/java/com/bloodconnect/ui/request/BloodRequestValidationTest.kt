@@ -160,11 +160,11 @@ class BloodRequestValidationTest {
     @Test
     fun validateHospital_blankOrEmpty_returnsRequiredErrorMessage() {
         assertEquals(
-            "Hospital or facility name is required",
+            "Hospital name is required",
             BloodRequestValidator.validateHospital("")
         )
         assertEquals(
-            "Hospital or facility name is required",
+            "Hospital name is required",
             BloodRequestValidator.validateHospital("   ")
         )
     }
@@ -210,11 +210,11 @@ class BloodRequestValidationTest {
     @Test
     fun validateCity_blankOrEmpty_returnsRequiredErrorMessage() {
         assertEquals(
-            "City or locality is required",
+            "City is required",
             BloodRequestValidator.validateCity("")
         )
         assertEquals(
-            "City or locality is required",
+            "City is required",
             BloodRequestValidator.validateCity("   ")
         )
     }
@@ -222,11 +222,11 @@ class BloodRequestValidationTest {
     @Test
     fun validateCity_singleCharacter_returnsMinLengthErrorMessage() {
         assertEquals(
-            "City or locality must be at least 2 characters",
+            "City must be at least 2 characters",
             BloodRequestValidator.validateCity("A")
         )
         assertEquals(
-            "City or locality must be at least 2 characters",
+            "City must be at least 2 characters",
             BloodRequestValidator.validateCity(" 7 ")
         )
     }
