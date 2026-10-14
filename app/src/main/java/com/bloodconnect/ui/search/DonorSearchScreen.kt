@@ -427,12 +427,8 @@ fun DonorSearchScreen(
                 }
             } else if (uiState.donors.isEmpty()) {
                 EmptyState(
-                    title = "No Matching Donors",
-                    description = if (!uiState.isDistanceFilterAvailable) {
-                        "No donors match your blood group and locality filter. Try clearing or broadening the search."
-                    } else {
-                        "No donors match your current filter combination. Try expanding the search radius or resetting the filters."
-                    },
+                    title = "No donors found",
+                    description = "Try changing your filters or expanding the search radius to find available donors.",
                     icon = Icons.Default.SearchOff,
                     actionLabel = "Reset Filters",
                     onActionClick = { viewModel.clearFilters() }
