@@ -32,16 +32,22 @@ class BloodRequestsViewModel @Inject constructor(
     }
 
     fun loadRequests() {
+        if (isLoading) return
+        isLoading = true
+        errorMessage = null
         viewModelScope.launch {
-            isLoading = true
-            errorMessage = null
-            val result = requestRepository.getActiveRequests()
-            if (result.isSuccess) {
-                requests = result.getOrDefault(emptyList())
-            } else {
-                errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to load requests"
+            try {
+                val result = requestRepository.getActiveRequests()
+                if (result.isSuccess) {
+                    requests = result.getOrDefault(emptyList())
+                } else {
+                    errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to load requests"
+                }
+            } catch (e: Exception) {
+                errorMessage = e.localizedMessage ?: "Failed to load requests"
+            } finally {
+                isLoading = false
             }
-            isLoading = false
         }
     }
 
@@ -54,26 +60,36 @@ class BloodRequestsViewModel @Inject constructor(
         urgency: String,
         onSuccess: () -> Unit
     ) {
+        if (isLoading) return
+        isLoading = true
+        errorMessage = null
         viewModelScope.launch {
-            isLoading = true
-            val canonicalUrgency = Urgency.fromStringOrDefault(urgency).displayName
-            val request = BloodRequest(
-                requesterId = requesterId,
-                requesterName = requesterName,
-                bloodGroup = bloodGroup,
-                hospital = hospital,
-                unitsNeeded = unitsNeeded,
-                urgency = canonicalUrgency,
-                status = RequestStatus.PENDING.displayName
-            )
-            val result = requestRepository.createRequest(request)
-            if (result.isSuccess) {
-                loadRequests()
-                onSuccess()
-            } else {
-                errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to create request"
+            try {
+                val canonicalUrgency = Urgency.fromStringOrDefault(urgency).displayName
+                val request = BloodRequest(
+                    requesterId = requesterId,
+                    requesterName = requesterName,
+                    bloodGroup = bloodGroup,
+                    hospital = hospital,
+                    unitsNeeded = unitsNeeded,
+                    urgency = canonicalUrgency,
+                    status = RequestStatus.PENDING.displayName
+                )
+                val result = requestRepository.createRequest(request)
+                if (result.isSuccess) {
+                    val reloadResult = requestRepository.getActiveRequests()
+                    if (reloadResult.isSuccess) {
+                        requests = reloadResult.getOrDefault(emptyList())
+                    }
+                    onSuccess()
+                } else {
+                    errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to create request"
+                }
+            } catch (e: Exception) {
+                errorMessage = e.localizedMessage ?: "Failed to create request"
+            } finally {
+                isLoading = false
             }
-            isLoading = false
         }
     }
 
