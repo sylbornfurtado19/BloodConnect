@@ -35,7 +35,7 @@ data class BloodRequest(
     @set:PropertyName("hospital")
     var hospital: String = "",
     val city: String = "",
-    val urgency: String = "Normal",
+    val urgency: String = Urgency.ROUTINE.displayName,
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
     @get:PropertyName("status")
@@ -145,6 +145,30 @@ data class BloodRequest(
      */
     fun withCanonicalStatus(): BloodRequest = copy(status = canonicalStatus)
 
+    // ------------------------------------------------------------------------
+    // Urgency Resolution Helpers
+    // ------------------------------------------------------------------------
+
+    /**
+     * Resolves the strongly-typed [Urgency] enum for this request.
+     * Legacy values like "Normal" or missing/blank values safely resolve to [Urgency.ROUTINE].
+     */
+    @get:Exclude
+    val urgencyLevel: Urgency
+        get() = Urgency.fromStringOrDefault(urgency, Urgency.ROUTINE)
+
+    /**
+     * Returns the standardized canonical urgency string ("Routine", "Urgent", "Critical").
+     */
+    @get:Exclude
+    val canonicalUrgency: String
+        get() = urgencyLevel.displayName
+
+    /**
+     * Returns a copy with the urgency normalized to the canonical representation.
+     */
+    fun withCanonicalUrgency(): BloodRequest = copy(urgency = canonicalUrgency)
+
     companion object {
         /**
          * Factory allowing instantiation with any combination of modern or legacy parameters.
@@ -160,7 +184,7 @@ data class BloodRequest(
             hospital: String = "",
             hospitalName: String = "",
             city: String = "",
-            urgency: String = "Normal",
+            urgency: String = Urgency.ROUTINE.displayName,
             latitude: Double = 0.0,
             longitude: Double = 0.0,
             status: String = RequestStatus.PENDING.displayName,
@@ -175,7 +199,7 @@ data class BloodRequest(
                 unitsNeeded = if (unitsNeeded != 1) unitsNeeded else unitsRequired,
                 hospital = hospital.ifBlank { hospitalName },
                 city = city,
-                urgency = urgency,
+                urgency = Urgency.fromStringOrDefault(urgency).displayName,
                 latitude = latitude,
                 longitude = longitude,
                 status = status,

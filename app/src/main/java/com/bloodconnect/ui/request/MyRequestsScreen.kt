@@ -48,12 +48,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bloodconnect.data.model.RequestStatus
+import com.bloodconnect.data.model.Urgency
 import com.bloodconnect.ui.components.BloodGroupBadge
 import com.bloodconnect.ui.components.EmptyState
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
 
 private val statusFilterOptions = listOf("All") + RequestStatus.entries.map { it.displayName }
+private val urgencyFilterOptions = listOf("All") + Urgency.entries.map { it.displayName }
 
 /**
  * Screen displaying the user's historical blood requests and their demonstration statuses.
@@ -66,17 +68,28 @@ fun MyRequestsScreen(
     modifier: Modifier = Modifier
 ) {
     var selectedFilter by remember { mutableStateOf("All") }
+    var selectedUrgencyFilter by remember { mutableStateOf("All") }
     var selectedRequestForDetails by remember { mutableStateOf<MySampleRequest?>(null) }
 
-    val displayedRequests = remember(selectedFilter) {
-        if (selectedFilter == "All") {
-            sampleMyRequestsList
-        } else {
-            val filterStatus = RequestStatus.fromString(selectedFilter)
-            sampleMyRequestsList.filter {
-                val reqStatus = RequestStatus.fromString(it.status)
-                reqStatus == filterStatus || it.status.startsWith(selectedFilter, ignoreCase = true)
+    val displayedRequests = remember(selectedFilter, selectedUrgencyFilter) {
+        sampleMyRequestsList.filter { req ->
+            val statusMatches = if (selectedFilter == "All") {
+                true
+            } else {
+                val filterStatus = RequestStatus.fromString(selectedFilter)
+                val reqStatus = RequestStatus.fromString(req.status)
+                reqStatus == filterStatus || req.status.startsWith(selectedFilter, ignoreCase = true)
             }
+
+            val urgencyMatches = if (selectedUrgencyFilter == "All") {
+                true
+            } else {
+                val filterUrgency = Urgency.fromString(selectedUrgencyFilter)
+                val reqUrgency = Urgency.fromStringOrDefault(req.urgency)
+                reqUrgency == filterUrgency || req.urgency.equals(selectedUrgencyFilter, ignoreCase = true)
+            }
+
+            statusMatches && urgencyMatches
         }
     }
 
@@ -175,7 +188,7 @@ fun MyRequestsScreen(
             ) {
                 Column(
                     modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
                         text = "Filter by Status",
@@ -202,6 +215,34 @@ fun MyRequestsScreen(
                             )
                         }
                     }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    Text(
+                        text = "Filter by Urgency",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        urgencyFilterOptions.forEach { urgencyOption ->
+                            FilterChip(
+                                selected = selectedUrgencyFilter == urgencyOption,
+                                onClick = { selectedUrgencyFilter = urgencyOption },
+                                label = { Text(urgencyOption) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onSecondary
+                                )
+                            )
+                        }
+                    }
                 }
             }
 
@@ -216,12 +257,22 @@ fun MyRequestsScreen(
             )
 
             if (displayedRequests.isEmpty()) {
+                val filterDesc = if (selectedFilter != "All" && selectedUrgencyFilter != "All") {
+                    "Status: $selectedFilter, Urgency: $selectedUrgencyFilter"
+                } else if (selectedFilter != "All") {
+                    "Status: $selectedFilter"
+                } else {
+                    "Urgency: $selectedUrgencyFilter"
+                }
                 EmptyState(
                     title = "No Requests Found",
-                    description = "No demonstration requests match the selected status filter ($selectedFilter).",
+                    description = "No demonstration requests match the selected filter ($filterDesc).",
                     icon = Icons.Default.Inbox,
                     actionLabel = "Show All Requests",
-                    onActionClick = { selectedFilter = "All" }
+                    onActionClick = {
+                        selectedFilter = "All"
+                        selectedUrgencyFilter = "All"
+                    }
                 )
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -338,7 +389,10 @@ fun MyRequestsScreen(
                             RequestDetailRow(label = "Date & Time", value = req.requestDate)
                             RequestDetailRow(label = "Hospital", value = req.hospital)
                             RequestDetailRow(label = "Locality", value = req.city)
-                            RequestDetailRow(label = "Urgency", value = req.urgency)
+                            RequestDetailRow(
+                                label = "Urgency",
+                                value = Urgency.fromStringOrDefault(req.urgency).displayName
+                            )
                             if (req.notes.isNotBlank()) {
                                 RequestDetailRow(label = "Notes", value = req.notes)
                             }
@@ -426,7 +480,7 @@ private fun MyRequestCard(
                     }
 
                     Text(
-                        text = "${entry.unitsNeeded} Unit(s) Needed · ${entry.urgency}",
+                        text = "${entry.unitsNeeded} Unit(s) Needed · ${Urgency.fromStringOrDefault(entry.urgency).displayName}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium

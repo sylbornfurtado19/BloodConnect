@@ -2,6 +2,7 @@ package com.bloodconnect.data.repository
 
 import com.bloodconnect.data.model.BloodRequest
 import com.bloodconnect.data.model.RequestStatus
+import com.bloodconnect.data.model.Urgency
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
@@ -19,9 +20,11 @@ class BloodRequestRepository @Inject constructor(
             val docRef = requestsCollection.document()
             val canonicalStatus = RequestStatus.fromString(request.status)?.displayName
                 ?: RequestStatus.PENDING.displayName
+            val canonicalUrgency = Urgency.fromStringOrDefault(request.urgency).displayName
             val newRequest = request.copy(
                 id = docRef.id,
-                status = canonicalStatus
+                status = canonicalStatus,
+                urgency = canonicalUrgency
             )
             docRef.set(newRequest).await()
             Result.success(docRef.id)
@@ -63,7 +66,7 @@ class BloodRequestRepository @Inject constructor(
 
             val combined = (canonicalList + legacyActiveList + legacyPendingList)
                 .distinctBy { it.id.ifBlank { it.requestId } }
-                .map { it.withCanonicalStatus() }
+                .map { it.withCanonicalStatus().withCanonicalUrgency() }
 
             Result.success(combined)
         } catch (e: Exception) {
@@ -78,8 +81,48 @@ class BloodRequestRepository @Inject constructor(
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .get()
                 .await()
-            val list = snapshot.toObjects(BloodRequest::class.java).map { it.withCanonicalStatus() }
+            val list = snapshot.toObjects(BloodRequest::class.java)
+                .map { it.withCanonicalStatus().withCanonicalUrgency() }
             Result.success(list)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getRequestsByUrgency(urgency: Urgency): Result<List<BloodRequest>> {
+        return getRequestsByUrgency(urgency.displayName)
+    }
+
+    suspend fun getRequestsByUrgency(urgency: String): Result<List<BloodRequest>> {
+        return try {
+            val targetUrgency = Urgency.fromStringOrDefault(urgency)
+            val snapshot = requestsCollection
+                .whereEqualTo("urgency", targetUrgency.displayName)
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .get()
+                .await()
+            val canonicalList = snapshot.toObjects(BloodRequest::class.java)
+
+            // Backward compatibility for legacy documents that have "Normal" when querying ROUTINE
+            val legacyNormalList = if (targetUrgency == Urgency.ROUTINE) {
+                try {
+                    val legacySnapshot = requestsCollection
+                        .whereEqualTo("urgency", "Normal")
+                        .get()
+                        .await()
+                    legacySnapshot.toObjects(BloodRequest::class.java)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            } else {
+                emptyList()
+            }
+
+            val combined = (canonicalList + legacyNormalList)
+                .distinctBy { it.id.ifBlank { it.requestId } }
+                .map { it.withCanonicalStatus().withCanonicalUrgency() }
+
+            Result.success(combined)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -97,5 +140,19 @@ class BloodRequestRepository @Inject constructor(
 
     suspend fun updateRequestStatus(requestId: String, status: RequestStatus): Result<Unit> {
         return updateRequestStatus(requestId, status.displayName)
+    }
+
+    suspend fun updateRequestUrgency(requestId: String, urgency: String): Result<Unit> {
+        return try {
+            val canonicalUrgency = Urgency.fromStringOrDefault(urgency).displayName
+            requestsCollection.document(requestId).update("urgency", canonicalUrgency).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateRequestUrgency(requestId: String, urgency: Urgency): Result<Unit> {
+        return updateRequestUrgency(requestId, urgency.displayName)
     }
 }

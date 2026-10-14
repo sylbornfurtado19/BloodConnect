@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.bloodconnect.data.model.Urgency
 import com.bloodconnect.ui.components.BloodConnectButton
 import com.bloodconnect.ui.components.BloodConnectTextField
 import com.bloodconnect.ui.components.BloodGroupBadge
@@ -90,7 +91,7 @@ private val sampleRequestsList = listOf(
         hospital = "City General Hospital (Emergency Wing)",
         city = "Central Sector",
         units = 2,
-        urgency = "Critical",
+        urgency = Urgency.CRITICAL.displayName,
         timeLabel = "15 mins ago"
     ),
     SampleRequestEntry(
@@ -99,7 +100,7 @@ private val sampleRequestsList = listOf(
         hospital = "Metro Care Medical Center",
         city = "Westside District",
         units = 1,
-        urgency = "Urgent",
+        urgency = Urgency.URGENT.displayName,
         timeLabel = "1 hour ago"
     ),
     SampleRequestEntry(
@@ -108,13 +109,13 @@ private val sampleRequestsList = listOf(
         hospital = "St. Jude Regional Clinic",
         city = "North Valley Ward",
         units = 3,
-        urgency = "Routine",
+        urgency = Urgency.ROUTINE.displayName,
         timeLabel = "3 hours ago"
     )
 )
 
 private val bloodGroups = listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-")
-private val urgencyLevels = listOf("Routine", "Urgent", "Critical")
+private val urgencyLevels = Urgency.entries.map { it.displayName }
 
 /**
  * Screen for creating new emergency blood requests and viewing recent illustrative requests.
@@ -131,7 +132,7 @@ fun BloodRequestsScreen(
     var unitsNeeded by remember { mutableStateOf("1") }
     var hospital by remember { mutableStateOf("") }
     var cityLocality by remember { mutableStateOf("") }
-    var selectedUrgency by remember { mutableStateOf("Urgent") }
+    var selectedUrgency by remember { mutableStateOf(Urgency.URGENT.displayName) }
     var additionalNotes by remember { mutableStateOf("") }
 
     // Validation error states
@@ -139,6 +140,7 @@ fun BloodRequestsScreen(
     var unitsError by remember { mutableStateOf<String?>(null) }
     var hospitalError by remember { mutableStateOf<String?>(null) }
     var cityError by remember { mutableStateOf<String?>(null) }
+    var urgencyError by remember { mutableStateOf<String?>(null) }
 
     // Review & Confirmation dialog states
     var pendingRequest by remember { mutableStateOf<PendingBloodRequest?>(null) }
@@ -157,23 +159,26 @@ fun BloodRequestsScreen(
         val unitsErr = BloodRequestValidator.validateUnits(trimmedUnits)
         val hospErr = BloodRequestValidator.validateHospital(trimmedHospital)
         val cityErr = BloodRequestValidator.validateCity(trimmedCity)
+        val urgErr = BloodRequestValidator.validateUrgency(selectedUrgency)
 
         bloodGroupError = bgErr
         unitsError = unitsErr
         hospitalError = hospErr
         cityError = cityErr
+        urgencyError = urgErr
 
-        val isValid = bgErr == null && unitsErr == null && hospErr == null && cityErr == null
+        val isValid = bgErr == null && unitsErr == null && hospErr == null && cityErr == null && urgErr == null
 
         val parsedUnits = trimmedUnits.toIntOrNull()
 
         if (isValid) {
+            val canonicalUrgency = Urgency.fromStringOrDefault(selectedUrgency).displayName
             pendingRequest = PendingBloodRequest(
                 bloodGroup = selectedBloodGroup!!,
                 units = parsedUnits!!,
                 hospital = trimmedHospital,
                 city = trimmedCity,
-                urgency = selectedUrgency,
+                urgency = canonicalUrgency,
                 notes = trimmedNotes
             )
             showReviewDialog = true
@@ -185,12 +190,13 @@ fun BloodRequestsScreen(
         unitsNeeded = "1"
         hospital = ""
         cityLocality = ""
-        selectedUrgency = "Urgent"
+        selectedUrgency = Urgency.URGENT.displayName
         additionalNotes = ""
         bloodGroupError = null
         unitsError = null
         hospitalError = null
         cityError = null
+        urgencyError = null
         pendingRequest = null
     }
 
@@ -360,20 +366,24 @@ fun BloodRequestsScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             urgencyLevels.forEach { level ->
+                                val chipUrgency = Urgency.fromString(level)
                                 FilterChip(
                                     selected = selectedUrgency == level,
-                                    onClick = { selectedUrgency = level },
+                                    onClick = {
+                                        selectedUrgency = level
+                                        urgencyError = null
+                                    },
                                     label = { Text(level) },
                                     modifier = Modifier.weight(1f),
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = when (level) {
-                                            "Critical" -> MaterialTheme.colorScheme.primary
-                                            "Urgent" -> MaterialTheme.colorScheme.primaryContainer
+                                        selectedContainerColor = when (chipUrgency) {
+                                            Urgency.CRITICAL -> MaterialTheme.colorScheme.primary
+                                            Urgency.URGENT -> MaterialTheme.colorScheme.primaryContainer
                                             else -> MaterialTheme.colorScheme.secondaryContainer
                                         },
-                                        selectedLabelColor = when (level) {
-                                            "Critical" -> MaterialTheme.colorScheme.onPrimary
-                                            "Urgent" -> MaterialTheme.colorScheme.onPrimaryContainer
+                                        selectedLabelColor = when (chipUrgency) {
+                                            Urgency.CRITICAL -> MaterialTheme.colorScheme.onPrimary
+                                            Urgency.URGENT -> MaterialTheme.colorScheme.onPrimaryContainer
                                             else -> MaterialTheme.colorScheme.onSecondaryContainer
                                         }
                                     )
@@ -382,15 +392,24 @@ fun BloodRequestsScreen(
                         }
 
                         Text(
-                            text = when (selectedUrgency) {
-                                "Critical" -> "• Critical: Immediate emergency transfusion needed"
-                                "Urgent" -> "• Urgent: Transfusion required within 2 to 6 hours"
+                            text = when (Urgency.fromString(selectedUrgency)) {
+                                Urgency.CRITICAL -> "• Critical: Immediate emergency transfusion needed"
+                                Urgency.URGENT -> "• Urgent: Transfusion required within 2 to 6 hours"
                                 else -> "• Routine: Planned surgery or scheduled procedure"
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                             modifier = Modifier.padding(start = 2.dp, top = 2.dp)
                         )
+
+                        if (urgencyError != null) {
+                            Text(
+                                text = urgencyError!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(start = 2.dp)
+                            )
+                        }
                     }
 
                     // 6. Additional Notes (Optional)
@@ -723,19 +742,20 @@ private fun SampleRequestRowCard(
                 )
             }
 
+            val chipUrgency = Urgency.fromStringOrDefault(entry.urgency)
             SuggestionChip(
                 onClick = {},
-                label = { Text(entry.urgency) },
+                label = { Text(chipUrgency.displayName) },
                 colors = SuggestionChipDefaults.suggestionChipColors(
-                    containerColor = when (entry.urgency) {
-                        "Critical" -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
-                        "Urgent" -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                        else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+                    containerColor = when (chipUrgency) {
+                        Urgency.CRITICAL -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                        Urgency.URGENT -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        Urgency.ROUTINE -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
                     },
-                    labelColor = when (entry.urgency) {
-                        "Critical" -> MaterialTheme.colorScheme.error
-                        "Urgent" -> MaterialTheme.colorScheme.primary
-                        else -> MaterialTheme.colorScheme.secondary
+                    labelColor = when (chipUrgency) {
+                        Urgency.CRITICAL -> MaterialTheme.colorScheme.error
+                        Urgency.URGENT -> MaterialTheme.colorScheme.primary
+                        Urgency.ROUTINE -> MaterialTheme.colorScheme.secondary
                     }
                 ),
                 shape = RoundedCornerShape(8.dp)

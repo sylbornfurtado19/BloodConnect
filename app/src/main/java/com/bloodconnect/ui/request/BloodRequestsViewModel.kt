@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bloodconnect.data.model.BloodRequest
 import com.bloodconnect.data.model.RequestStatus
+import com.bloodconnect.data.model.Urgency
 import com.bloodconnect.data.repository.BloodRequestRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -55,13 +56,14 @@ class BloodRequestsViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             isLoading = true
+            val canonicalUrgency = Urgency.fromStringOrDefault(urgency).displayName
             val request = BloodRequest(
                 requesterId = requesterId,
                 requesterName = requesterName,
                 bloodGroup = bloodGroup,
                 hospital = hospital,
                 unitsNeeded = unitsNeeded,
-                urgency = urgency,
+                urgency = canonicalUrgency,
                 status = RequestStatus.PENDING.displayName
             )
             val result = requestRepository.createRequest(request)
@@ -73,6 +75,26 @@ class BloodRequestsViewModel @Inject constructor(
             }
             isLoading = false
         }
+    }
+
+    fun createRequest(
+        requesterId: String,
+        requesterName: String,
+        bloodGroup: String,
+        hospital: String,
+        unitsNeeded: Int,
+        urgency: Urgency,
+        onSuccess: () -> Unit
+    ) {
+        createRequest(
+            requesterId = requesterId,
+            requesterName = requesterName,
+            bloodGroup = bloodGroup,
+            hospital = hospital,
+            unitsNeeded = unitsNeeded,
+            urgency = urgency.displayName,
+            onSuccess = onSuccess
+        )
     }
 
     /**

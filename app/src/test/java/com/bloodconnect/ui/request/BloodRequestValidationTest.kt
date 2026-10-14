@@ -206,4 +206,59 @@ class BloodRequestValidationTest {
             BloodRequestValidator.validateBloodGroup("")
         )
     }
+
+    // -------------------------------------------------------------
+    // Urgency Validation Tests (Routine, Urgent, Critical)
+    // -------------------------------------------------------------
+
+    @Test
+    fun validateUrgency_canonicalLevels_returnsNull() {
+        assertNull(BloodRequestValidator.validateUrgency("Routine"))
+        assertNull(BloodRequestValidator.validateUrgency("Urgent"))
+        assertNull(BloodRequestValidator.validateUrgency("Critical"))
+    }
+
+    @Test
+    fun validateUrgency_legacyAndAlternativeEquivalents_returnsNull() {
+        assertNull(BloodRequestValidator.validateUrgency("Normal"))
+        assertNull(BloodRequestValidator.validateUrgency("normal"))
+        assertNull(BloodRequestValidator.validateUrgency("NORMAL"))
+        assertNull(BloodRequestValidator.validateUrgency("Standard"))
+        assertNull(BloodRequestValidator.validateUrgency("Emergency"))
+        assertNull(BloodRequestValidator.validateUrgency("EMERGENCY"))
+    }
+
+    @Test
+    fun validateUrgency_caseInsensitiveAndSurroundingWhitespace_returnsNull() {
+        assertNull(BloodRequestValidator.validateUrgency("  routine  "))
+        assertNull(BloodRequestValidator.validateUrgency("\tUrgent\n"))
+        assertNull(BloodRequestValidator.validateUrgency("CRITICAL"))
+        assertNull(BloodRequestValidator.validateUrgency("  Normal  "))
+    }
+
+    @Test
+    fun validateUrgency_nullOrBlank_returnsRequiredErrorMessage() {
+        assertEquals(
+            "Urgency level is required",
+            BloodRequestValidator.validateUrgency(null)
+        )
+        assertEquals(
+            "Urgency level is required",
+            BloodRequestValidator.validateUrgency("")
+        )
+        assertEquals(
+            "Urgency level is required",
+            BloodRequestValidator.validateUrgency("   ")
+        )
+    }
+
+    @Test
+    fun validateUrgency_invalidValues_returnsInvalidErrorMessage() {
+        val expectedMessage = "Please select a valid urgency level (Routine, Urgent, or Critical)"
+        assertEquals(expectedMessage, BloodRequestValidator.validateUrgency("Immediate"))
+        assertEquals(expectedMessage, BloodRequestValidator.validateUrgency("Fast"))
+        assertEquals(expectedMessage, BloodRequestValidator.validateUrgency("Low"))
+        assertEquals(expectedMessage, BloodRequestValidator.validateUrgency("123"))
+        assertEquals(expectedMessage, BloodRequestValidator.validateUrgency("Moderate"))
+    }
 }

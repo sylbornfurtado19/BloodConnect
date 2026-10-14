@@ -66,4 +66,22 @@ object BloodRequestValidator {
             else -> null
         }
     }
+
+    /**
+     * Validates blood request urgency level.
+     * Enforces valid urgency levels (Routine, Urgent, Critical) or legacy equivalents (Normal).
+     *
+     * @param urgency Selected urgency token or null if unselected.
+     * @return User-readable error message, or null if valid.
+     */
+    fun validateUrgency(urgency: String?): String? {
+        if (urgency.isNullOrBlank()) {
+            return "Urgency level is required"
+        }
+        return if (com.bloodconnect.data.model.Urgency.fromString(urgency) != null) {
+            null
+        } else {
+            "Please select a valid urgency level (Routine, Urgent, or Critical)"
+        }
+    }
 }
