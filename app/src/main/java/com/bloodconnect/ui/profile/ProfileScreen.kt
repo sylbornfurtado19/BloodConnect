@@ -72,6 +72,10 @@ import com.bloodconnect.ui.theme.BloodConnectTheme
 import androidx.hilt.navigation.compose.hiltViewModel
 
 private val standardBloodGroups = listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-")
+private const val FALLBACK_NAME = "Not available"
+private const val FALLBACK_BLOOD_GROUP = "Not specified"
+private const val FALLBACK_CITY = "Not specified"
+private const val FALLBACK_CONTACT = "Not provided"
 
 /**
  * Screen displaying the user's donor profile, availability status, and general donation guidelines.
@@ -85,12 +89,12 @@ fun ProfileScreen(
     onSignOut: (() -> Unit)? = null,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    // Active Profile Demo State (Fictional initial values)
-    var displayName by remember { mutableStateOf("Alex Rivera") }
-    var bloodGroup by remember { mutableStateOf("O+") }
-    var cityLocality by remember { mutableStateOf("Central Metro District") }
-    var contactInfo by remember { mutableStateOf("alex.demo@example.com") }
-    var isDonorAvailable by remember { mutableStateOf(true) }
+    // Profile Display State with friendly fallback defaults
+    var displayName by remember { mutableStateOf(FALLBACK_NAME) }
+    var bloodGroup by remember { mutableStateOf(FALLBACK_BLOOD_GROUP) }
+    var cityLocality by remember { mutableStateOf(FALLBACK_CITY) }
+    var contactInfo by remember { mutableStateOf(FALLBACK_CONTACT) }
+    var isDonorAvailable by remember { mutableStateOf(false) }
 
     // Edit Mode Form State
     var isEditing by remember { mutableStateOf(false) }
@@ -107,21 +111,35 @@ fun ProfileScreen(
     var showSuccessDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel.user) {
-        viewModel.user?.let { u ->
-            val name = u.displayName.ifBlank { u.fullName }
-            if (name.isNotBlank()) displayName = name
-            if (u.bloodGroup.isNotBlank()) bloodGroup = u.bloodGroup
-            if (u.locality.isNotBlank()) cityLocality = u.locality
-            if (u.email.isNotBlank()) contactInfo = u.email else if (u.phone.isNotBlank()) contactInfo = u.phone
-            isDonorAvailable = u.isAvailable
+        val user = viewModel.user
+        if (user != null) {
+            val name = user.displayName.ifBlank { user.fullName }.trim()
+            displayName = if (name.isNotBlank()) name else FALLBACK_NAME
+
+            val bg = user.bloodGroup.trim()
+            bloodGroup = if (bg.isNotBlank()) bg else FALLBACK_BLOOD_GROUP
+
+            val locality = user.locality.trim()
+            cityLocality = if (locality.isNotBlank()) locality else FALLBACK_CITY
+
+            val contact = user.email.ifBlank { user.phone }.trim()
+            contactInfo = if (contact.isNotBlank()) contact else FALLBACK_CONTACT
+
+            isDonorAvailable = user.isAvailable
+        } else {
+            displayName = FALLBACK_NAME
+            bloodGroup = FALLBACK_BLOOD_GROUP
+            cityLocality = FALLBACK_CITY
+            contactInfo = FALLBACK_CONTACT
+            isDonorAvailable = false
         }
     }
 
     fun startEditing() {
-        editName = displayName
-        editBloodGroup = bloodGroup
-        editCity = cityLocality
-        editContact = contactInfo
+        editName = if (displayName != FALLBACK_NAME) displayName else ""
+        editBloodGroup = if (bloodGroup in standardBloodGroups) bloodGroup else standardBloodGroups.first()
+        editCity = if (cityLocality != FALLBACK_CITY) cityLocality else ""
+        editContact = if (contactInfo != FALLBACK_CONTACT) contactInfo else ""
         nameError = null
         cityError = null
         isEditing = true
@@ -219,37 +237,47 @@ fun ProfileScreen(
                 }
             }
 
-            // Demonstration Data Banner
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+            val isProfileMissing = viewModel.user == null && !viewModel.isLoading
+            val hasMissingFields = viewModel.user != null && (
+                displayName == FALLBACK_NAME || bloodGroup == FALLBACK_BLOOD_GROUP || cityLocality == FALLBACK_CITY
+            )
+
+            if (isProfileMissing || hasMissingFields) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Column {
-                        Text(
-                            text = "Demonstration Profile",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
                         )
-                        Text(
-                            text = "This screen displays fictional sample profile data. Edits are handled in local UI state and are not saved to a server or permanent database.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column {
+                            Text(
+                                text = if (isProfileMissing) "Profile Not Found" else "Profile Incomplete",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = if (isProfileMissing) {
+                                    "No profile record was found for your account. Fallback details are displayed below."
+                                } else {
+                                    "Some profile details are missing for your account. Fallback details are displayed below."
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -277,7 +305,7 @@ fun ProfileScreen(
                         .mapNotNull { it.firstOrNull()?.uppercaseChar() }
                         .take(2)
                         .joinToString("")
-                        .ifEmpty { "BC" }
+                        .ifEmpty { "U" }
 
                     Box(
                         modifier = Modifier
@@ -306,11 +334,15 @@ fun ProfileScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         BloodGroupBadge(
-                            bloodGroup = bloodGroup,
+                            bloodGroup = if (bloodGroup in standardBloodGroups) bloodGroup else "--",
                             size = 36.dp
                         )
                         Text(
-                            text = "Registered Blood Group ($bloodGroup)",
+                            text = if (bloodGroup in standardBloodGroups) {
+                                "Registered Blood Group ($bloodGroup)"
+                            } else {
+                                "Blood Group Not Specified"
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -321,7 +353,7 @@ fun ProfileScreen(
                     SuggestionChip(
                         onClick = {},
                         label = {
-                            Text(if (isDonorAvailable) "Active Donor (Demo)" else "Inactive (Demo)")
+                            Text(if (isDonorAvailable) "Active Donor" else "Inactive / Unavailable")
                         },
                         colors = SuggestionChipDefaults.suggestionChipColors(
                             containerColor = if (isDonorAvailable) {
@@ -510,8 +542,8 @@ fun ProfileScreen(
                         BloodConnectTextField(
                             value = editContact,
                             onValueChange = { editContact = it },
-                            label = "Contact Info (Optional Demo Email/Phone)",
-                            placeholder = "e.g., alex.demo@example.com",
+                            label = "Contact Info (Email/Phone)",
+                            placeholder = "e.g., user@example.com",
                             leadingIcon = Icons.Default.Email
                         )
 
@@ -562,7 +594,7 @@ fun ProfileScreen(
                                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                                 ) {
                                     BloodGroupBadge(
-                                        bloodGroup = bloodGroup,
+                                        bloodGroup = if (bloodGroup in standardBloodGroups) bloodGroup else "--",
                                         size = 40.dp
                                     )
                                     Column {
@@ -572,7 +604,7 @@ fun ProfileScreen(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         Text(
-                                            text = "$bloodGroup Donor",
+                                            text = if (bloodGroup in standardBloodGroups) "$bloodGroup Donor" else "Not Specified",
                                             style = MaterialTheme.typography.bodyLarge,
                                             fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurface
@@ -592,7 +624,7 @@ fun ProfileScreen(
 
                                 ProfileInfoItem(
                                     icon = Icons.Default.Email,
-                                    label = "Contact Info (Demo)",
+                                    label = "Contact Info",
                                     value = contactInfo.ifBlank { "Not provided" }
                                 )
                             }
