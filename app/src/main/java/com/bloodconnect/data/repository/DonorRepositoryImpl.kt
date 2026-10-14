@@ -119,7 +119,10 @@ class DonorRepositoryImpl @Inject constructor(
                 val locality = doc.getString("locality") ?: "City Center"
                 val lat = doc.getDouble("latitude")
                 val lon = doc.getDouble("longitude")
-                val available = doc.getBoolean("isAvailable") ?: true
+                val available = resolveDonorAvailability(
+                    isAvailable = doc.getBoolean("isAvailable"),
+                    legacyAvailable = doc.getBoolean("available")
+                )
 
                 Donor(
                     id = uid,
@@ -180,7 +183,10 @@ class DonorRepositoryImpl @Inject constructor(
                 val locality = doc.getString("locality") ?: "City Center"
                 val lat = doc.getDouble("latitude")
                 val lon = doc.getDouble("longitude")
-                val available = doc.getBoolean("isAvailable") ?: true
+                val available = resolveDonorAvailability(
+                    isAvailable = doc.getBoolean("isAvailable"),
+                    legacyAvailable = doc.getBoolean("available")
+                )
 
                 Donor(
                     id = uid,
@@ -218,7 +224,10 @@ class DonorRepositoryImpl @Inject constructor(
                 val locality = doc.getString("locality") ?: "City Center"
                 val lat = doc.getDouble("latitude")
                 val lon = doc.getDouble("longitude")
-                val available = doc.getBoolean("isAvailable") ?: true
+                val available = resolveDonorAvailability(
+                    isAvailable = doc.getBoolean("isAvailable"),
+                    legacyAvailable = doc.getBoolean("available")
+                )
 
                 val donor = Donor(
                     id = uid,
@@ -239,4 +248,17 @@ class DonorRepositoryImpl @Inject constructor(
             Result.success(found)
         }
     }
+}
+
+/**
+ * Resolves donor availability with backward compatibility for legacy records.
+ * Prefers the standardized "isAvailable" field, falling back to legacy "available",
+ * and finally defaulting to [default] (true) if neither field is present.
+ */
+fun resolveDonorAvailability(
+    isAvailable: Boolean?,
+    legacyAvailable: Boolean?,
+    default: Boolean = true
+): Boolean {
+    return isAvailable ?: legacyAvailable ?: default
 }
