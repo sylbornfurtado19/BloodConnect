@@ -93,6 +93,54 @@ class BloodRequestValidationTest {
     }
 
     // -------------------------------------------------------------
+    // Units Needed Boundary Tests (0, 1, 20, 21)
+    // -------------------------------------------------------------
+
+    @Test
+    fun validateUnits_boundaryZero_returnsPositiveNumberErrorMessage() {
+        val result = BloodRequestValidator.validateUnits("0")
+        assertEquals(
+            "Please enter a valid positive number of units (1 to 20)",
+            result
+        )
+    }
+
+    @Test
+    fun validateUnits_boundaryOne_lowerValidBound_returnsNull() {
+        val result = BloodRequestValidator.validateUnits("1")
+        assertNull(result)
+    }
+
+    @Test
+    fun validateUnits_boundaryTwenty_upperValidBound_returnsNull() {
+        val result = BloodRequestValidator.validateUnits("20")
+        assertNull(result)
+    }
+
+    @Test
+    fun validateUnits_boundaryTwentyOne_firstExceedingValue_returnsExceedErrorMessage() {
+        val result = BloodRequestValidator.validateUnits("21")
+        assertEquals(
+            "Units needed cannot exceed 20 units",
+            result
+        )
+    }
+
+    @Test
+    fun validateUnits_boundaryValuesWithWhitespace_handlesBoundariesCorrectly() {
+        assertEquals(
+            "Please enter a valid positive number of units (1 to 20)",
+            BloodRequestValidator.validateUnits("  0  ")
+        )
+        assertNull(BloodRequestValidator.validateUnits("  1  "))
+        assertNull(BloodRequestValidator.validateUnits("  20  "))
+        assertEquals(
+            "Units needed cannot exceed 20 units",
+            BloodRequestValidator.validateUnits("  21  ")
+        )
+    }
+
+    // -------------------------------------------------------------
     // Hospital Name Validation Tests (minimum 3 characters)
     // -------------------------------------------------------------
 
