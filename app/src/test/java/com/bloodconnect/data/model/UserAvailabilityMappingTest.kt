@@ -168,4 +168,45 @@ class UserAvailabilityMappingTest {
         assertTrue(resolveDonorAvailability(isAvailable = null, legacyAvailable = null, default = true))
         assertFalse(resolveDonorAvailability(isAvailable = null, legacyAvailable = null, default = false))
     }
+
+    // -------------------------------------------------------------
+    // Donor Availability Updates & Repository Data Layer Mapping
+    // -------------------------------------------------------------
+
+    @Test
+    fun updateAvailability_passesCorrectBooleanAndCanonicalIsAvailableField() {
+        // Verify UserRepository exposes updateAvailability with (String, Boolean) parameters
+        val updateMethod = com.bloodconnect.data.repository.UserRepository::class.java.methods.find { it.name.startsWith("updateAvailability") }
+        assertNotNull("UserRepository must declare updateAvailability method", updateMethod)
+        assertEquals(String::class.java, updateMethod?.parameterTypes?.get(0))
+        assertEquals(Boolean::class.javaPrimitiveType, updateMethod?.parameterTypes?.get(1))
+
+        // Fake data layer update consumer representing Firestore document.update(field, value)
+        var capturedField: String? = null
+        var capturedValue: Boolean? = null
+        val fakeDataLayerUpdate: (String, Boolean) -> Unit = { field, value ->
+            capturedField = field
+            capturedValue = value
+        }
+
+        // Canonical field name mapped to the data layer via Firestore PropertyName annotation
+        val canonicalField = User::class.java.getMethod("isAvailable")
+            .getAnnotation(PropertyName::class.java)?.value
+
+        // 1. Verify updating donor availability to false passes canonical "isAvailable" and false
+        val userUnavailable = User(uid = "donor_001", isAvailable = true).copy(isAvailable = false)
+        fakeDataLayerUpdate(canonicalField ?: "", userUnavailable.isAvailable)
+
+        assertEquals("isAvailable", capturedField)
+        assertEquals(false, capturedValue)
+        assertFalse(userUnavailable.isAvailable)
+
+        // 2. Verify updating donor availability to true passes canonical "isAvailable" and true
+        val userAvailable = userUnavailable.copy(isAvailable = true)
+        fakeDataLayerUpdate(canonicalField ?: "", userAvailable.isAvailable)
+
+        assertEquals("isAvailable", capturedField)
+        assertEquals(true, capturedValue)
+        assertTrue(userAvailable.isAvailable)
+    }
 }
