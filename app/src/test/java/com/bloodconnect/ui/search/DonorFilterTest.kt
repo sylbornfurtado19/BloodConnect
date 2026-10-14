@@ -237,6 +237,26 @@ class DonorFilterTest {
         assertTrue(d2Dist < d3Dist)
     }
 
+    @Test
+    fun sort_nearestFirst_ordersDonorsByAscendingDistance() {
+        val unsortedDonors = listOf(donorFar, donorClose, donorMedium)
+        val (sorted, distances) = filterAndSortDonors(
+            donors = unsortedDonors,
+            sortOrder = DistanceSortOrder.NEAREST,
+            userLocation = testUserLocation,
+            maxDistanceKm = 100
+        )
+
+        // Verifies nearest-first sorting orders donors strictly by ascending distance
+        assertEquals(listOf("D1", "D2", "D3"), sorted.map { it.id })
+
+        val d1Dist = distances["D1"]!!
+        val d2Dist = distances["D2"]!!
+        val d3Dist = distances["D3"]!!
+        assertTrue(d1Dist <= d2Dist)
+        assertTrue(d2Dist <= d3Dist)
+    }
+
     // -------------------------------------------------------------
     // Farthest-First Sorting Tests
     // -------------------------------------------------------------
