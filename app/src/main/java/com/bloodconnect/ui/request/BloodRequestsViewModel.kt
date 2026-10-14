@@ -48,8 +48,8 @@ class BloodRequestsViewModel @Inject constructor(
         requesterId: String,
         requesterName: String,
         bloodGroup: String,
-        hospitalName: String,
-        unitsRequired: Int,
+        hospital: String,
+        unitsNeeded: Int,
         urgency: String,
         onSuccess: () -> Unit
     ) {
@@ -59,8 +59,8 @@ class BloodRequestsViewModel @Inject constructor(
                 requesterId = requesterId,
                 requesterName = requesterName,
                 bloodGroup = bloodGroup,
-                hospitalName = hospitalName,
-                unitsRequired = unitsRequired,
+                hospital = hospital,
+                unitsNeeded = unitsNeeded,
                 urgency = urgency,
                 status = RequestStatus.PENDING.displayName
             )
@@ -73,5 +73,29 @@ class BloodRequestsViewModel @Inject constructor(
             }
             isLoading = false
         }
+    }
+
+    /**
+     * Backward-compatible overload for legacy parameter names (hospitalName, unitsRequired).
+     */
+    fun createRequest(
+        requesterId: String,
+        requesterName: String,
+        bloodGroup: String,
+        hospitalName: String,
+        unitsRequired: Int,
+        urgency: String,
+        onSuccess: () -> Unit,
+        @Suppress("UNUSED_PARAMETER") legacyFlag: Boolean = true
+    ) {
+        createRequest(
+            requesterId = requesterId,
+            requesterName = requesterName,
+            bloodGroup = bloodGroup,
+            hospital = hospitalName,
+            unitsNeeded = unitsRequired,
+            urgency = urgency,
+            onSuccess = onSuccess
+        )
     }
 }

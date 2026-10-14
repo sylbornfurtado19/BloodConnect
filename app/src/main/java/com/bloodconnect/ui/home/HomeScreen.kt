@@ -306,7 +306,7 @@ fun HomeScreen(
                 // Sample Request 1
                 SampleRequestCard(
                     bloodGroup = "O+",
-                    hospitalName = "City General Hospital (Central)",
+                    hospital = "City General Hospital (Central)",
                     urgencyStatus = "Critical · 2 Units needed",
                     onClick = onNavigateToBloodRequests
                 )
@@ -314,7 +314,7 @@ fun HomeScreen(
                 // Sample Request 2
                 SampleRequestCard(
                     bloodGroup = "A-",
-                    hospitalName = "Metro Care Medical Center",
+                    hospital = "Metro Care Medical Center",
                     urgencyStatus = "Urgent · 1 Unit needed",
                     onClick = onNavigateToBloodRequests
                 )
@@ -322,7 +322,7 @@ fun HomeScreen(
                 // Sample Request 3
                 SampleRequestCard(
                     bloodGroup = "B+",
-                    hospitalName = "St. Jude Regional Clinic",
+                    hospital = "St. Jude Regional Clinic",
                     urgencyStatus = "Needed within 24h · 1 Unit",
                     onClick = onNavigateToBloodRequests
                 )
@@ -356,11 +356,13 @@ fun HomeScreen(
 @Composable
 private fun SampleRequestCard(
     bloodGroup: String,
-    hospitalName: String,
+    hospital: String = "",
     urgencyStatus: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    hospitalName: String = hospital
 ) {
+    val facilityName = hospital.ifBlank { hospitalName }
     OutlinedCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
@@ -379,7 +381,7 @@ private fun SampleRequestCard(
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = hospitalName,
+                    text = facilityName,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface

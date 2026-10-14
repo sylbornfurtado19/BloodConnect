@@ -20,7 +20,7 @@ class BloodRequestRepository @Inject constructor(
             val canonicalStatus = RequestStatus.fromString(request.status)?.displayName
                 ?: RequestStatus.PENDING.displayName
             val newRequest = request.copy(
-                requestId = docRef.id,
+                id = docRef.id,
                 status = canonicalStatus
             )
             docRef.set(newRequest).await()
@@ -62,7 +62,7 @@ class BloodRequestRepository @Inject constructor(
             }
 
             val combined = (canonicalList + legacyActiveList + legacyPendingList)
-                .distinctBy { it.requestId.ifBlank { it.id } }
+                .distinctBy { it.id.ifBlank { it.requestId } }
                 .map { it.withCanonicalStatus() }
 
             Result.success(combined)

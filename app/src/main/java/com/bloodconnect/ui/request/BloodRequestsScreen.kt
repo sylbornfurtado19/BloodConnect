@@ -128,8 +128,8 @@ fun BloodRequestsScreen(
 ) {
     // Form input states
     var selectedBloodGroup by remember { mutableStateOf<String?>(null) }
-    var unitsRequired by remember { mutableStateOf("1") }
-    var hospitalName by remember { mutableStateOf("") }
+    var unitsNeeded by remember { mutableStateOf("1") }
+    var hospital by remember { mutableStateOf("") }
     var cityLocality by remember { mutableStateOf("") }
     var selectedUrgency by remember { mutableStateOf("Urgent") }
     var additionalNotes by remember { mutableStateOf("") }
@@ -147,9 +147,9 @@ fun BloodRequestsScreen(
     var showConfirmationDialog by remember { mutableStateOf(false) }
 
     fun validateAndSubmit() {
-        val trimmedHospital = hospitalName.trim()
+        val trimmedHospital = hospital.trim()
         val trimmedCity = cityLocality.trim()
-        val trimmedUnits = unitsRequired.trim()
+        val trimmedUnits = unitsNeeded.trim()
         val trimmedNotes = additionalNotes.trim()
 
         // Validation via extracted pure validator
@@ -182,8 +182,8 @@ fun BloodRequestsScreen(
 
     fun resetForm() {
         selectedBloodGroup = null
-        unitsRequired = "1"
-        hospitalName = ""
+        unitsNeeded = "1"
+        hospital = ""
         cityLocality = ""
         selectedUrgency = "Urgent"
         additionalNotes = ""
@@ -306,9 +306,9 @@ fun BloodRequestsScreen(
 
                     // 2. Units Needed
                     BloodConnectTextField(
-                        value = unitsRequired,
+                        value = unitsNeeded,
                         onValueChange = {
-                            unitsRequired = it
+                            unitsNeeded = it
                             unitsError = null
                         },
                         label = "Units Needed (1 to 20) *",
@@ -320,9 +320,9 @@ fun BloodRequestsScreen(
 
                     // 3. Hospital Name
                     BloodConnectTextField(
-                        value = hospitalName,
+                        value = hospital,
                         onValueChange = {
-                            hospitalName = it
+                            hospital = it
                             hospitalError = null
                         },
                         label = "Hospital / Medical Facility *",
