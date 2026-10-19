@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.bloodconnect.data.model.User
 import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.UserRepository
+import com.bloodconnect.utils.LocationHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,7 +36,8 @@ sealed interface AuthUiState {
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val locationHelper: LocationHelper
 ) : ViewModel() {
 
     private val _uiStateFlow = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
@@ -81,6 +83,7 @@ class AuthViewModel @Inject constructor(
 
     /**
      * Registers a new donor account with profile details and credentials.
+     * Captures user location coordinates if permission is granted; falls back gracefully if denied.
      */
     fun signUp(
         fullName: String,
@@ -118,6 +121,23 @@ class AuthViewModel @Inject constructor(
                         )
                         val saveResult = userRepository.saveUser(user)
                         if (saveResult.isSuccess) {
+                            // Non-blocking location capture
+                            try {
+                                val locationResult = locationHelper.getCurrentLocation()
+                                if (locationResult.isSuccess) {
+                                    val userLocation = locationResult.getOrNull()
+                                    if (userLocation != null) {
+                                        userRepository.updateLocation(
+                                            firebaseUser.uid,
+                                            userLocation.latitude,
+                                            userLocation.longitude
+                                        )
+                                    }
+                                }
+                            } catch (_: Exception) {
+                                // Location capture failure must not block registration
+                            }
+
                             updateState(AuthUiState.Success)
                             withContext(Dispatchers.Main) {
                                 onSuccess()
@@ -141,6 +161,7 @@ class AuthViewModel @Inject constructor(
 
     /**
      * Authenticates with Google and creates a Firestore profile if it's a new user.
+     * Captures location coordinates if existing or new doc has default 0.0 coordinates.
      */
     fun signInWithGoogle(idToken: String, onSuccess: () -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -162,6 +183,27 @@ class AuthViewModel @Inject constructor(
                             )
                             userRepository.saveUser(newUser)
                         }
+
+                        // Non-blocking location capture if coordinates are 0.0
+                        val currentDoc = userRepository.getUser(firebaseUser.uid).getOrNull()
+                        if (currentDoc != null && currentDoc.latitude == 0.0 && currentDoc.longitude == 0.0) {
+                            try {
+                                val locationResult = locationHelper.getCurrentLocation()
+                                if (locationResult.isSuccess) {
+                                    val userLocation = locationResult.getOrNull()
+                                    if (userLocation != null) {
+                                        userRepository.updateLocation(
+                                            firebaseUser.uid,
+                                            userLocation.latitude,
+                                            userLocation.longitude
+                                        )
+                                    }
+                                }
+                            } catch (_: Exception) {
+                                // Location capture failure must not block sign-in
+                            }
+                        }
+
                         updateState(AuthUiState.Success)
                         withContext(Dispatchers.Main) {
                             onSuccess()

@@ -290,6 +290,7 @@ class DonorSearchViewModel @Inject constructor(
 /**
  * Pure function executing donor filtering by blood group, locality query,
  * and distance radius, as well as distance-aware sorting.
+ * Excludes donors with latitude == 0.0 && longitude == 0.0 from distance calculation (treated as null coordinates).
  */
 fun filterAndSortDonors(
     donors: List<Donor>,
@@ -302,12 +303,14 @@ fun filterAndSortDonors(
     val distances = mutableMapOf<String, Double>()
     if (userLocation != null) {
         for (donor in donors) {
-            if (donor.latitude != null && donor.longitude != null) {
+            val lat = donor.latitude
+            val lon = donor.longitude
+            if (lat != null && lon != null && !(lat == 0.0 && lon == 0.0)) {
                 val dist = calculateDistanceKm(
                     userLat = userLocation.latitude,
                     userLon = userLocation.longitude,
-                    donorLat = donor.latitude,
-                    donorLon = donor.longitude
+                    donorLat = lat,
+                    donorLon = lon
                 )
                 distances[donor.id] = dist
             }

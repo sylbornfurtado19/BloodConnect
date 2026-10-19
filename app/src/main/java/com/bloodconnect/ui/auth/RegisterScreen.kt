@@ -1,5 +1,6 @@
 package com.bloodconnect.ui.auth
 
+import android.Manifest
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,12 +38,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bloodconnect.ui.components.BloodConnectTextField
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 /**
  * Register Screen connected to [AuthViewModel].
  * Captures donor information and executes real registration against Firebase Auth & Firestore.
+ * Requests location permissions via Accompanist so user coordinates can be recorded upon sign-up.
  * Displays loading indicators and error feedback, navigating to Home upon success.
  */
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
@@ -56,6 +62,19 @@ fun RegisterScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     val uiState by authViewModel.uiStateFlow.collectAsState()
+
+    val locationPermissionState = rememberMultiplePermissionsState(
+        permissions = listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    )
+
+    LaunchedEffect(Unit) {
+        if (!locationPermissionState.allPermissionsGranted) {
+            locationPermissionState.launchMultiplePermissionRequest()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -193,6 +212,9 @@ fun RegisterScreen(
 
                 Button(
                     onClick = {
+                        if (!locationPermissionState.allPermissionsGranted) {
+                            locationPermissionState.launchMultiplePermissionRequest()
+                        }
                         authViewModel.signUp(fullName, bloodGroup, email, password, phone, onNavigateToHome)
                     },
                     enabled = uiState !is AuthUiState.Loading,

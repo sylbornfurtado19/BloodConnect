@@ -56,6 +56,19 @@ class UserRepository @Inject constructor(
         }
     }
 
+    suspend fun updateLocation(uid: String, latitude: Double, longitude: Double): Result<Unit> {
+        return try {
+            val updates = mapOf<String, Any>(
+                "latitude" to latitude,
+                "longitude" to longitude
+            )
+            usersCollection.document(uid).update(updates).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun searchDonors(bloodGroup: String): Result<List<User>> {
         return try {
             val query = if (bloodGroup.isBlank()) {

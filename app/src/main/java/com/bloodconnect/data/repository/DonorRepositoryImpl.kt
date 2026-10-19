@@ -1,5 +1,6 @@
 package com.bloodconnect.data.repository
 
+import com.bloodconnect.BuildConfig
 import com.bloodconnect.data.model.BloodGroup
 import com.bloodconnect.data.model.Donor
 import com.google.firebase.firestore.FirebaseFirestore
@@ -11,8 +12,17 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Implementation of [DonorRepository] that queries Firestore for registered donors
- * and provides fallback demonstration records with coordinates and edge-case null coordinates.
+ * Constant toggle for enabling sample donor records during debug testing.
+ * Defaults to false so real Firestore data is always served by default.
+ */
+const val USE_SAMPLE_DONORS: Boolean = false
+
+private fun shouldUseSampleDonors(): Boolean {
+    return BuildConfig.DEBUG && USE_SAMPLE_DONORS
+}
+
+/**
+ * Implementation of [DonorRepository] that queries Firestore for registered donors.
  */
 @Singleton
 class DonorRepositoryImpl @Inject constructor(
@@ -135,7 +145,7 @@ class DonorRepositoryImpl @Inject constructor(
                 )
             }
 
-            if (donors.isNotEmpty()) {
+            if (donors.isNotEmpty() || !shouldUseSampleDonors()) {
                 Result.success(donors)
             } else {
                 val sampleFiltered = if (bloodGroup != null) {
@@ -145,13 +155,17 @@ class DonorRepositoryImpl @Inject constructor(
                 }
                 Result.success(sampleFiltered)
             }
-        } catch (_: Exception) {
-            val sampleFiltered = if (bloodGroup != null) {
-                sampleDonors.filter { it.bloodGroup == bloodGroup }
+        } catch (e: Exception) {
+            if (shouldUseSampleDonors()) {
+                val sampleFiltered = if (bloodGroup != null) {
+                    sampleDonors.filter { it.bloodGroup == bloodGroup }
+                } else {
+                    sampleDonors
+                }
+                Result.success(sampleFiltered)
             } else {
-                sampleDonors
+                Result.failure(e)
             }
-            Result.success(sampleFiltered)
         }
     }
 
@@ -167,12 +181,16 @@ class DonorRepositoryImpl @Inject constructor(
 
         val listener = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                val sampleFiltered = if (bloodGroup != null) {
-                    sampleDonors.filter { it.bloodGroup == bloodGroup }
+                if (shouldUseSampleDonors()) {
+                    val sampleFiltered = if (bloodGroup != null) {
+                        sampleDonors.filter { it.bloodGroup == bloodGroup }
+                    } else {
+                        sampleDonors
+                    }
+                    trySend(sampleFiltered)
                 } else {
-                    sampleDonors
+                    close(error)
                 }
-                trySend(sampleFiltered)
                 return@addSnapshotListener
             }
             val donors = snapshot?.documents?.mapNotNull { doc ->
@@ -199,7 +217,7 @@ class DonorRepositoryImpl @Inject constructor(
                 )
             } ?: emptyList()
 
-            if (donors.isNotEmpty()) {
+            if (donors.isNotEmpty() || !shouldUseSampleDonors()) {
                 trySend(donors)
             } else {
                 val sampleFiltered = if (bloodGroup != null) {
@@ -239,13 +257,19 @@ class DonorRepositoryImpl @Inject constructor(
                     isAvailable = available
                 )
                 Result.success(donor)
-            } else {
+            } else if (shouldUseSampleDonors()) {
                 val found = sampleDonors.find { it.id.equals(donorId, ignoreCase = true) }
                 Result.success(found)
+            } else {
+                Result.success(null)
             }
-        } catch (_: Exception) {
-            val found = sampleDonors.find { it.id.equals(donorId, ignoreCase = true) }
-            Result.success(found)
+        } catch (e: Exception) {
+            if (shouldUseSampleDonors()) {
+                val found = sampleDonors.find { it.id.equals(donorId, ignoreCase = true) }
+                Result.success(found)
+            } else {
+                Result.failure(e)
+            }
         }
     }
 }
