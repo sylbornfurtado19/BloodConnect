@@ -90,6 +90,7 @@ fun BloodRequestsScreen(
 ) {
     val requests = viewModel.requests
     val isLoading = viewModel.isLoading
+    val isSubmitting = viewModel.isSubmitting
     val errorMessage = viewModel.errorMessage
 
     // Form input states
@@ -372,22 +373,22 @@ fun BloodRequestsScreen(
                         singleLine = false
                     )
 
-                    // Action Buttons (Review & Reset)
+                    // Action Buttons (Review & Reset) - uses isSubmitting, NOT isLoading
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         BloodConnectButton(
-                            text = if (isLoading) "Broadcasting..." else "Review Request",
+                            text = if (isSubmitting) "Broadcasting..." else "Review Request",
                             icon = Icons.Default.AddAlert,
                             onClick = { validateAndSubmit() },
-                            enabled = !isLoading,
+                            enabled = !isSubmitting,
                             modifier = Modifier.weight(1f)
                         )
 
                         OutlinedButton(
                             onClick = { resetForm() },
-                            enabled = !isLoading,
+                            enabled = !isSubmitting,
                             modifier = Modifier.height(50.dp),
                             shape = RoundedCornerShape(12.dp)
                         ) {
@@ -395,7 +396,7 @@ fun BloodRequestsScreen(
                         }
                     }
 
-                    if (isLoading) {
+                    if (isSubmitting) {
                         CircularProgressIndicator(
                             modifier = Modifier
                                 .size(28.dp)
@@ -545,6 +546,7 @@ fun BloodRequestsScreen(
                             unitsNeeded = req.units,
                             urgency = req.urgency,
                             city = req.city,
+                            notes = req.notes,
                             onSuccess = {
                                 resetForm()
                                 showConfirmationDialog = true
@@ -632,7 +634,7 @@ private fun ReviewDetailRow(
 }
 
 /**
- * Card displaying a live active blood request entry from Firestore.
+ * Card displaying a live active blood request entry from Firestore with notes if non-blank.
  */
 @Composable
 private fun LiveRequestCard(
@@ -644,7 +646,7 @@ private fun LiveRequestCard(
         shape = RoundedCornerShape(14.dp)
     ) {
         Row(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -678,6 +680,14 @@ private fun LiveRequestCard(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium
                 )
+
+                if (request.notes.isNotBlank()) {
+                    Text(
+                        text = "Notes: ${request.notes}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
+                    )
+                }
             }
 
             val chipUrgency = request.urgencyLevel

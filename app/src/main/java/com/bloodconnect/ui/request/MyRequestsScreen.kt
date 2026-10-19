@@ -69,7 +69,7 @@ private val urgencyFilterOptions = listOf("All") + Urgency.entries.map { it.disp
 
 /**
  * Screen displaying the user's historical blood requests from Firestore.
- * Allows users to review request statuses, mark pending requests as fulfilled, or cancel them.
+ * Allows users to review request statuses, mark pending requests as fulfilled, or cancel them with confirmation.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,6 +85,7 @@ fun MyRequestsScreen(
     var selectedFilter by remember { mutableStateOf("All") }
     var selectedUrgencyFilter by remember { mutableStateOf("All") }
     var selectedRequestForDetails by remember { mutableStateOf<BloodRequest?>(null) }
+    var showCancelConfirmationDialog by remember { mutableStateOf(false) }
 
     val displayedRequests = remember(requests, selectedFilter, selectedUrgencyFilter) {
         requests.filter { req ->
@@ -373,6 +374,9 @@ fun MyRequestsScreen(
                             RequestDetailRow(label = "Hospital", value = req.hospital)
                             RequestDetailRow(label = "Locality", value = req.city)
                             RequestDetailRow(label = "Urgency", value = req.urgencyLevel.displayName)
+                            if (req.notes.isNotBlank()) {
+                                RequestDetailRow(label = "Notes", value = req.notes)
+                            }
                         }
                     }
 
@@ -397,8 +401,7 @@ fun MyRequestsScreen(
 
                             OutlinedButton(
                                 onClick = {
-                                    viewModel.updateStatus(req.id.ifBlank { req.requestId }, RequestStatus.CANCELLED)
-                                    selectedRequestForDetails = null
+                                    showCancelConfirmationDialog = true
                                 },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(8.dp),
@@ -422,10 +425,41 @@ fun MyRequestsScreen(
             }
         )
     }
+
+    // Cancel Confirmation Dialog
+    if (showCancelConfirmationDialog && selectedRequestForDetails != null) {
+        val req = selectedRequestForDetails!!
+        AlertDialog(
+            onDismissRequest = { showCancelConfirmationDialog = false },
+            title = { Text("Cancel this request?") },
+            text = { Text("Are you sure you want to cancel this emergency blood request? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showCancelConfirmationDialog = false
+                        selectedRequestForDetails = null
+                        viewModel.updateStatus(req.id.ifBlank { req.requestId }, RequestStatus.CANCELLED)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Yes, cancel")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showCancelConfirmationDialog = false },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Keep it")
+                }
+            }
+        )
+    }
 }
 
 /**
- * Card representing an individual blood request in history.
+ * Card representing an individual blood request in history with notes display if non-blank.
  */
 @Composable
 private fun MyRequestCard(
@@ -495,6 +529,14 @@ private fun MyRequestCard(
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium
                     )
+
+                    if (entry.notes.isNotBlank()) {
+                        Text(
+                            text = "Notes: ${entry.notes}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
+                        )
+                    }
                 }
 
                 val statusEnum = entry.requestStatus

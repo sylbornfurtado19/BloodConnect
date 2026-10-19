@@ -13,11 +13,11 @@ import com.bloodconnect.utils.UserLocation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
@@ -46,8 +46,87 @@ class DonorMapViewModel @Inject constructor(
     private val locationHelper: LocationHelper
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(MapUiState(isLoading = true))
-    val uiState: StateFlow<MapUiState> = _uiState.asStateFlow()
+    private val rawDonors = MutableStateFlow<List<Donor>>(emptyList())
+    private val rawRequests = MutableStateFlow<List<BloodRequest>>(emptyList())
+    private val filter = MutableStateFlow(MapFilter.ALL)
+    private val bloodGroupFilter = MutableStateFlow<BloodGroup?>(null)
+    private val userLocation = MutableStateFlow<UserLocation?>(null)
+    private val errorMessage = MutableStateFlow<String?>(null)
+    private val isLoading = MutableStateFlow(true)
+
+    val uiState: StateFlow<MapUiState> = combine(
+        rawDonors,
+        rawRequests,
+        filter,
+        bloodGroupFilter,
+        userLocation
+    ) { donors, requests, currentFilter, currentBg, location ->
+        val currentUserId = authRepository.currentUserId
+
+        val validDonors = donors.filter { donor ->
+            donor.id != currentUserId &&
+            donor.latitude != null && donor.longitude != null &&
+            !(donor.latitude == 0.0 && donor.longitude == 0.0)
+        }
+
+        val validRequests = requests.filter { req ->
+            req.latitude != 0.0 || req.longitude != 0.0
+        }
+
+        val filteredDonors = if (currentBg != null) {
+            validDonors.filter { it.bloodGroup == currentBg }
+        } else {
+            validDonors
+        }
+
+        val filteredRequests = if (currentBg != null) {
+            validRequests.filter { req ->
+                val reqBg = BloodGroup.fromString(req.bloodGroup)
+                reqBg == currentBg
+            }
+        } else {
+            validRequests
+        }
+
+        val finalDonors = if (currentFilter == MapFilter.ALL || currentFilter == MapFilter.DONORS) {
+            filteredDonors
+        } else {
+            emptyList()
+        }
+
+        val finalRequests = if (currentFilter == MapFilter.ALL || currentFilter == MapFilter.REQUESTS) {
+            filteredRequests
+        } else {
+            emptyList()
+        }
+
+        // Return a temporary holder object
+        MapIntermediateState(finalDonors, finalRequests, location, currentFilter, currentBg)
+    }.combine(
+        combine(errorMessage, isLoading) { err, load -> Pair(err, load) }
+    ) { intermediate, errorLoad ->
+        MapUiState(
+            donors = intermediate.donors,
+            requests = intermediate.requests,
+            userLocation = intermediate.userLocation,
+            filter = intermediate.filter,
+            bloodGroupFilter = intermediate.bloodGroupFilter,
+            isLoading = errorLoad.second,
+            errorMessage = errorLoad.first
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = MapUiState(isLoading = true)
+    )
+
+    private data class MapIntermediateState(
+        val donors: List<Donor>,
+        val requests: List<BloodRequest>,
+        val userLocation: UserLocation?,
+        val filter: MapFilter,
+        val bloodGroupFilter: BloodGroup?
+    )
 
     init {
         observeMapData()
@@ -56,62 +135,42 @@ class DonorMapViewModel @Inject constructor(
 
     private fun observeMapData() {
         viewModelScope.launch(Dispatchers.IO) {
-            val currentUserId = authRepository.currentUserId
-            val donorsFlow = donorRepository.observeDonors(null)
-                .catch { emit(emptyList()) }
-            val requestsFlow = requestRepository.observeActiveRequests()
-                .catch { emit(emptyList()) }
-
-            combine(donorsFlow, requestsFlow) { allDonors, allRequests ->
-                val validDonors = allDonors.filter { donor ->
-                    donor.id != currentUserId &&
-                    donor.latitude != null && donor.longitude != null &&
-                    !(donor.latitude == 0.0 && donor.longitude == 0.0)
-                }
-
-                val validRequests = allRequests.filter { req ->
-                    req.latitude != 0.0 || req.longitude != 0.0
-                }
-
-                val currentState = _uiState.value
-                val bgFilter = currentState.bloodGroupFilter
-
-                val filteredDonors = if (bgFilter != null) {
-                    validDonors.filter { it.bloodGroup == bgFilter }
-                } else {
-                    validDonors
-                }
-
-                val filteredRequests = if (bgFilter != null) {
-                    validRequests.filter { req ->
-                        val reqBg = BloodGroup.fromString(req.bloodGroup)
-                        reqBg == bgFilter
+            launch {
+                donorRepository.observeDonors(null)
+                    .catch { e ->
+                        errorMessage.value = e.localizedMessage ?: "Failed to load map data"
+                        emit(emptyList())
                     }
-                } else {
-                    validRequests
-                }
+                    .collect { donors ->
+                        rawDonors.value = donors
+                        isLoading.value = false
+                    }
+            }
 
-                MapUiState(
-                    donors = filteredDonors,
-                    requests = filteredRequests,
-                    userLocation = currentState.userLocation,
-                    filter = currentState.filter,
-                    bloodGroupFilter = currentState.bloodGroupFilter,
-                    isLoading = false,
-                    errorMessage = null
-                )
-            }.collect { newState ->
-                _uiState.value = newState
+            launch {
+                requestRepository.observeActiveRequests()
+                    .catch { e ->
+                        errorMessage.value = e.localizedMessage ?: "Failed to load map data"
+                        emit(emptyList())
+                    }
+                    .collect { requests ->
+                        rawRequests.value = requests
+                        isLoading.value = false
+                    }
             }
         }
     }
 
-    fun setFilter(filter: MapFilter) {
-        _uiState.update { it.copy(filter = filter) }
+    fun setFilter(newFilter: MapFilter) {
+        filter.value = newFilter
     }
 
-    fun setBloodGroupFilter(bloodGroup: BloodGroup?) {
-        _uiState.update { it.copy(bloodGroupFilter = bloodGroup) }
+    fun setBloodGroupFilter(bg: BloodGroup?) {
+        bloodGroupFilter.value = bg
+    }
+
+    fun clearError() {
+        errorMessage.value = null
     }
 
     fun refreshUserLocation() {
@@ -122,7 +181,7 @@ class DonorMapViewModel @Inject constructor(
                 }
                 val location = locResult?.getOrNull()
                 if (location != null) {
-                    _uiState.update { it.copy(userLocation = location) }
+                    userLocation.value = location
                 }
             } catch (_: Exception) {
                 // Ignore location fetch failures on map
