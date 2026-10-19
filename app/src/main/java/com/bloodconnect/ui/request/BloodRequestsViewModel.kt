@@ -13,6 +13,7 @@ import com.bloodconnect.data.repository.BloodRequestRepository
 import com.bloodconnect.data.repository.UserRepository
 import com.bloodconnect.utils.LocationHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -32,18 +33,23 @@ class BloodRequestsViewModel @Inject constructor(
     var isLoading by mutableStateOf(false)
         private set
 
+    var isSubmitting by mutableStateOf(false)
+        private set
+
     var errorMessage by mutableStateOf<String?>(null)
         private set
+
+    private var listJob: Job? = null
 
     init {
         loadRequests()
     }
 
     fun loadRequests() {
-        if (isLoading) return
+        listJob?.cancel()
         isLoading = true
         errorMessage = null
-        viewModelScope.launch {
+        listJob = viewModelScope.launch {
             try {
                 requestRepository.observeActiveRequests()
                     .catch { e ->
@@ -62,20 +68,31 @@ class BloodRequestsViewModel @Inject constructor(
         }
     }
 
+    override fun onCleared() {
+        listJob?.cancel()
+    }
+
     fun createRequestWithLocation(
         bloodGroup: String,
         hospital: String,
         unitsNeeded: Int,
         urgency: String,
         city: String,
+        notes: String = "",
         onSuccess: () -> Unit
     ) {
-        if (isLoading) return
-        isLoading = true
+        if (isSubmitting) return
+
+        val currentUid = authRepository.currentUserId
+        if (currentUid.isNullOrBlank()) {
+            errorMessage = "Please sign in to request blood"
+            return
+        }
+
+        isSubmitting = true
         errorMessage = null
         viewModelScope.launch {
             try {
-                val currentUid = authRepository.currentUserId ?: "anonymous_user"
                 val userResult = userRepository.getUser(currentUid)
                 val userObj = userResult.getOrNull()
                 val requesterName = userObj?.fullName?.ifBlank { null }
@@ -100,7 +117,8 @@ class BloodRequestsViewModel @Inject constructor(
                     city = city,
                     latitude = lat,
                     longitude = lon,
-                    status = RequestStatus.PENDING.displayName
+                    status = RequestStatus.PENDING.displayName,
+                    notes = notes
                 )
                 val result = requestRepository.createRequest(request)
                 if (result.isSuccess) {
@@ -111,7 +129,7 @@ class BloodRequestsViewModel @Inject constructor(
             } catch (e: Exception) {
                 errorMessage = e.localizedMessage ?: "Failed to create request"
             } finally {
-                isLoading = false
+                isSubmitting = false
             }
         }
     }
@@ -131,6 +149,7 @@ class BloodRequestsViewModel @Inject constructor(
             unitsNeeded = unitsNeeded,
             urgency = urgency,
             city = "",
+            notes = "",
             onSuccess = onSuccess
         )
     }
@@ -150,6 +169,7 @@ class BloodRequestsViewModel @Inject constructor(
             unitsNeeded = unitsNeeded,
             urgency = urgency.displayName,
             city = "",
+            notes = "",
             onSuccess = onSuccess
         )
     }
@@ -173,6 +193,7 @@ class BloodRequestsViewModel @Inject constructor(
             unitsNeeded = unitsRequired,
             urgency = urgency,
             city = "",
+            notes = "",
             onSuccess = onSuccess
         )
     }

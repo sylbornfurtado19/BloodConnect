@@ -10,6 +10,7 @@ import androidx.navigation.navArgument
 import com.bloodconnect.ui.auth.LoginScreen
 import com.bloodconnect.ui.auth.RegisterScreen
 import com.bloodconnect.ui.home.HomeScreen
+import com.bloodconnect.ui.map.DonorMapScreen
 import com.bloodconnect.ui.search.DonorDetailScreen
 import com.bloodconnect.ui.search.DonorSearchScreen
 import com.bloodconnect.ui.request.BloodRequestsScreen
@@ -88,6 +89,11 @@ fun BloodConnectNavHost(
                     navController.navigate(Screen.Profile.route) {
                         launchSingleTop = true
                     }
+                },
+                onNavigateToDonorMap = {
+                    navController.navigate(Screen.DonorMap.route) {
+                        launchSingleTop = true
+                    }
                 }
             )
         }
@@ -138,6 +144,14 @@ fun BloodConnectNavHost(
             )
         }
 
+        composable(route = Screen.DonorMap.route) {
+            DonorMapScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         composable(route = Screen.Profile.route) {
             ProfileScreen(
                 onNavigateBack = {
@@ -153,4 +167,3 @@ fun BloodConnectNavHost(
         }
     }
 }
-

@@ -14,6 +14,7 @@ import java.util.Date
  * - [hospital]: Medical facility or hospital name.
  * - [createdAt]: Epoch millisecond creation timestamp.
  * - [status]: Standardized status string (e.g. "Pending", "Fulfilled", "Cancelled").
+ * - [notes]: Optional additional details or instructions.
  *
  * Preserves bidirectional Firestore compatibility for legacy fields:
  * - "requestId" <-> "id"
@@ -43,7 +44,8 @@ data class BloodRequest(
     var status: String = RequestStatus.PENDING.displayName,
     @get:PropertyName("createdAt")
     @set:PropertyName("createdAt")
-    var createdAt: Long = System.currentTimeMillis()
+    var createdAt: Long = System.currentTimeMillis(),
+    val notes: String = ""
 ) {
     // ------------------------------------------------------------------------
     // Backward-Compatible Property Aliases & Firestore Field Mappings
@@ -189,7 +191,8 @@ data class BloodRequest(
             longitude: Double = 0.0,
             status: String = RequestStatus.PENDING.displayName,
             createdAt: Long = System.currentTimeMillis(),
-            timestamp: Timestamp? = null
+            timestamp: Timestamp? = null,
+            notes: String = ""
         ): BloodRequest {
             return BloodRequest(
                 id = id.ifBlank { requestId },
@@ -203,7 +206,8 @@ data class BloodRequest(
                 latitude = latitude,
                 longitude = longitude,
                 status = status,
-                createdAt = timestamp?.toDate()?.time ?: createdAt
+                createdAt = timestamp?.toDate()?.time ?: createdAt,
+                notes = notes
             )
         }
     }

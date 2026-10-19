@@ -79,11 +79,17 @@ class BloodRequestRepository @Inject constructor(
     }
 
     /**
-     * Observes active blood requests as a continuous real-time Flow using snapshot listener.
+     * Observes active blood requests using a server-side query with whereIn and orderBy limit(100).
+     *
+     * IMPORTANT: Firestore Composite Index Required in Firebase Console:
+     * Collection: blood_requests
+     * Fields: status (Ascending), timestamp (Descending)
      */
     fun observeActiveRequests(): Flow<List<BloodRequest>> = callbackFlow {
         val query = requestsCollection
+            .whereIn("status", listOf("Pending", "Active", "PENDING"))
             .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(100)
 
         val listener = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
@@ -97,12 +103,7 @@ class BloodRequestRepository @Inject constructor(
                 }
             } ?: emptyList()
 
-            // Filter client-side for active/pending statuses to support legacy records reliably without composite index failures
-            val activeList = list.filter { req ->
-                req.requestStatus == RequestStatus.PENDING
-            }
-
-            trySend(activeList)
+            trySend(list)
         }
         awaitClose { listener.remove() }
     }

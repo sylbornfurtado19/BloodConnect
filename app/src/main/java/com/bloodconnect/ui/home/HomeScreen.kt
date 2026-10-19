@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -53,7 +54,7 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 /**
  * Main Home & Dashboard screen for BloodConnect.
  * Displays quick actions, blood group shortcuts, and sample urgent requests.
- * Triggers background location permission requests and location sync via [HomeViewModel].
+ * Triggers background location permission requests only ONCE per app session via [HomeViewModel].
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -63,6 +64,7 @@ fun HomeScreen(
     onNavigateToBloodRequests: () -> Unit = {},
     onNavigateToProfile: () -> Unit = {},
     onNavigateToMyRequests: () -> Unit = {},
+    onNavigateToDonorMap: () -> Unit = {},
     modifier: Modifier = Modifier,
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -74,7 +76,8 @@ fun HomeScreen(
     )
 
     LaunchedEffect(Unit) {
-        if (!locationPermissionState.allPermissionsGranted) {
+        if (!locationPermissionState.allPermissionsGranted && !homeViewModel.permissionRequested) {
+            homeViewModel.markPermissionRequested()
             locationPermissionState.launchMultiplePermissionRequest()
         }
     }
@@ -147,7 +150,7 @@ fun HomeScreen(
                 }
             }
 
-            // B. Main Actions - Find Donors & Request Blood
+            // B. Main Actions - Find Donors & Request Blood & Nearby Map
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     text = "Quick Actions",
@@ -227,54 +230,94 @@ fun HomeScreen(
                     }
                 }
 
-                // Action 3: My Requests (Request History)
-                OutlinedCard(
-                    onClick = onNavigateToMyRequests,
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    // Action 3: Nearby Map
+                    OutlinedCard(
+                        onClick = onNavigateToDonorMap,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Box(
+                        Row(
                             modifier = Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(MaterialTheme.colorScheme.secondaryContainer),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.History,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.tertiaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Map,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Nearby Map",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "View donors & requests",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
+                    }
 
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "My Requests",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "View your blood request history & demo statuses",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                    // Action 4: My Requests (Request History)
+                    OutlinedCard(
+                        onClick = onNavigateToMyRequests,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "My Requests",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Manage your requests",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Open My Requests",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
                     }
                 }
             }
@@ -318,47 +361,6 @@ fun HomeScreen(
                         )
                     }
                 }
-            }
-
-            // D. Recent Blood Requests (Sample Content)
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SectionHeader(
-                    title = "Recent Requests (Sample)",
-                    subtitle = "Illustrative emergency feeds",
-                    actionText = "View All",
-                    onActionClick = onNavigateToBloodRequests
-                )
-
-                // Sample Request 1
-                SampleRequestCard(
-                    bloodGroup = "O+",
-                    hospital = "City General Hospital (Central)",
-                    urgencyStatus = "Critical · 2 Units needed",
-                    onClick = onNavigateToBloodRequests
-                )
-
-                // Sample Request 2
-                SampleRequestCard(
-                    bloodGroup = "A-",
-                    hospital = "Metro Care Medical Center",
-                    urgencyStatus = "Urgent · 1 Unit needed",
-                    onClick = onNavigateToBloodRequests
-                )
-
-                // Sample Request 3
-                SampleRequestCard(
-                    bloodGroup = "B+",
-                    hospital = "St. Jude Regional Clinic",
-                    urgencyStatus = "Needed within 24h · 1 Unit",
-                    onClick = onNavigateToBloodRequests
-                )
-
-                Text(
-                    text = "* Sample demonstration data. Real requests will load in upcoming phases.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(start = 4.dp, top = 2.dp)
-                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -432,7 +434,8 @@ private fun HomeScreenPreview() {
             onNavigateToDonorSearch = {},
             onNavigateToBloodRequests = {},
             onNavigateToProfile = {},
-            onNavigateToMyRequests = {}
+            onNavigateToMyRequests = {},
+            onNavigateToDonorMap = {}
         )
     }
 }
