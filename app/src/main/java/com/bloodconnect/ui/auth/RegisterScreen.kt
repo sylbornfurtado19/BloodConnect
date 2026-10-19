@@ -44,7 +44,7 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 /**
  * Register Screen connected to [AuthViewModel].
  * Captures donor information and executes real registration against Firebase Auth & Firestore.
- * Requests location permissions via Accompanist so user coordinates can be recorded upon sign-up.
+ * Requests location permissions via Accompanist so user coordinates can be recorded non-blockingly upon sign-up.
  * Displays loading indicators and error feedback, navigating to Home upon success.
  */
 @OptIn(ExperimentalPermissionsApi::class)
@@ -212,9 +212,6 @@ fun RegisterScreen(
 
                 Button(
                     onClick = {
-                        if (!locationPermissionState.allPermissionsGranted) {
-                            locationPermissionState.launchMultiplePermissionRequest()
-                        }
                         authViewModel.signUp(fullName, bloodGroup, email, password, phone, onNavigateToHome)
                     },
                     enabled = uiState !is AuthUiState.Loading,

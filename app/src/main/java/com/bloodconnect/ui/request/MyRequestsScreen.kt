@@ -15,14 +15,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -30,6 +34,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
@@ -47,46 +52,54 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.bloodconnect.data.model.BloodRequest
 import com.bloodconnect.data.model.RequestStatus
 import com.bloodconnect.data.model.Urgency
 import com.bloodconnect.ui.components.BloodGroupBadge
 import com.bloodconnect.ui.components.EmptyState
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val statusFilterOptions = listOf("All") + RequestStatus.entries.map { it.displayName }
 private val urgencyFilterOptions = listOf("All") + Urgency.entries.map { it.displayName }
 
 /**
- * Screen displaying the user's historical blood requests and their demonstration statuses.
- * Powered by local demonstration state and filter chips.
+ * Screen displaying the user's historical blood requests from Firestore.
+ * Allows users to review request statuses, mark pending requests as fulfilled, or cancel them.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyRequestsScreen(
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: MyRequestsViewModel = hiltViewModel()
 ) {
+    val requests = viewModel.requests
+    val isLoading = viewModel.isLoading
+    val errorMessage = viewModel.errorMessage
+
     var selectedFilter by remember { mutableStateOf("All") }
     var selectedUrgencyFilter by remember { mutableStateOf("All") }
-    var selectedRequestForDetails by remember { mutableStateOf<MySampleRequest?>(null) }
+    var selectedRequestForDetails by remember { mutableStateOf<BloodRequest?>(null) }
 
-    val displayedRequests = remember(selectedFilter, selectedUrgencyFilter) {
-        sampleMyRequestsList.filter { req ->
+    val displayedRequests = remember(requests, selectedFilter, selectedUrgencyFilter) {
+        requests.filter { req ->
             val statusMatches = if (selectedFilter == "All") {
                 true
             } else {
                 val filterStatus = RequestStatus.fromString(selectedFilter)
-                val reqStatus = RequestStatus.fromString(req.status)
-                reqStatus == filterStatus || req.status.startsWith(selectedFilter, ignoreCase = true)
+                req.requestStatus == filterStatus || req.status.startsWith(selectedFilter, ignoreCase = true)
             }
 
             val urgencyMatches = if (selectedUrgencyFilter == "All") {
                 true
             } else {
                 val filterUrgency = Urgency.fromString(selectedUrgencyFilter)
-                val reqUrgency = Urgency.fromStringOrDefault(req.urgency)
-                reqUrgency == filterUrgency || req.urgency.equals(selectedUrgencyFilter, ignoreCase = true)
+                req.urgencyLevel == filterUrgency || req.urgency.equals(selectedUrgencyFilter, ignoreCase = true)
             }
 
             statusMatches && urgencyMatches
@@ -137,45 +150,10 @@ fun MyRequestsScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Review your past emergency blood requests and their illustrative demonstration statuses.",
+                    text = "Review your past emergency blood requests and manage their statuses.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-
-            // Demo Disclaimer Banner
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Column {
-                        Text(
-                            text = "Sample Request Records",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Statuses shown below are simulated demonstration values. Requests are not sent to real hospitals, matched with live donors, or tracked in production.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
             }
 
             // Status Filter Section
@@ -248,7 +226,7 @@ fun MyRequestsScreen(
 
             // Requests List Header
             SectionHeader(
-                title = "My Requests (Sample)",
+                title = "My Requests",
                 subtitle = if (displayedRequests.isNotEmpty()) {
                     "Showing ${displayedRequests.size} request record(s)"
                 } else {
@@ -256,23 +234,24 @@ fun MyRequestsScreen(
                 }
             )
 
-            if (displayedRequests.isEmpty()) {
-                val filterDesc = if (selectedFilter != "All" && selectedUrgencyFilter != "All") {
-                    "Status: $selectedFilter, Urgency: $selectedUrgencyFilter"
-                } else if (selectedFilter != "All") {
-                    "Status: $selectedFilter"
-                } else {
-                    "Urgency: $selectedUrgencyFilter"
+            if (isLoading && requests.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Loading your requests...", style = MaterialTheme.typography.bodyMedium)
                 }
+            } else if (displayedRequests.isEmpty()) {
                 EmptyState(
                     title = "No Requests Found",
-                    description = "No demonstration requests match the selected filter ($filterDesc).",
+                    description = "You have not submitted any emergency blood requests matching the current filters.",
                     icon = Icons.Default.Inbox,
-                    actionLabel = "Show All Requests",
-                    onActionClick = {
-                        selectedFilter = "All"
-                        selectedUrgencyFilter = "All"
-                    }
+                    actionLabel = "Refresh",
+                    onActionClick = { viewModel.loadMyRequests() }
                 )
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -285,19 +264,25 @@ fun MyRequestsScreen(
                 }
             }
 
-            // Bottom Notice
-            Text(
-                text = "* Demonstration request history. All statuses and patient profiles are fictional and do not represent real-world broadcasts or medical records.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.padding(start = 4.dp, top = 4.dp, bottom = 12.dp)
-            )
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage!!,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
-    // Request Detail Dialog
+    // Request Detail Dialog with Actions
     if (selectedRequestForDetails != null) {
         val req = selectedRequestForDetails!!
+        val dateFormatted = remember(req.createdAt) {
+            SimpleDateFormat("MMM dd, yyyy · hh:mm a", Locale.getDefault()).format(Date(req.createdAt))
+        }
+
         AlertDialog(
             onDismissRequest = { selectedRequestForDetails = null },
             icon = {
@@ -310,7 +295,7 @@ fun MyRequestsScreen(
             },
             title = {
                 Text(
-                    text = "Request Details (Demo)",
+                    text = "Request Details",
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -361,22 +346,20 @@ fun MyRequestsScreen(
                                     }
                                 }
 
-                                val statusEnum = RequestStatus.fromString(req.status)
+                                val statusEnum = req.requestStatus
                                 SuggestionChip(
                                     onClick = {},
-                                    label = { Text(statusEnum?.displayName ?: req.status) },
+                                    label = { Text(statusEnum.displayName) },
                                     colors = SuggestionChipDefaults.suggestionChipColors(
                                         containerColor = when (statusEnum) {
                                             RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
                                             RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                             RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
-                                            null -> MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
                                         },
                                         labelColor = when (statusEnum) {
                                             RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary
                                             RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary
                                             RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error
-                                            null -> MaterialTheme.colorScheme.error
                                         }
                                     ),
                                     shape = RoundedCornerShape(8.dp)
@@ -385,25 +368,48 @@ fun MyRequestsScreen(
 
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                            RequestDetailRow(label = "Request ID", value = req.id)
-                            RequestDetailRow(label = "Date & Time", value = req.requestDate)
+                            RequestDetailRow(label = "Request ID", value = req.id.ifBlank { req.requestId })
+                            RequestDetailRow(label = "Date & Time", value = dateFormatted)
                             RequestDetailRow(label = "Hospital", value = req.hospital)
                             RequestDetailRow(label = "Locality", value = req.city)
-                            RequestDetailRow(
-                                label = "Urgency",
-                                value = Urgency.fromStringOrDefault(req.urgency).displayName
-                            )
-                            if (req.notes.isNotBlank()) {
-                                RequestDetailRow(label = "Notes", value = req.notes)
-                            }
+                            RequestDetailRow(label = "Urgency", value = req.urgencyLevel.displayName)
                         }
                     }
 
-                    Text(
-                        text = "Note: This is a simulated request history record. No actual broadcast was sent to hospitals or donors, and no personal donor contacts are disclosed.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
-                    )
+                    // Action buttons if Pending
+                    if (req.requestStatus == RequestStatus.PENDING) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.updateStatus(req.id.ifBlank { req.requestId }, RequestStatus.FULFILLED)
+                                    selectedRequestForDetails = null
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.size(4.dp))
+                                Text("Mark Fulfilled")
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.updateStatus(req.id.ifBlank { req.requestId }, RequestStatus.CANCELLED)
+                                    selectedRequestForDetails = null
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Icon(imageVector = Icons.Default.Cancel, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.size(4.dp))
+                                Text("Cancel")
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -423,10 +429,14 @@ fun MyRequestsScreen(
  */
 @Composable
 private fun MyRequestCard(
-    entry: MySampleRequest,
+    entry: BloodRequest,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val dateFormatted = remember(entry.createdAt) {
+        SimpleDateFormat("MMM dd, yyyy · hh:mm a", Locale.getDefault()).format(Date(entry.createdAt))
+    }
+
     OutlinedCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
@@ -473,36 +483,34 @@ private fun MyRequestCard(
                             modifier = Modifier.size(14.dp)
                         )
                         Text(
-                            text = entry.city,
+                            text = entry.city.ifBlank { "Unspecified Location" },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
                     Text(
-                        text = "${entry.unitsNeeded} Unit(s) Needed · ${Urgency.fromStringOrDefault(entry.urgency).displayName}",
+                        text = "${entry.unitsNeeded} Unit(s) Needed · ${entry.urgencyLevel.displayName}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium
                     )
                 }
 
-                val statusEnum = RequestStatus.fromString(entry.status)
+                val statusEnum = entry.requestStatus
                 SuggestionChip(
                     onClick = onClick,
-                    label = { Text(statusEnum?.displayName ?: entry.status) },
+                    label = { Text(statusEnum.displayName) },
                     colors = SuggestionChipDefaults.suggestionChipColors(
                         containerColor = when (statusEnum) {
                             RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
                             RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                             RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
-                            null -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
                         },
                         labelColor = when (statusEnum) {
                             RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary
                             RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary
                             RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error
-                            null -> MaterialTheme.colorScheme.error
                         }
                     ),
                     shape = RoundedCornerShape(8.dp)
@@ -525,14 +533,14 @@ private fun MyRequestCard(
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = entry.requestDate,
+                        text = dateFormatted,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
                 Text(
-                    text = "Tap to view details",
+                    text = "Tap to view & manage",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold

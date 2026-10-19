@@ -5,6 +5,9 @@ import com.bloodconnect.data.model.RequestStatus
 import com.bloodconnect.data.model.Urgency
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -67,8 +70,59 @@ class BloodRequestRepository @Inject constructor(
             val combined = (canonicalList + legacyActiveList + legacyPendingList)
                 .distinctBy { it.id.ifBlank { it.requestId } }
                 .map { it.withCanonicalStatus().withCanonicalUrgency() }
+                .sortedByDescending { it.createdAt }
 
             Result.success(combined)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Observes active blood requests as a continuous real-time Flow using snapshot listener.
+     */
+    fun observeActiveRequests(): Flow<List<BloodRequest>> = callbackFlow {
+        val query = requestsCollection
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+
+        val listener = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            val list = snapshot?.documents?.mapNotNull { doc ->
+                doc.toObject(BloodRequest::class.java)?.let { req ->
+                    if (req.id.isBlank()) req.id = doc.id
+                    req.withCanonicalStatus().withCanonicalUrgency()
+                }
+            } ?: emptyList()
+
+            // Filter client-side for active/pending statuses to support legacy records reliably without composite index failures
+            val activeList = list.filter { req ->
+                req.requestStatus == RequestStatus.PENDING
+            }
+
+            trySend(activeList)
+        }
+        awaitClose { listener.remove() }
+    }
+
+    /**
+     * Retrieves all requests submitted by a specific requester ID.
+     */
+    suspend fun getRequestsByRequester(uid: String): Result<List<BloodRequest>> {
+        return try {
+            val snapshot = requestsCollection
+                .whereEqualTo("requesterId", uid)
+                .get()
+                .await()
+            val list = snapshot.toObjects(BloodRequest::class.java)
+                .map { req ->
+                    if (req.id.isBlank()) req.id = req.requestId
+                    req.withCanonicalStatus().withCanonicalUrgency()
+                }
+                .sortedByDescending { it.createdAt }
+            Result.success(list)
         } catch (e: Exception) {
             Result.failure(e)
         }
