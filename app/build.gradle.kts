@@ -68,9 +68,11 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.messaging)
     
-    // Utils
+    // Maps & Location & Utils
     implementation(libs.play.services.location)
     implementation(libs.play.services.auth)
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.maps)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.accompanist.permissions)
 

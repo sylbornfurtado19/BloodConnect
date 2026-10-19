@@ -16,6 +16,11 @@
         android:roundIcon="@drawable/blood_drop_logo"
         android:supportsRtl="true"
         android:theme="@style/Theme.BloodConnect">
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyAjA0dOTqz6xx8V4aVt-He1VewH3JmmpMo" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
