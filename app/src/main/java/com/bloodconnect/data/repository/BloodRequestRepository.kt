@@ -40,56 +40,35 @@ class BloodRequestRepository @Inject constructor(
 
     suspend fun getActiveRequests(): Result<List<BloodRequest>> {
         return try {
-            val canonicalSnapshot = requestsCollection
-                .whereEqualTo("status", RequestStatus.PENDING.displayName)
+            val snapshot = requestsCollection
                 .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(100)
                 .get()
                 .await()
-            val canonicalList = canonicalSnapshot.toObjects(BloodRequest::class.java)
 
-            val legacyActiveList = try {
-                val legacySnapshot = requestsCollection
-                    .whereEqualTo("status", "Active")
-                    .get()
-                    .await()
-                legacySnapshot.toObjects(BloodRequest::class.java)
-            } catch (_: Exception) {
-                emptyList()
-            }
+            val activeList = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(BloodRequest::class.java)?.let { req ->
+                    if (req.id.isBlank()) req.id = doc.id
+                    req.withCanonicalStatus().withCanonicalUrgency()
+                }
+            }.filter { it.requestStatus == RequestStatus.PENDING }
 
-            val legacyPendingList = try {
-                val legacySnapshot = requestsCollection
-                    .whereEqualTo("status", "PENDING")
-                    .get()
-                    .await()
-                legacySnapshot.toObjects(BloodRequest::class.java)
-            } catch (_: Exception) {
-                emptyList()
-            }
-
-            val combined = (canonicalList + legacyActiveList + legacyPendingList)
-                .distinctBy { it.id.ifBlank { it.requestId } }
-                .map { it.withCanonicalStatus().withCanonicalUrgency() }
-                .sortedByDescending { it.createdAt }
-
-            Result.success(combined)
+            Result.success(activeList)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
     /**
-     * Observes active blood requests using a server-side query with whereIn and orderBy limit(100).
-     *
-     * IMPORTANT: Firestore Composite Index Required in Firebase Console:
-     * Collection: blood_requests
-     * Fields: status (Ascending), timestamp (Descending)
+     * Observes active blood requests using single-field timestamp ordering and in-memory status filtering.
+     * Prevents FAILED_PRECONDITION errors when composite indexes are not yet built in Firebase Console.
      */
     fun observeActiveRequests(): Flow<List<BloodRequest>> = callbackFlow {
         val query = requestsCollection
-            .whereIn("status", listOf("Pending", "Active", "PENDING"))
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .limit(100)
+
+        val activeStatuses = setOf("Pending", "Active", "PENDING")
 
         val listener = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
@@ -101,6 +80,8 @@ class BloodRequestRepository @Inject constructor(
                     if (req.id.isBlank()) req.id = doc.id
                     req.withCanonicalStatus().withCanonicalUrgency()
                 }
+            }?.filter { req ->
+                req.status in activeStatuses || req.requestStatus == RequestStatus.PENDING
             } ?: emptyList()
 
             trySend(list)
@@ -132,12 +113,17 @@ class BloodRequestRepository @Inject constructor(
     suspend fun getRequestsByStatus(status: RequestStatus): Result<List<BloodRequest>> {
         return try {
             val snapshot = requestsCollection
-                .whereEqualTo("status", status.displayName)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(100)
                 .get()
                 .await()
-            val list = snapshot.toObjects(BloodRequest::class.java)
-                .map { it.withCanonicalStatus().withCanonicalUrgency() }
+            val list = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(BloodRequest::class.java)?.let { req ->
+                    if (req.id.isBlank()) req.id = doc.id
+                    req.withCanonicalStatus().withCanonicalUrgency()
+                }
+            }.filter { it.requestStatus == status }
+
             Result.success(list)
         } catch (e: Exception) {
             Result.failure(e)
@@ -152,31 +138,19 @@ class BloodRequestRepository @Inject constructor(
         return try {
             val targetUrgency = Urgency.fromStringOrDefault(urgency)
             val snapshot = requestsCollection
-                .whereEqualTo("urgency", targetUrgency.displayName)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(100)
                 .get()
                 .await()
-            val canonicalList = snapshot.toObjects(BloodRequest::class.java)
 
-            val legacyNormalList = if (targetUrgency == Urgency.ROUTINE) {
-                try {
-                    val legacySnapshot = requestsCollection
-                        .whereEqualTo("urgency", "Normal")
-                        .get()
-                        .await()
-                    legacySnapshot.toObjects(BloodRequest::class.java)
-                } catch (_: Exception) {
-                    emptyList()
+            val list = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(BloodRequest::class.java)?.let { req ->
+                    if (req.id.isBlank()) req.id = doc.id
+                    req.withCanonicalStatus().withCanonicalUrgency()
                 }
-            } else {
-                emptyList()
-            }
+            }.filter { it.urgencyLevel == targetUrgency }
 
-            val combined = (canonicalList + legacyNormalList)
-                .distinctBy { it.id.ifBlank { it.requestId } }
-                .map { it.withCanonicalStatus().withCanonicalUrgency() }
-
-            Result.success(combined)
+            Result.success(list)
         } catch (e: Exception) {
             Result.failure(e)
         }
