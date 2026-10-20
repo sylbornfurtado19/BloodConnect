@@ -452,6 +452,13 @@ fun ProfileScreen(
                             color = MaterialTheme.colorScheme.tertiary,
                             fontWeight = FontWeight.SemiBold
                         )
+                        if (!isDonorAvailable) {
+                            Text(
+                                text = "You can switch availability back on when your cooldown ends.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     Button(
@@ -511,7 +518,10 @@ fun ProfileScreen(
 
                         Switch(
                             checked = isDonorAvailable,
-                            onCheckedChange = { isDonorAvailable = it },
+                            onCheckedChange = {
+                                isDonorAvailable = it
+                                viewModel.updateAvailability(it)
+                            },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                                 checkedTrackColor = MaterialTheme.colorScheme.primary

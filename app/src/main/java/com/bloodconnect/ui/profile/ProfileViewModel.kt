@@ -11,6 +11,7 @@ import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.BloodRequestRepository
 import com.bloodconnect.data.repository.UserRepository
 import com.bloodconnect.notifications.TopicManager
+import com.bloodconnect.utils.DonationSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -21,7 +22,8 @@ class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val requestRepository: BloodRequestRepository,
-    private val topicManager: TopicManager
+    private val topicManager: TopicManager,
+    private val donationSyncManager: DonationSyncManager
 ) : ViewModel() {
 
     var user by mutableStateOf<User?>(null)
@@ -54,6 +56,8 @@ class ProfileViewModel @Inject constructor(
             isLoading = true
             errorMessage = null
             try {
+                donationSyncManager.syncFromPledges(uid)
+
                 val result = userRepository.getUser(uid)
                 if (result.isSuccess) {
                     val loadedUser = result.getOrNull()
@@ -83,6 +87,14 @@ class ProfileViewModel @Inject constructor(
         val uid = authRepository.currentUserId ?: return
         viewModelScope.launch {
             userRepository.markDonatedToday(uid)
+            loadUserProfile()
+        }
+    }
+
+    fun updateAvailability(isAvailable: Boolean) {
+        val uid = authRepository.currentUserId ?: return
+        viewModelScope.launch {
+            userRepository.updateAvailability(uid, isAvailable)
             loadUserProfile()
         }
     }

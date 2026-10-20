@@ -60,7 +60,7 @@ service cloud.firestore {
 
         allow update: if isSignedIn() &&
           request.auth.uid == get(/databases/$(database)/documents/blood_requests/$(id)).data.requesterId &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"]) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "donatedAt"]) &&
           request.resource.data.status == "Donated";
 
         allow delete: if isSignedIn() && request.auth.uid == donorUid;

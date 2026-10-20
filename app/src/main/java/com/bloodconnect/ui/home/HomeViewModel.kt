@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.UserRepository
 import com.bloodconnect.notifications.TopicManager
+import com.bloodconnect.utils.DonationSyncManager
 import com.bloodconnect.utils.LocationSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +25,8 @@ class HomeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val locationSyncManager: LocationSyncManager,
-    private val topicManager: TopicManager
+    private val topicManager: TopicManager,
+    private val donationSyncManager: DonationSyncManager
 ) : ViewModel() {
 
     var permissionRequested by mutableStateOf(false)
@@ -34,10 +36,10 @@ class HomeViewModel @Inject constructor(
         private set
 
     init {
-        // B2: Subscribe to user's blood group topic if signed in
         val uid = authRepository.currentUserId
         if (uid != null) {
             viewModelScope.launch(Dispatchers.IO) {
+                donationSyncManager.syncFromPledges(uid)
                 val user = userRepository.getUser(uid).getOrNull()
                 if (user != null && user.bloodGroup.isNotBlank()) {
                     topicManager.subscribe(user.bloodGroup)

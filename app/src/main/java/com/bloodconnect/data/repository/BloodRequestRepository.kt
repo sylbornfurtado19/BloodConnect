@@ -38,11 +38,15 @@ class BloodRequestRepository @Inject constructor(
         }
     }
 
+    /**
+     * Retrieves active blood requests using a single-field status filter.
+     * Note: single-field whereIn needs no composite index.
+     */
     suspend fun getActiveRequests(): Result<List<BloodRequest>> {
         return try {
             val snapshot = requestsCollection
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .limit(100)
+                .whereIn("status", listOf("Pending", "Active", "PENDING"))
+                .limit(200)
                 .get()
                 .await()
 
@@ -52,6 +56,7 @@ class BloodRequestRepository @Inject constructor(
                     req.withCanonicalStatus().withCanonicalUrgency()
                 }
             }.filter { it.requestStatus == RequestStatus.PENDING }
+             .sortedByDescending { it.createdAt }
 
             Result.success(activeList)
         } catch (e: Exception) {
@@ -60,13 +65,13 @@ class BloodRequestRepository @Inject constructor(
     }
 
     /**
-     * Observes active blood requests using single-field timestamp ordering and in-memory status filtering.
-     * Prevents FAILED_PRECONDITION errors when composite indexes are not yet built in Firebase Console.
+     * Observes active blood requests using a single-field status filter.
+     * Note: single-field whereIn needs no composite index.
      */
     fun observeActiveRequests(): Flow<List<BloodRequest>> = callbackFlow {
         val query = requestsCollection
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(100)
+            .whereIn("status", listOf("Pending", "Active", "PENDING"))
+            .limit(200)
 
         val activeStatuses = setOf("Pending", "Active", "PENDING")
 
@@ -82,7 +87,7 @@ class BloodRequestRepository @Inject constructor(
                 }
             }?.filter { req ->
                 req.status in activeStatuses || req.requestStatus == RequestStatus.PENDING
-            } ?: emptyList()
+            }?.sortedByDescending { it.createdAt } ?: emptyList()
 
             trySend(list)
         }
@@ -113,8 +118,8 @@ class BloodRequestRepository @Inject constructor(
     suspend fun getRequestsByStatus(status: RequestStatus): Result<List<BloodRequest>> {
         return try {
             val snapshot = requestsCollection
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .limit(100)
+                .whereEqualTo("status", status.displayName)
+                .limit(200)
                 .get()
                 .await()
             val list = snapshot.documents.mapNotNull { doc ->
@@ -123,6 +128,7 @@ class BloodRequestRepository @Inject constructor(
                     req.withCanonicalStatus().withCanonicalUrgency()
                 }
             }.filter { it.requestStatus == status }
+             .sortedByDescending { it.createdAt }
 
             Result.success(list)
         } catch (e: Exception) {
@@ -245,10 +251,14 @@ class BloodRequestRepository @Inject constructor(
 
     suspend fun markPledgeDonated(requestId: String, donorUid: String): Result<Unit> {
         return try {
+            val updates = mapOf<String, Any>(
+                "status" to "Donated",
+                "donatedAt" to System.currentTimeMillis()
+            )
             requestsCollection.document(requestId)
                 .collection("pledges")
                 .document(donorUid)
-                .update("status", "Donated")
+                .update(updates)
                 .await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -272,6 +282,24 @@ class BloodRequestRepository @Inject constructor(
                 .get(AggregateSource.SERVER)
                 .await()
             Result.success(countQuery.count.toInt())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Retrieves all confirmed donated pledges for [uid] from collection group "pledges".
+     * Note: Uses the same collection-group index as [countMyDonations].
+     */
+    suspend fun getMyDonatedPledges(uid: String): Result<List<Pledge>> {
+        return try {
+            val snapshot = firestore.collectionGroup("pledges")
+                .whereEqualTo("donorId", uid)
+                .whereEqualTo("status", "Donated")
+                .get()
+                .await()
+            val pledges = snapshot.toObjects(Pledge::class.java)
+            Result.success(pledges)
         } catch (e: Exception) {
             Result.failure(e)
         }

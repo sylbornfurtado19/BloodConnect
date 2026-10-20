@@ -70,7 +70,24 @@ class UserRepository @Inject constructor(
 
     suspend fun markDonatedToday(uid: String): Result<Unit> {
         return try {
-            usersCollection.document(uid).update("lastDonationAt", System.currentTimeMillis()).await()
+            val updates = mapOf<String, Any>(
+                "lastDonationAt" to System.currentTimeMillis(),
+                "isAvailable" to false
+            )
+            usersCollection.document(uid).update(updates).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun recordDonation(uid: String, donationTimestamp: Long): Result<Unit> {
+        return try {
+            val updates = mapOf<String, Any>(
+                "lastDonationAt" to donationTimestamp,
+                "isAvailable" to false
+            )
+            usersCollection.document(uid).update(updates).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
