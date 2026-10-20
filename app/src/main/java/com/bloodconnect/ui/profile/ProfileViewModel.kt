@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bloodconnect.data.model.Badge
+import com.bloodconnect.data.model.DonationStreak
 import com.bloodconnect.data.model.DonorTier
 import com.bloodconnect.data.model.User
 import com.bloodconnect.data.repository.AuthRepository
@@ -30,6 +32,12 @@ class ProfileViewModel @Inject constructor(
         private set
 
     var donationCount by mutableStateOf(0)
+        private set
+
+    var donationStreak by mutableStateOf(0)
+        private set
+
+    var badges by mutableStateOf<List<Badge>>(emptyList())
         private set
 
     val donorTier: DonorTier
@@ -71,9 +79,14 @@ class ProfileViewModel @Inject constructor(
                     errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to load profile"
                 }
 
-                val countResult = requestRepository.countMyDonations(uid)
-                if (countResult.isSuccess) {
-                    donationCount = countResult.getOrDefault(0)
+                val donatedPledgesResult = requestRepository.getMyDonatedPledges(uid)
+                if (donatedPledgesResult.isSuccess) {
+                    val pledges = donatedPledgesResult.getOrDefault(emptyList())
+                    donationCount = pledges.size
+                    val timestamps = pledges.map { it.donatedAt ?: it.createdAt }
+                    val streak = DonationStreak.compute(timestamps)
+                    donationStreak = streak
+                    badges = Badge.earnedBadges(donationCount, streak)
                 }
             } catch (e: Exception) {
                 errorMessage = e.localizedMessage ?: "Failed to load profile"

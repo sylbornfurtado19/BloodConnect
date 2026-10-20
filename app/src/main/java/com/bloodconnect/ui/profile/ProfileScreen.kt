@@ -1,5 +1,6 @@
 package com.bloodconnect.ui.profile
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -64,10 +66,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bloodconnect.data.model.Badge
 import com.bloodconnect.data.model.DonationEligibility
 import com.bloodconnect.data.model.DonorTier
 import com.bloodconnect.ui.components.BloodConnectButton
@@ -86,7 +91,7 @@ private const val FALLBACK_CITY = "Not specified"
 private const val FALLBACK_CONTACT = "Not provided"
 
 /**
- * Screen displaying the user's donor profile, donor tier, lives saved, availability status, and general donation guidelines.
+ * Screen displaying the user's donor profile, donor tier, lives saved, badges, streak, availability status, and general donation guidelines.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,6 +101,7 @@ fun ProfileScreen(
     onSignOut: (() -> Unit)? = null,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     var displayName by remember { mutableStateOf(FALLBACK_NAME) }
     var bloodGroup by remember { mutableStateOf(FALLBACK_BLOOD_GROUP) }
     var cityLocality by remember { mutableStateOf(FALLBACK_CITY) }
@@ -125,8 +131,11 @@ fun ProfileScreen(
     }
 
     val donationCount = viewModel.donationCount
+    val donationStreak = viewModel.donationStreak
     val donorTier = viewModel.donorTier
     val nextThreshold = DonorTier.nextThreshold(donationCount)
+    val earnedBadges = viewModel.badges
+    val allBadges = Badge.entries
 
     LaunchedEffect(viewModel.user) {
         val user = viewModel.user
@@ -420,6 +429,99 @@ fun ProfileScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
+                    }
+                }
+            }
+
+            // Badges & Streak Card (3D)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Badges & Achievements",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Donation streak: $donationStreak",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        allBadges.forEach { badge ->
+                            val isEarned = badge in earnedBadges
+                            OutlinedCard(
+                                modifier = Modifier.width(130.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.outlinedCardColors(
+                                    containerColor = if (isEarned) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = badge.emoji,
+                                        style = MaterialTheme.typography.headlineSmall
+                                    )
+                                    Text(
+                                        text = badge.displayName,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isEarned) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                    Text(
+                                        text = if (isEarned) "Unlocked" else badge.description,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (isEarned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            val shareText = "I've donated blood $donationCount time(s) as a ${donorTier.displayName} donor on BloodConnect. Be a hero too! #BloodConnect"
+                            val sendIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                                type = "text/plain"
+                            }
+                            val shareIntent = Intent.createChooser(sendIntent, null)
+                            context.startActivity(shareIntent)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Share my impact")
                     }
                 }
             }
