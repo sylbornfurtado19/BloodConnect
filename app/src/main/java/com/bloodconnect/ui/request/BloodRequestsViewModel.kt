@@ -6,14 +6,17 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bloodconnect.data.model.BloodRequest
+import com.bloodconnect.data.model.Pledge
 import com.bloodconnect.data.model.RequestStatus
 import com.bloodconnect.data.model.Urgency
+import com.bloodconnect.data.model.User
 import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.BloodRequestRepository
 import com.bloodconnect.data.repository.UserRepository
 import com.bloodconnect.utils.LocationHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -30,6 +33,9 @@ class BloodRequestsViewModel @Inject constructor(
     var requests by mutableStateOf<List<BloodRequest>>(emptyList())
         private set
 
+    var currentUserProfile by mutableStateOf<User?>(null)
+        private set
+
     var isLoading by mutableStateOf(false)
         private set
 
@@ -39,10 +45,21 @@ class BloodRequestsViewModel @Inject constructor(
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
+    val currentUserId: String?
+        get() = authRepository.currentUserId
+
     private var listJob: Job? = null
 
     init {
         loadRequests()
+        loadCurrentUserProfile()
+    }
+
+    fun loadCurrentUserProfile() {
+        val uid = currentUserId ?: return
+        viewModelScope.launch {
+            currentUserProfile = userRepository.getUser(uid).getOrNull()
+        }
     }
 
     fun loadRequests() {
@@ -72,6 +89,49 @@ class BloodRequestsViewModel @Inject constructor(
         listJob?.cancel()
     }
 
+    fun observeMyPledge(requestId: String): Flow<Pledge?>? {
+        val uid = currentUserId ?: return null
+        return requestRepository.observeMyPledge(requestId, uid)
+    }
+
+    fun pledgeToRequest(requestId: String, onSuccess: () -> Unit = {}) {
+        val uid = currentUserId ?: return
+        viewModelScope.launch {
+            val user = userRepository.getUser(uid).getOrNull()
+            val donorName = user?.fullName?.ifBlank { null } ?: user?.displayName?.ifBlank { "Volunteer Donor" } ?: "Volunteer Donor"
+            val bloodGroup = user?.bloodGroup ?: ""
+            val phone = user?.phone ?: user?.email ?: ""
+
+            val pledge = Pledge(
+                donorId = uid,
+                donorName = donorName,
+                bloodGroup = bloodGroup,
+                phone = phone,
+                createdAt = System.currentTimeMillis(),
+                status = "Pledged"
+            )
+
+            val result = requestRepository.pledge(requestId, pledge)
+            if (result.isSuccess) {
+                onSuccess()
+            } else {
+                errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to submit pledge"
+            }
+        }
+    }
+
+    fun withdrawPledge(requestId: String, onSuccess: () -> Unit = {}) {
+        val uid = currentUserId ?: return
+        viewModelScope.launch {
+            val result = requestRepository.withdrawPledge(requestId, uid)
+            if (result.isSuccess) {
+                onSuccess()
+            } else {
+                errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to withdraw pledge"
+            }
+        }
+    }
+
     fun createRequestWithLocation(
         bloodGroup: String,
         hospital: String,
@@ -83,8 +143,8 @@ class BloodRequestsViewModel @Inject constructor(
     ) {
         if (isSubmitting) return
 
-        val currentUid = authRepository.currentUserId
-        if (currentUid.isNullOrBlank()) {
+        val uid = currentUserId
+        if (uid.isNullOrBlank()) {
             errorMessage = "Please sign in to request blood"
             return
         }
@@ -93,7 +153,7 @@ class BloodRequestsViewModel @Inject constructor(
         errorMessage = null
         viewModelScope.launch {
             try {
-                val userResult = userRepository.getUser(currentUid)
+                val userResult = userRepository.getUser(uid)
                 val userObj = userResult.getOrNull()
                 val requesterName = userObj?.fullName?.ifBlank { null }
                     ?: userObj?.displayName?.ifBlank { null }
@@ -108,7 +168,7 @@ class BloodRequestsViewModel @Inject constructor(
 
                 val canonicalUrgency = Urgency.fromStringOrDefault(urgency).displayName
                 val request = BloodRequest(
-                    requesterId = currentUid,
+                    requesterId = uid,
                     requesterName = requesterName,
                     bloodGroup = bloodGroup,
                     hospital = hospital,
@@ -174,9 +234,6 @@ class BloodRequestsViewModel @Inject constructor(
         )
     }
 
-    /**
-     * Backward-compatible overload for legacy parameter names (hospitalName, unitsRequired).
-     */
     fun createRequest(
         requesterId: String,
         requesterName: String,

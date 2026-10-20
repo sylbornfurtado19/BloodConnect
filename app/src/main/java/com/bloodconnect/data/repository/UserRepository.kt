@@ -25,7 +25,6 @@ class UserRepository @Inject constructor(
         return try {
             val snapshot = usersCollection.document(uid).get().await()
             val user = snapshot.toObject(User::class.java)?.let { parsed ->
-                // Ensure backward compatibility when legacy documents only contain "available"
                 if (snapshot.contains("isAvailable")) {
                     val modernVal = snapshot.getBoolean("isAvailable")
                     if (modernVal != null) {
@@ -63,6 +62,15 @@ class UserRepository @Inject constructor(
                 "longitude" to longitude
             )
             usersCollection.document(uid).update(updates).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun markDonatedToday(uid: String): Result<Unit> {
+        return try {
+            usersCollection.document(uid).update("lastDonationAt", System.currentTimeMillis()).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

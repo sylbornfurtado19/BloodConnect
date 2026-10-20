@@ -2,6 +2,7 @@ package com.bloodconnect.data.repository
 
 import com.bloodconnect.BuildConfig
 import com.bloodconnect.data.model.BloodGroup
+import com.bloodconnect.data.model.DonationEligibility
 import com.bloodconnect.data.model.Donor
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
@@ -129,10 +130,14 @@ class DonorRepositoryImpl @Inject constructor(
                 val locality = doc.getString("locality") ?: "City Center"
                 val lat = doc.getDouble("latitude")
                 val lon = doc.getDouble("longitude")
+                val lastDonated = doc.getLong("lastDonationAt")
+                val isEligible = DonationEligibility.isEligible(lastDonated)
                 val available = resolveDonorAvailability(
                     isAvailable = doc.getBoolean("isAvailable"),
                     legacyAvailable = doc.getBoolean("available")
-                )
+                ) && isEligible
+
+                if (!available) return@mapNotNull null
 
                 Donor(
                     id = uid,
@@ -141,7 +146,7 @@ class DonorRepositoryImpl @Inject constructor(
                     locality = locality,
                     latitude = lat,
                     longitude = lon,
-                    isAvailable = available
+                    isAvailable = true
                 )
             }
 
@@ -201,10 +206,14 @@ class DonorRepositoryImpl @Inject constructor(
                 val locality = doc.getString("locality") ?: "City Center"
                 val lat = doc.getDouble("latitude")
                 val lon = doc.getDouble("longitude")
+                val lastDonated = doc.getLong("lastDonationAt")
+                val isEligible = DonationEligibility.isEligible(lastDonated)
                 val available = resolveDonorAvailability(
                     isAvailable = doc.getBoolean("isAvailable"),
                     legacyAvailable = doc.getBoolean("available")
-                )
+                ) && isEligible
+
+                if (!available) return@mapNotNull null
 
                 Donor(
                     id = uid,
@@ -213,7 +222,7 @@ class DonorRepositoryImpl @Inject constructor(
                     locality = locality,
                     latitude = lat,
                     longitude = lon,
-                    isAvailable = available
+                    isAvailable = true
                 )
             } ?: emptyList()
 
@@ -242,10 +251,12 @@ class DonorRepositoryImpl @Inject constructor(
                 val locality = doc.getString("locality") ?: "City Center"
                 val lat = doc.getDouble("latitude")
                 val lon = doc.getDouble("longitude")
+                val lastDonated = doc.getLong("lastDonationAt")
+                val isEligible = DonationEligibility.isEligible(lastDonated)
                 val available = resolveDonorAvailability(
                     isAvailable = doc.getBoolean("isAvailable"),
                     legacyAvailable = doc.getBoolean("available")
-                )
+                ) && isEligible
 
                 val donor = Donor(
                     id = uid,

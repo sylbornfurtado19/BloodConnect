@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isBloodGroupValid(bg) {
+      return bg in ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+    }
+
+    // ------------------------------------------------------------------------
+    // User Profiles Rules
+    // ------------------------------------------------------------------------
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(["livesSaved", "donorTier"]);
+      allow delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // Emergency Blood Requests Rules
+    // ------------------------------------------------------------------------
+    match /blood_requests/{id} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn() &&
+        request.resource.data.requesterId == request.auth.uid &&
+        request.resource.data.status == "Pending" &&
+        request.resource.data.unitsNeeded is int &&
+        request.resource.data.unitsNeeded >= 1 &&
+        request.resource.data.unitsNeeded <= 20 &&
+        isBloodGroupValid(request.resource.data.bloodGroup);
+
+      allow update: if isSignedIn() &&
+        request.auth.uid == resource.data.requesterId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "urgency"]);
+
+      allow delete: if false;
+
+      // Pledges Subcollection Rules
+      match /pledges/{donorUid} {
+        allow create: if isSignedIn() &&
+          request.auth.uid == donorUid &&
+          request.resource.data.donorId == donorUid &&
+          request.resource.data.status == "Pledged";
+
+        allow read: if isSignedIn() && (
+          request.auth.uid == resource.data.donorId ||
+          request.auth.uid == get(/databases/$(database)/documents/blood_requests/$(id)).data.requesterId
+        );
+
+        allow update: if isSignedIn() &&
+          request.auth.uid == get(/databases/$(database)/documents/blood_requests/$(id)).data.requesterId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"]) &&
+          request.resource.data.status == "Donated";
+
+        allow delete: if isSignedIn() && request.auth.uid == donorUid;
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection Group Query for Pledges (Donor Tier Count Query)
+    // ------------------------------------------------------------------------
+    match /{path=**}/pledges/{p} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.donorId;
+    }
+
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

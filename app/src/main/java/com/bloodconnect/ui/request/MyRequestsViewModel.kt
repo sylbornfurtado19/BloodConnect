@@ -6,10 +6,12 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bloodconnect.data.model.BloodRequest
+import com.bloodconnect.data.model.Pledge
 import com.bloodconnect.data.model.RequestStatus
 import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.BloodRequestRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -52,6 +54,20 @@ class MyRequestsViewModel @Inject constructor(
                 errorMessage = e.localizedMessage ?: "Failed to load your requests"
             } finally {
                 isLoading = false
+            }
+        }
+    }
+
+    fun observePledges(requestId: String): Flow<List<Pledge>> {
+        return requestRepository.observePledges(requestId)
+    }
+
+    fun markPledgeDonated(requestId: String, donorUid: String) {
+        viewModelScope.launch {
+            try {
+                requestRepository.markPledgeDonated(requestId, donorUid)
+            } catch (e: Exception) {
+                errorMessage = e.localizedMessage ?: "Failed to update pledge status"
             }
         }
     }

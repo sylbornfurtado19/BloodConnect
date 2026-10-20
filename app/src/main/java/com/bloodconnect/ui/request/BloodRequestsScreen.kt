@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocationCity
@@ -42,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,8 +56,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bloodconnect.data.model.BloodGroup
 import com.bloodconnect.data.model.BloodRequest
+import com.bloodconnect.data.model.DonationEligibility
 import com.bloodconnect.data.model.Urgency
+import com.bloodconnect.data.model.User
 import com.bloodconnect.ui.components.BloodConnectButton
 import com.bloodconnect.ui.components.BloodConnectTextField
 import com.bloodconnect.ui.components.BloodGroupBadge
@@ -63,9 +68,6 @@ import com.bloodconnect.ui.components.EmptyState
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
 
-/**
- * Validated blood request data model used for review and confirmation.
- */
 private data class PendingBloodRequest(
     val bloodGroup: String,
     val units: Int,
@@ -78,9 +80,6 @@ private data class PendingBloodRequest(
 private val bloodGroups = listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-")
 private val urgencyLevels = Urgency.entries.map { it.displayName }
 
-/**
- * Screen for creating new emergency blood requests and viewing active live requests from Firestore.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BloodRequestsScreen(
@@ -92,8 +91,8 @@ fun BloodRequestsScreen(
     val isLoading = viewModel.isLoading
     val isSubmitting = viewModel.isSubmitting
     val errorMessage = viewModel.errorMessage
+    val currentUserProfile = viewModel.currentUserProfile
 
-    // Form input states
     var selectedBloodGroup by remember { mutableStateOf<String?>(null) }
     var unitsNeeded by remember { mutableStateOf("1") }
     var hospital by remember { mutableStateOf("") }
@@ -101,14 +100,12 @@ fun BloodRequestsScreen(
     var selectedUrgency by remember { mutableStateOf(Urgency.URGENT.displayName) }
     var additionalNotes by remember { mutableStateOf("") }
 
-    // Validation error states
     var bloodGroupError by remember { mutableStateOf<String?>(null) }
     var unitsError by remember { mutableStateOf<String?>(null) }
     var hospitalError by remember { mutableStateOf<String?>(null) }
     var cityError by remember { mutableStateOf<String?>(null) }
     var urgencyError by remember { mutableStateOf<String?>(null) }
 
-    // Review & Confirmation dialog states
     var pendingRequest by remember { mutableStateOf<PendingBloodRequest?>(null) }
     var showReviewDialog by remember { mutableStateOf(false) }
     var showConfirmationDialog by remember { mutableStateOf(false) }
@@ -198,7 +195,6 @@ fun BloodRequestsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(22.dp)
         ) {
-            // Screen Introduction
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = "Request Emergency Blood",
@@ -213,7 +209,6 @@ fun BloodRequestsScreen(
                 )
             }
 
-            // SECTION A: Create a Blood Request Form Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -232,7 +227,6 @@ fun BloodRequestsScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    // 1. Blood Group Selection
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             text = "Blood Group Required *",
@@ -273,7 +267,6 @@ fun BloodRequestsScreen(
                         }
                     }
 
-                    // 2. Units Needed
                     BloodConnectTextField(
                         value = unitsNeeded,
                         onValueChange = {
@@ -287,7 +280,6 @@ fun BloodRequestsScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
 
-                    // 3. Hospital Name
                     BloodConnectTextField(
                         value = hospital,
                         onValueChange = {
@@ -301,7 +293,6 @@ fun BloodRequestsScreen(
                         errorMessage = hospitalError
                     )
 
-                    // 4. City / Locality
                     BloodConnectTextField(
                         value = cityLocality,
                         onValueChange = {
@@ -315,7 +306,6 @@ fun BloodRequestsScreen(
                         errorMessage = cityError
                     )
 
-                    // 5. Urgency Selection
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             text = "Urgency Level *",
@@ -364,7 +354,6 @@ fun BloodRequestsScreen(
                         }
                     }
 
-                    // 6. Additional Notes (Optional)
                     BloodConnectTextField(
                         value = additionalNotes,
                         onValueChange = { additionalNotes = it },
@@ -373,7 +362,6 @@ fun BloodRequestsScreen(
                         singleLine = false
                     )
 
-                    // Action Buttons (Review & Reset) - uses isSubmitting, NOT isLoading
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -418,7 +406,6 @@ fun BloodRequestsScreen(
                 }
             }
 
-            // SECTION B: Live Active Blood Requests from Firestore
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 SectionHeader(
                     title = "Active Blood Requests",
@@ -447,7 +434,11 @@ fun BloodRequestsScreen(
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         requests.forEach { request ->
-                            LiveRequestCard(request = request)
+                            LiveRequestCard(
+                                request = request,
+                                currentUser = currentUserProfile,
+                                viewModel = viewModel
+                            )
                         }
                     }
                 }
@@ -457,7 +448,6 @@ fun BloodRequestsScreen(
         }
     }
 
-    // REVIEW DIALOG: Confirm and submit to Firestore
     if (showReviewDialog && pendingRequest != null) {
         val req = pendingRequest!!
         AlertDialog(
@@ -569,7 +559,6 @@ fun BloodRequestsScreen(
         )
     }
 
-    // CONFIRMATION DIALOG
     if (showConfirmationDialog) {
         AlertDialog(
             onDismissRequest = { showConfirmationDialog = false },
@@ -633,81 +622,156 @@ private fun ReviewDetailRow(
     }
 }
 
-/**
- * Card displaying a live active blood request entry from Firestore with notes if non-blank.
- */
 @Composable
 private fun LiveRequestCard(
     request: BloodRequest,
+    currentUser: User?,
+    viewModel: BloodRequestsViewModel,
     modifier: Modifier = Modifier
 ) {
+    var showPledgeConfirmDialog by remember { mutableStateOf(false) }
+
+    val myPledgeState = remember(request.id) {
+        viewModel.observeMyPledge(request.id)
+    }?.collectAsState(initial = null)
+
+    val myPledge = myPledgeState?.value
+
+    val userBloodGroup = currentUser?.bloodGroup?.let { BloodGroup.fromString(it) }
+    val requestBloodGroup = BloodGroup.fromString(request.bloodGroup)
+    val isEligibleToDonate = DonationEligibility.isEligible(currentUser?.lastDonationAt)
+
+    val canPledge = currentUser != null &&
+            request.requesterId.isNotBlank() &&
+            currentUser.uid != request.requesterId &&
+            isEligibleToDonate &&
+            userBloodGroup != null &&
+            requestBloodGroup != null &&
+            userBloodGroup.canDonateTo(requestBloodGroup)
+
     OutlinedCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp)
     ) {
-        Row(
-            modifier = modifier
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            BloodGroupBadge(
-                bloodGroup = request.bloodGroup,
-                size = 48.dp
-            )
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(
-                    text = request.hospital,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                BloodGroupBadge(
+                    bloodGroup = request.bloodGroup,
+                    size = 48.dp
                 )
 
-                Text(
-                    text = "${request.city} · Requested by ${request.requesterName.ifBlank { "Anonymous" }}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Text(
-                    text = "${request.unitsNeeded} Unit(s) Needed",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
-                )
-
-                if (request.notes.isNotBlank()) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
                     Text(
-                        text = "Notes: ${request.notes}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
+                        text = request.hospital,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+
+                    Text(
+                        text = "${request.city} · Requested by ${request.requesterName.ifBlank { "Anonymous" }}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Text(
+                        text = "${request.unitsNeeded} Unit(s) Needed",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    if (request.notes.isNotBlank()) {
+                        Text(
+                            text = "Notes: ${request.notes}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
+                        )
+                    }
                 }
+
+                val chipUrgency = request.urgencyLevel
+                SuggestionChip(
+                    onClick = {},
+                    label = { Text(chipUrgency.displayName) },
+                    colors = SuggestionChipDefaults.suggestionChipColors(
+                        containerColor = when (chipUrgency) {
+                            Urgency.CRITICAL -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                            Urgency.URGENT -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                            Urgency.ROUTINE -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+                        },
+                        labelColor = when (chipUrgency) {
+                            Urgency.CRITICAL -> MaterialTheme.colorScheme.error
+                            Urgency.URGENT -> MaterialTheme.colorScheme.primary
+                            Urgency.ROUTINE -> MaterialTheme.colorScheme.secondary
+                        }
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                )
             }
 
-            val chipUrgency = request.urgencyLevel
-            SuggestionChip(
-                onClick = {},
-                label = { Text(chipUrgency.displayName) },
-                colors = SuggestionChipDefaults.suggestionChipColors(
-                    containerColor = when (chipUrgency) {
-                        Urgency.CRITICAL -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
-                        Urgency.URGENT -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                        Urgency.ROUTINE -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
-                    },
-                    labelColor = when (chipUrgency) {
-                        Urgency.CRITICAL -> MaterialTheme.colorScheme.error
-                        Urgency.URGENT -> MaterialTheme.colorScheme.primary
-                        Urgency.ROUTINE -> MaterialTheme.colorScheme.secondary
+            if (canPledge) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                if (myPledge == null) {
+                    Button(
+                        onClick = { showPledgeConfirmDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.padding(start = 6.dp))
+                        Text("I can donate")
                     }
-                ),
-                shape = RoundedCornerShape(8.dp)
-            )
+                } else {
+                    OutlinedButton(
+                        onClick = { viewModel.withdrawPledge(request.id) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("You pledged · Withdraw")
+                    }
+                }
+            }
         }
+    }
+
+    if (showPledgeConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showPledgeConfirmDialog = false },
+            title = { Text("Pledge Blood Donation") },
+            text = { Text("Share your name and phone number with the requester so they can contact you?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPledgeConfirmDialog = false
+                        viewModel.pledgeToRequest(request.id)
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showPledgeConfirmDialog = false },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

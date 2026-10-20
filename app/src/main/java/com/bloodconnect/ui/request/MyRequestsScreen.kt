@@ -1,5 +1,7 @@
 package com.bloodconnect.ui.request
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,8 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.LocationCity
@@ -40,20 +44,24 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bloodconnect.data.model.BloodRequest
+import com.bloodconnect.data.model.Pledge
 import com.bloodconnect.data.model.RequestStatus
 import com.bloodconnect.data.model.Urgency
 import com.bloodconnect.ui.components.BloodGroupBadge
@@ -67,10 +75,6 @@ import java.util.Locale
 private val statusFilterOptions = listOf("All") + RequestStatus.entries.map { it.displayName }
 private val urgencyFilterOptions = listOf("All") + Urgency.entries.map { it.displayName }
 
-/**
- * Screen displaying the user's historical blood requests from Firestore.
- * Allows users to review request statuses, mark pending requests as fulfilled, or cancel them with confirmation.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyRequestsScreen(
@@ -81,6 +85,7 @@ fun MyRequestsScreen(
     val requests = viewModel.requests
     val isLoading = viewModel.isLoading
     val errorMessage = viewModel.errorMessage
+    val context = LocalContext.current
 
     var selectedFilter by remember { mutableStateOf("All") }
     var selectedUrgencyFilter by remember { mutableStateOf("All") }
@@ -142,7 +147,6 @@ fun MyRequestsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            // Screen Introduction
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = "Request History",
@@ -157,7 +161,6 @@ fun MyRequestsScreen(
                 )
             }
 
-            // Status Filter Section
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -225,7 +228,6 @@ fun MyRequestsScreen(
                 }
             }
 
-            // Requests List Header
             SectionHeader(
                 title = "My Requests",
                 subtitle = if (displayedRequests.isNotEmpty()) {
@@ -259,6 +261,7 @@ fun MyRequestsScreen(
                     displayedRequests.forEach { request ->
                         MyRequestCard(
                             entry = request,
+                            viewModel = viewModel,
                             onClick = { selectedRequestForDetails = request }
                         )
                     }
@@ -277,12 +280,14 @@ fun MyRequestsScreen(
         }
     }
 
-    // Request Detail Dialog with Actions
     if (selectedRequestForDetails != null) {
         val req = selectedRequestForDetails!!
         val dateFormatted = remember(req.createdAt) {
             SimpleDateFormat("MMM dd, yyyy · hh:mm a", Locale.getDefault()).format(Date(req.createdAt))
         }
+
+        val pledgesState = viewModel.observePledges(req.id.ifBlank { req.requestId }).collectAsState(initial = emptyList())
+        val pledges = pledgesState.value
 
         AlertDialog(
             onDismissRequest = { selectedRequestForDetails = null },
@@ -380,7 +385,69 @@ fun MyRequestsScreen(
                         }
                     }
 
-                    // Action buttons if Pending
+                    // Pledges List
+                    if (pledges.isNotEmpty()) {
+                        Text(
+                            text = "Pledged Donors (${pledges.size})",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            pledges.forEach { pledge ->
+                                OutlinedCard(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = pledge.donorName,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "Group: ${pledge.bloodGroup} · Status: ${pledge.status}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            if (pledge.phone.isNotBlank()) {
+                                                IconButton(
+                                                    onClick = {
+                                                        val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${pledge.phone}"))
+                                                        context.startActivity(dialIntent)
+                                                    }
+                                                ) {
+                                                    Icon(imageVector = Icons.Default.Call, contentDescription = "Call Donor", tint = MaterialTheme.colorScheme.primary)
+                                                }
+                                            }
+
+                                            if (pledge.status != "Donated") {
+                                                TextButton(
+                                                    onClick = {
+                                                        viewModel.markPledgeDonated(req.id.ifBlank { req.requestId }, pledge.donorId)
+                                                    }
+                                                ) {
+                                                    Text("Mark donated", style = MaterialTheme.typography.labelSmall)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     if (req.requestStatus == RequestStatus.PENDING) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -426,7 +493,6 @@ fun MyRequestsScreen(
         )
     }
 
-    // Cancel Confirmation Dialog
     if (showCancelConfirmationDialog && selectedRequestForDetails != null) {
         val req = selectedRequestForDetails!!
         AlertDialog(
@@ -458,18 +524,19 @@ fun MyRequestsScreen(
     }
 }
 
-/**
- * Card representing an individual blood request in history with notes display if non-blank.
- */
 @Composable
 private fun MyRequestCard(
     entry: BloodRequest,
+    viewModel: MyRequestsViewModel,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val dateFormatted = remember(entry.createdAt) {
         SimpleDateFormat("MMM dd, yyyy · hh:mm a", Locale.getDefault()).format(Date(entry.createdAt))
     }
+
+    val pledgesState = viewModel.observePledges(entry.id.ifBlank { entry.requestId }).collectAsState(initial = emptyList())
+    val pledgeCount = pledgesState.value.size
 
     OutlinedCard(
         onClick = onClick,
@@ -529,6 +596,21 @@ private fun MyRequestCard(
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Medium
                     )
+
+                    if (pledgeCount > 0) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Favorite, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(14.dp))
+                            Text(
+                                text = "$pledgeCount donor(s) pledged",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
 
                     if (entry.notes.isNotBlank()) {
                         Text(

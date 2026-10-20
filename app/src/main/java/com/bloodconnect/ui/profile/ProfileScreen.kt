@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,7 +40,9 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
@@ -63,13 +66,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.bloodconnect.data.model.DonationEligibility
+import com.bloodconnect.data.model.DonorTier
 import com.bloodconnect.ui.components.BloodConnectButton
 import com.bloodconnect.ui.components.BloodConnectOutlinedButton
 import com.bloodconnect.ui.components.BloodConnectTextField
 import com.bloodconnect.ui.components.BloodGroupBadge
-import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
-import androidx.hilt.navigation.compose.hiltViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val standardBloodGroups = listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-")
 private const val FALLBACK_NAME = "Not available"
@@ -78,8 +85,7 @@ private const val FALLBACK_CITY = "Not specified"
 private const val FALLBACK_CONTACT = "Not provided"
 
 /**
- * Screen displaying the user's donor profile, availability status, and general donation guidelines.
- * Uses local Compose state for demo customization and profile editing.
+ * Screen displaying the user's donor profile, donor tier, lives saved, availability status, and general donation guidelines.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,26 +95,36 @@ fun ProfileScreen(
     onSignOut: (() -> Unit)? = null,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    // Profile Display State with friendly fallback defaults
     var displayName by remember { mutableStateOf(FALLBACK_NAME) }
     var bloodGroup by remember { mutableStateOf(FALLBACK_BLOOD_GROUP) }
     var cityLocality by remember { mutableStateOf(FALLBACK_CITY) }
     var contactInfo by remember { mutableStateOf(FALLBACK_CONTACT) }
     var isDonorAvailable by remember { mutableStateOf(false) }
 
-    // Edit Mode Form State
     var isEditing by remember { mutableStateOf(false) }
     var editName by remember { mutableStateOf(displayName) }
     var editBloodGroup by remember { mutableStateOf(bloodGroup) }
     var editCity by remember { mutableStateOf(cityLocality) }
     var editContact by remember { mutableStateOf(contactInfo) }
 
-    // Validation State
     var nameError by remember { mutableStateOf<String?>(null) }
     var cityError by remember { mutableStateOf<String?>(null) }
 
-    // Feedback Confirmation Dialog
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var showDonatedTodayDialog by remember { mutableStateOf(false) }
+
+    val lastDonationAt = viewModel.user?.lastDonationAt
+    val isEligibleToDonate = DonationEligibility.isEligible(lastDonationAt)
+    val eligibleOnDateStr = remember(lastDonationAt) {
+        val eligibleTimestamp = DonationEligibility.eligibleOn(lastDonationAt)
+        if (eligibleTimestamp != null) {
+            SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(eligibleTimestamp))
+        } else null
+    }
+
+    val donationCount = viewModel.donationCount
+    val donorTier = viewModel.donorTier
+    val nextThreshold = DonorTier.nextThreshold(donationCount)
 
     LaunchedEffect(viewModel.user) {
         val user = viewModel.user
@@ -237,51 +253,6 @@ fun ProfileScreen(
                 }
             }
 
-            val isProfileMissing = viewModel.user == null && !viewModel.isLoading
-            val hasMissingFields = viewModel.user != null && (
-                displayName == FALLBACK_NAME || bloodGroup == FALLBACK_BLOOD_GROUP || cityLocality == FALLBACK_CITY
-            )
-
-            if (isProfileMissing || hasMissingFields) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Column {
-                            Text(
-                                text = if (isProfileMissing) "Profile Not Found" else "Profile Incomplete",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = if (isProfileMissing) {
-                                    "No profile record was found for your account. Fallback details are displayed below."
-                                } else {
-                                    "Some profile details are missing for your account. Fallback details are displayed below."
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
             // 1. Profile Header & Avatar Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -298,7 +269,6 @@ fun ProfileScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Avatar Placeholder with Initials
                     val initials = displayName
                         .split(" ")
                         .filter { it.isNotBlank() }
@@ -349,19 +319,18 @@ fun ProfileScreen(
                         )
                     }
 
-                    // Status Chip
                     SuggestionChip(
                         onClick = {},
                         label = {
-                            Text(if (isDonorAvailable) "Active Donor" else "Inactive / Unavailable")
+                            Text(if (isDonorAvailable && isEligibleToDonate) "Active Donor" else "Inactive / Cooldown")
                         },
                         colors = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = if (isDonorAvailable) {
+                            containerColor = if (isDonorAvailable && isEligibleToDonate) {
                                 MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
                             } else {
                                 MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
                             },
-                            labelColor = if (isDonorAvailable) {
+                            labelColor = if (isDonorAvailable && isEligibleToDonate) {
                                 MaterialTheme.colorScheme.tertiary
                             } else {
                                 MaterialTheme.colorScheme.error
@@ -372,7 +341,132 @@ fun ProfileScreen(
                 }
             }
 
-            // 2. Donor Availability Status Card
+            // Real Donor Tier & Impact Card (F4)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Donor Tier: ${donorTier.displayName}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Lives Saved: $donationCount",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text(donorTier.displayName) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                labelColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                    }
+
+                    Text(
+                        text = "* Each confirmed donation counts as 1 life saved.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    if (nextThreshold != null) {
+                        val prevMin = donorTier.minDonations
+                        val progress = (donationCount - prevMin).toFloat() / (nextThreshold - prevMin).toFloat()
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            LinearProgressIndicator(
+                                progress = { progress.coerceIn(0f, 1f) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            Text(
+                                text = "$donationCount / $nextThreshold donations to reach next tier",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "Maximum tier reached! Thank you for your extraordinary lifesaving contributions.",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            // 2. Donation Cooldown & Eligibility Action Card
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Donation Status & Cooldown",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    if (!isEligibleToDonate && eligibleOnDateStr != null) {
+                        Text(
+                            text = "You are currently in a 90-day donation cooldown. Eligible again on $eligibleOnDateStr.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    } else {
+                        Text(
+                            text = "You are currently eligible to donate blood.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Button(
+                        onClick = { showDonatedTodayDialog = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("I donated today")
+                    }
+                }
+            }
+
+            // 3. Donor Availability Status Card
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp)
@@ -407,7 +501,7 @@ fun ProfileScreen(
                                     color = if (isDonorAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = if (isDonorAvailable) "Status: Active Demo Donor" else "Status: Inactive / On Cooldown",
+                                    text = if (isDonorAvailable) "Status: Active Donor" else "Status: Inactive / On Cooldown",
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Medium,
                                     color = if (isDonorAvailable) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
@@ -429,23 +523,17 @@ fun ProfileScreen(
 
                     Text(
                         text = if (isDonorAvailable) {
-                            "You are currently marked as an active volunteer donor in local demonstration state. You would be eligible to receive emergency blood requests."
+                            "You are currently marked as an active volunteer donor. You will receive emergency blood request notifications."
                         } else {
-                            "You are currently marked as unavailable in local demonstration state. Requests and emergency alerts are paused while inactive."
+                            "You are currently marked as unavailable. Requests and emergency alerts are paused while inactive."
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    Text(
-                        text = "* Note: This toggle controls local demonstration state only. No live backend synchronization, remote database updates, or donor network broadcasts occur.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-                    )
                 }
             }
 
-            // 3. Profile Information / Edit Section
+            // 4. Profile Information / Edit Section
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -483,7 +571,6 @@ fun ProfileScreen(
                     }
 
                     if (isEditing) {
-                        // Editable Form Fields
                         BloodConnectTextField(
                             value = editName,
                             onValueChange = {
@@ -497,7 +584,6 @@ fun ProfileScreen(
                             errorMessage = nameError
                         )
 
-                        // Blood Group Selection Chips
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
                                 text = "Blood Group *",
@@ -547,7 +633,6 @@ fun ProfileScreen(
                             leadingIcon = Icons.Default.Email
                         )
 
-                        // Action Buttons: Cancel & Save
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -566,7 +651,6 @@ fun ProfileScreen(
                             )
                         }
                     } else {
-                        // Read-Only Summary Display (clean & visually distinct)
                         OutlinedCard(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -640,56 +724,7 @@ fun ProfileScreen(
                 }
             }
 
-            // 4. Blood Donation Eligibility Information Section
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionHeader(
-                    title = "Donation Eligibility Guidelines",
-                    subtitle = "General criteria for potential blood donors"
-                )
-
-                OutlinedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        EligibilityPoint(
-                            text = "Age: Typically between 18 and 65 years."
-                        )
-                        EligibilityPoint(
-                            text = "Weight: Minimum body weight of 50 kg (110 lbs)."
-                        )
-                        EligibilityPoint(
-                            text = "General Health: In good physical health with normal vital signs on donation day."
-                        )
-                        EligibilityPoint(
-                            text = "Donation Interval: At least 84 days (12 weeks) between whole blood donations."
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        // Educational Medical Disclaimer
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "Important Notice: Eligibility criteria vary depending on regional blood service guidelines and individual health evaluations conducted by licensed medical practitioners. This application does not diagnose, verify medical fitness, or certify eligibility to donate.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(10.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 5. Sign Out Action (Preserves clean authentication separation)
+            // 5. Sign Out Action
             if (onSignOut != null) {
                 BloodConnectOutlinedButton(
                     text = "Sign Out",
@@ -703,7 +738,6 @@ fun ProfileScreen(
         }
     }
 
-    // Confirmation Feedback Dialog for Local Save
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = { showSuccessDialog = false },
@@ -717,33 +751,43 @@ fun ProfileScreen(
             },
             title = {
                 Text(
-                    text = "Profile Updated Locally",
+                    text = "Profile Updated",
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Demo profile updated successfully.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Updated profile for $displayName ($bloodGroup) in $cityLocality.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Note: These changes are retained in local demonstration state only and are not synced to an account or remote database.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                Text(text = "Updated profile for $displayName ($bloodGroup) in $cityLocality.")
             },
             confirmButton = {
                 TextButton(onClick = { showSuccessDialog = false }) {
                     Text("OK")
+                }
+            }
+        )
+    }
+
+    if (showDonatedTodayDialog) {
+        AlertDialog(
+            onDismissRequest = { showDonatedTodayDialog = false },
+            title = { Text("Confirm Blood Donation") },
+            text = { Text("Did you donate blood today? This will record your donation and start your 90-day cooldown period.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDonatedTodayDialog = false
+                        viewModel.markDonatedToday()
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showDonatedTodayDialog = false },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Cancel")
                 }
             }
         )
@@ -789,32 +833,6 @@ private fun ProfileInfoItem(
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-    }
-}
-
-@Composable
-private fun EligibilityPoint(
-    text: String,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Check,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .size(18.dp)
-                .padding(top = 2.dp)
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
     }
 }
 

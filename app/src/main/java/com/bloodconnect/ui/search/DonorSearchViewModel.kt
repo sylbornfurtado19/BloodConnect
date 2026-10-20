@@ -30,6 +30,7 @@ import kotlin.math.sqrt
  * @property isLocationPermissionGranted True if location permission was granted by user.
  * @property isDistanceFilterAvailable True when device coordinates are available for distance filtering.
  * @property selectedBloodGroup Active blood group filter, or null if all groups are included.
+ * @property includeCompatible True if compatible donor blood groups should also be included in search results.
  * @property locationQuery Active locality text query filter.
  * @property maxDistanceKm Maximum proximity distance threshold in kilometers.
  * @property sortOrder Sorting order by distance ([DistanceSortOrder.NEAREST] or [DistanceSortOrder.FARTHEST]).
@@ -45,6 +46,7 @@ data class DonorSearchUiState(
     val isLocationPermissionGranted: Boolean = false,
     val isDistanceFilterAvailable: Boolean = false,
     val selectedBloodGroup: BloodGroup? = null,
+    val includeCompatible: Boolean = true,
     val locationQuery: String = "",
     val maxDistanceKm: Int = 50,
     val sortOrder: DistanceSortOrder = DistanceSortOrder.NEAREST,
@@ -74,7 +76,7 @@ class DonorSearchViewModel @Inject constructor(
     fun loadDonors() {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val result = donorRepository.getDonors(_uiState.value.selectedBloodGroup)
+            val result = donorRepository.getDonors(null)
             result.fold(
                 onSuccess = { fetchedDonors ->
                     val currentState = _uiState.value
@@ -84,7 +86,8 @@ class DonorSearchViewModel @Inject constructor(
                         locationQuery = currentState.locationQuery,
                         maxDistanceKm = currentState.maxDistanceKm,
                         sortOrder = currentState.sortOrder,
-                        userLocation = currentState.userLocation
+                        userLocation = currentState.userLocation,
+                        includeCompatible = currentState.includeCompatible
                     )
                     _uiState.update {
                         it.copy(
@@ -122,7 +125,8 @@ class DonorSearchViewModel @Inject constructor(
                 locationQuery = state.locationQuery,
                 maxDistanceKm = state.maxDistanceKm,
                 sortOrder = state.sortOrder,
-                userLocation = location
+                userLocation = location,
+                includeCompatible = state.includeCompatible
             )
             state.copy(
                 userLocation = location,
@@ -157,7 +161,8 @@ class DonorSearchViewModel @Inject constructor(
                 locationQuery = state.locationQuery,
                 maxDistanceKm = state.maxDistanceKm,
                 sortOrder = state.sortOrder,
-                userLocation = state.userLocation
+                userLocation = state.userLocation,
+                includeCompatible = state.includeCompatible
             )
             state.copy(
                 selectedBloodGroup = bloodGroup,
@@ -177,6 +182,29 @@ class DonorSearchViewModel @Inject constructor(
     }
 
     /**
+     * Toggles whether compatible donor blood groups should be included in results.
+     */
+    fun setIncludeCompatible(include: Boolean) {
+        _uiState.update { state ->
+            val (filtered, distances) = applyFiltersAndSort(
+                donors = state.allDonors,
+                bloodGroup = state.selectedBloodGroup,
+                locationQuery = state.locationQuery,
+                maxDistanceKm = state.maxDistanceKm,
+                sortOrder = state.sortOrder,
+                userLocation = state.userLocation,
+                includeCompatible = include
+            )
+            state.copy(
+                includeCompatible = include,
+                donorDistances = distances,
+                donors = filtered,
+                isEmpty = filtered.isEmpty()
+            )
+        }
+    }
+
+    /**
      * Updates the locality search query text and recalculates results.
      */
     fun setLocationQuery(query: String) {
@@ -187,7 +215,8 @@ class DonorSearchViewModel @Inject constructor(
                 locationQuery = query,
                 maxDistanceKm = state.maxDistanceKm,
                 sortOrder = state.sortOrder,
-                userLocation = state.userLocation
+                userLocation = state.userLocation,
+                includeCompatible = state.includeCompatible
             )
             state.copy(
                 locationQuery = query,
@@ -209,7 +238,8 @@ class DonorSearchViewModel @Inject constructor(
                 locationQuery = state.locationQuery,
                 maxDistanceKm = distanceKm,
                 sortOrder = state.sortOrder,
-                userLocation = state.userLocation
+                userLocation = state.userLocation,
+                includeCompatible = state.includeCompatible
             )
             state.copy(
                 maxDistanceKm = distanceKm,
@@ -231,7 +261,8 @@ class DonorSearchViewModel @Inject constructor(
                 locationQuery = state.locationQuery,
                 maxDistanceKm = state.maxDistanceKm,
                 sortOrder = sortOrder,
-                userLocation = state.userLocation
+                userLocation = state.userLocation,
+                includeCompatible = state.includeCompatible
             )
             state.copy(
                 sortOrder = sortOrder,
@@ -253,10 +284,12 @@ class DonorSearchViewModel @Inject constructor(
                 locationQuery = "",
                 maxDistanceKm = 50,
                 sortOrder = DistanceSortOrder.NEAREST,
-                userLocation = state.userLocation
+                userLocation = state.userLocation,
+                includeCompatible = true
             )
             state.copy(
                 selectedBloodGroup = null,
+                includeCompatible = true,
                 locationQuery = "",
                 maxDistanceKm = 50,
                 sortOrder = DistanceSortOrder.NEAREST,
@@ -274,7 +307,8 @@ class DonorSearchViewModel @Inject constructor(
         locationQuery: String,
         maxDistanceKm: Int,
         sortOrder: DistanceSortOrder,
-        userLocation: UserLocation?
+        userLocation: UserLocation?,
+        includeCompatible: Boolean = true
     ): Pair<List<Donor>, Map<String, Double>> {
         return filterAndSortDonors(
             donors = donors,
@@ -282,7 +316,8 @@ class DonorSearchViewModel @Inject constructor(
             locationQuery = locationQuery,
             maxDistanceKm = maxDistanceKm,
             sortOrder = sortOrder,
-            userLocation = userLocation
+            userLocation = userLocation,
+            includeCompatible = includeCompatible
         )
     }
 }
@@ -290,7 +325,7 @@ class DonorSearchViewModel @Inject constructor(
 /**
  * Pure function executing donor filtering by blood group, locality query,
  * and distance radius, as well as distance-aware sorting.
- * Excludes donors with latitude == 0.0 && longitude == 0.0 from distance calculation (treated as null coordinates).
+ * Excludes donors with latitude == 0.0 && longitude == 0.0 from distance calculation.
  */
 fun filterAndSortDonors(
     donors: List<Donor>,
@@ -298,7 +333,8 @@ fun filterAndSortDonors(
     locationQuery: String = "",
     maxDistanceKm: Int = 50,
     sortOrder: DistanceSortOrder = DistanceSortOrder.NEAREST,
-    userLocation: UserLocation? = null
+    userLocation: UserLocation? = null,
+    includeCompatible: Boolean = true
 ): Pair<List<Donor>, Map<String, Double>> {
     val distances = mutableMapOf<String, Double>()
     if (userLocation != null) {
@@ -318,18 +354,23 @@ fun filterAndSortDonors(
     }
 
     val filtered = donors.filter { donor ->
-        val matchesBlood = bloodGroup == null || donor.bloodGroup == bloodGroup
+        val matchesBlood = if (bloodGroup == null) {
+            true
+        } else if (includeCompatible) {
+            donor.bloodGroup.canDonateTo(bloodGroup)
+        } else {
+            donor.bloodGroup == bloodGroup
+        }
+
         val matchesLocation = locationQuery.isBlank() || donor.locality.contains(locationQuery.trim(), ignoreCase = true)
 
         val matchesDistance = if (userLocation == null) {
-            // If location is unavailable, distance filtering is disabled
             true
         } else {
             val dist = distances[donor.id]
             if (dist != null) {
                 dist <= maxDistanceKm
             } else {
-                // Gracefully retain donors with missing coordinates without claiming fake distances
                 true
             }
         }

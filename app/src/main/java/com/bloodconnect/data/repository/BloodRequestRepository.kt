@@ -1,8 +1,10 @@
 package com.bloodconnect.data.repository
 
 import com.bloodconnect.data.model.BloodRequest
+import com.bloodconnect.data.model.Pledge
 import com.bloodconnect.data.model.RequestStatus
 import com.bloodconnect.data.model.Urgency
+import com.google.firebase.firestore.AggregateSource
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
@@ -38,7 +40,6 @@ class BloodRequestRepository @Inject constructor(
 
     suspend fun getActiveRequests(): Result<List<BloodRequest>> {
         return try {
-            // Query for canonical pending requests ("Pending")
             val canonicalSnapshot = requestsCollection
                 .whereEqualTo("status", RequestStatus.PENDING.displayName)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
@@ -46,7 +47,6 @@ class BloodRequestRepository @Inject constructor(
                 .await()
             val canonicalList = canonicalSnapshot.toObjects(BloodRequest::class.java)
 
-            // Backward compatibility for legacy documents that have "Active" or "PENDING"
             val legacyActiveList = try {
                 val legacySnapshot = requestsCollection
                     .whereEqualTo("status", "Active")
@@ -158,7 +158,6 @@ class BloodRequestRepository @Inject constructor(
                 .await()
             val canonicalList = snapshot.toObjects(BloodRequest::class.java)
 
-            // Backward compatibility for legacy documents that have "Normal" when querying ROUTINE
             val legacyNormalList = if (targetUrgency == Urgency.ROUTINE) {
                 try {
                     val legacySnapshot = requestsCollection
@@ -209,5 +208,98 @@ class BloodRequestRepository @Inject constructor(
 
     suspend fun updateRequestUrgency(requestId: String, urgency: Urgency): Result<Unit> {
         return updateRequestUrgency(requestId, urgency.displayName)
+    }
+
+    // ------------------------------------------------------------------------
+    // Request Pledges Subcollection Methods
+    // ------------------------------------------------------------------------
+
+    suspend fun pledge(requestId: String, pledge: Pledge): Result<Unit> {
+        return try {
+            requestsCollection.document(requestId)
+                .collection("pledges")
+                .document(pledge.donorId)
+                .set(pledge)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun withdrawPledge(requestId: String, donorUid: String): Result<Unit> {
+        return try {
+            requestsCollection.document(requestId)
+                .collection("pledges")
+                .document(donorUid)
+                .delete()
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun observePledges(requestId: String): Flow<List<Pledge>> = callbackFlow {
+        val listener = requestsCollection.document(requestId)
+            .collection("pledges")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val pledges = snapshot?.toObjects(Pledge::class.java) ?: emptyList()
+                trySend(pledges)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    fun observeMyPledge(requestId: String, donorUid: String): Flow<Pledge?> = callbackFlow {
+        val listener = requestsCollection.document(requestId)
+            .collection("pledges")
+            .document(donorUid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val pledge = snapshot?.toObject(Pledge::class.java)
+                trySend(pledge)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun markPledgeDonated(requestId: String, donorUid: String): Result<Unit> {
+        return try {
+            requestsCollection.document(requestId)
+                .collection("pledges")
+                .document(donorUid)
+                .update("status", "Donated")
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Counts confirmed donations for [uid] from collection group "pledges".
+     *
+     * IMPORTANT: Firestore Collection Group Index Required in Firebase Console:
+     * Collection Group: pledges
+     * Fields: donorId (Ascending), status (Ascending)
+     */
+    suspend fun countMyDonations(uid: String): Result<Int> {
+        return try {
+            val countQuery = firestore.collectionGroup("pledges")
+                .whereEqualTo("donorId", uid)
+                .whereEqualTo("status", "Donated")
+                .count()
+                .get(AggregateSource.SERVER)
+                .await()
+            Result.success(countQuery.count.toInt())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }
