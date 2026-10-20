@@ -3,6 +3,9 @@ const admin = require("firebase-admin");
 
 admin.initializeApp();
 
+// Region must match your Firestore database location (asia-south1 = Mumbai)
+const REGION = "asia-south1";
+
 const COMPATIBLE_DONORS = {
   "O-": ["O-"],
   "O+": ["O+", "O-"],
@@ -14,24 +17,27 @@ const COMPATIBLE_DONORS = {
   "AB+": ["AB+", "AB-", "A+", "A-", "B+", "B-", "O+", "O-"]
 };
 
-function calculateDistanceKm(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radius of Earth in km
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+// Normalizes blood group string ("O+", "o+", "O_POSITIVE", "O_POS", "AB-") to standard "O+" format.
+function normalizeGroup(value) {
+  if (typeof value !== "string") return null;
+  const v = value.trim().toUpperCase().replace(/\s+/g, "");
+  const m = v.match(/^(AB|A|B|O)(\+|-|_POS(?:ITIVE)?|_NEG(?:ATIVE)?)$/);
+  if (!m) return null;
+  const sign = m[2] === "+" || m[2].startsWith("_POS") ? "+" : "-";
+  return m[1] + sign;
+}
+
+// Converts standard blood group ("O+") to FCM topic name ("bg_O_POS").
+function topicFor(group) {
+  const g = normalizeGroup(group);
+  if (!g) return null;
+  return "bg_" + g.slice(0, -1) + (g.endsWith("+") ? "_POS" : "_NEG");
 }
 
 exports.sendEmergencyBloodRequestNotification = onDocumentCreated(
   {
     document: "blood_requests/{requestId}",
-    region: "us-central1"
+    region: REGION
   },
   async (event) => {
     const snap = event.data;
@@ -40,112 +46,81 @@ exports.sendEmergencyBloodRequestNotification = onDocumentCreated(
     const request = snap.data();
     const requestId = event.params.requestId;
 
-    if (!request || request.status !== "Pending") {
+    if (!request) return;
+
+    const rawStatus = request.status;
+    if (typeof rawStatus !== "string" || rawStatus.trim().toLowerCase() !== "pending") {
       return;
     }
 
-    const recipientGroup = request.bloodGroup;
-    const compatibleGroups = COMPATIBLE_DONORS[recipientGroup] || [recipientGroup];
-
+    // Idempotency: Claim request in a Firestore transaction so it is never notified twice
     const db = admin.firestore();
-    const usersRef = db.collection("users");
+    const docRef = snap.ref;
 
-    const groupChunks = [];
-    for (let i = 0; i < compatibleGroups.length; i += 30) {
-      groupChunks.push(compatibleGroups.slice(i, i + 30));
-    }
+    const claimed = await db.runTransaction(async (tx) => {
+      const docSnap = await tx.get(docRef);
+      if (!docSnap.exists || docSnap.get("notifiedAt")) {
+        return false;
+      }
+      tx.update(docRef, { notifiedAt: Date.now() });
+      return true;
+    });
 
-    const matchingUsersMap = new Map();
+    if (!claimed) return;
 
-    for (const chunk of groupChunks) {
-      const querySnap = await usersRef
-        .where("isAvailable", "==", true)
-        .where("bloodGroup", "in", chunk)
-        .get();
-
-      querySnap.forEach((doc) => {
-        const user = doc.data();
-        const uid = doc.id;
-
-        if (
-          uid !== request.requesterId &&
-          user.fcmToken &&
-          typeof user.fcmToken === "string" &&
-          user.fcmToken.trim().length > 0
-        ) {
-          const reqLat = Number(request.latitude) || 0;
-          const reqLon = Number(request.longitude) || 0;
-          const userLat = Number(user.latitude) || 0;
-          const userLon = Number(user.longitude) || 0;
-
-          if (reqLat !== 0 && reqLon !== 0 && userLat !== 0 && userLon !== 0) {
-            const distance = calculateDistanceKm(reqLat, reqLon, userLat, userLon);
-            if (distance <= 30) {
-              matchingUsersMap.set(uid, { token: user.fcmToken, uid });
-            }
-          } else {
-            matchingUsersMap.set(uid, { token: user.fcmToken, uid });
-          }
-        }
-      });
-    }
-
-    const recipients = Array.from(matchingUsersMap.values());
-    if (recipients.length === 0) {
-      console.log(`No matching donors found within radius for request ${requestId}`);
+    const normalizedGroup = normalizeGroup(request.bloodGroup);
+    if (!normalizedGroup) {
+      console.warn(`[skip] ${requestId}: unknown blood group "${request.bloodGroup}"`);
       return;
     }
 
-    const tokens = recipients.map((r) => r.token);
+    const donorGroups = COMPATIBLE_DONORS[normalizedGroup] || [];
+    const topics = donorGroups.map(topicFor).filter(Boolean);
+
+    if (topics.length === 0) {
+      console.warn(`[skip] ${requestId}: no compatible topics for group "${normalizedGroup}"`);
+      return;
+    }
+
     const urgency = request.urgency || "Routine";
     const hospital = request.hospital || request.hospitalName || "Hospital";
     const city = request.city ? `, ${request.city}` : "";
     const units = request.unitsNeeded || request.unitsRequired || 1;
+    const lat = String(Number(request.latitude) || 0);
+    const lon = String(Number(request.longitude) || 0);
 
-    const payload = {
-      data: {
-        title: `${urgency}: ${recipientGroup} blood needed`,
-        body: `${hospital}${city} - ${units} unit(s)`,
-        requestId: String(requestId),
-        bloodGroup: String(recipientGroup),
-        urgency: String(urgency),
-        requesterId: String(request.requesterId || "")
-      },
-      android: {
-        priority: "high"
-      }
+    const payloadData = {
+      title: `${urgency}: ${normalizedGroup} blood needed`,
+      body: `${hospital}${city} - ${units} unit(s)`,
+      requestId: String(requestId),
+      requesterId: String(request.requesterId || ""),
+      bloodGroup: String(normalizedGroup),
+      urgency: String(urgency),
+      latitude: lat,
+      longitude: lon
     };
 
-    for (let i = 0; i < tokens.length; i += 500) {
-      const batchTokens = tokens.slice(i, i + 500);
-      const batchRecipients = recipients.slice(i, i + 500);
-
-      const response = await admin.messaging().sendEachForMulticast({
-        tokens: batchTokens,
-        ...payload
-      });
-
-      response.responses.forEach(async (resp, idx) => {
-        if (!resp.success) {
-          const errCode = resp.error && resp.error.code;
-          if (
-            errCode === "messaging/registration-token-not-registered" ||
-            errCode === "messaging/invalid-registration-token"
-          ) {
-            const invalidUid = batchRecipients[idx].uid;
-            try {
-              await usersRef.doc(invalidUid).update({
-                fcmToken: admin.firestore.FieldValue.delete()
-              });
-              console.log(`Removed invalid token for user ${invalidUid}`);
-            } catch (e) {
-              console.error(`Failed to delete token for user ${invalidUid}:`, e);
-            }
+    const sendResults = await Promise.allSettled(
+      topics.map((topic) =>
+        admin.messaging().send({
+          topic: topic,
+          data: payloadData,
+          android: {
+            priority: "high",
+            ttl: 3600000 // 1 hour
           }
-        }
-      });
-    }
+        })
+      )
+    );
 
-    console.log(`Multicast sent for request ${requestId} to ${tokens.length} donors.`);
+    sendResults.forEach((result, idx) => {
+      const targetTopic = topics[idx];
+      if (result.status === "fulfilled") {
+        console.log(`[sent] ${requestId} -> ${targetTopic}`);
+      } else {
+        const reason = result.reason && (result.reason.message || result.reason.code) || "Unknown error";
+        console.error(`[fail] ${requestId} -> ${targetTopic}: ${reason}`);
+      }
+    });
   }
 );

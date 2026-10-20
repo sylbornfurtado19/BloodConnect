@@ -13,3 +13,5 @@
 *firebase-adminsdk*.json
 *service-account*.json
 /functions/node_modules
+firebase-debug.log
+firebase-debug.*.log
