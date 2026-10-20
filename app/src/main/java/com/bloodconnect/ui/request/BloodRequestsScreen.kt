@@ -1000,7 +1000,7 @@ private fun LiveRequestCard(
                 Button(
                     onClick = {
                         showPledgeConfirmDialog = false
-                        viewModel.pledgeToRequest(request.id, etaMinutes = selectedEtaMinutes)
+                        viewModel.pledgeToRequest(request, etaMinutes = selectedEtaMinutes)
                     },
                     shape = RoundedCornerShape(10.dp)
                 ) {

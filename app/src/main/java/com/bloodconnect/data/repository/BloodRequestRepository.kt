@@ -335,7 +335,16 @@ class BloodRequestRepository @Inject constructor(
                 .whereEqualTo("status", "Donated")
                 .get()
                 .await()
-            val pledges = snapshot.toObjects(Pledge::class.java)
+            val pledges = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(Pledge::class.java)?.let { pledge ->
+                    val resolvedRequestId = if (pledge.requestId.isNotBlank()) {
+                        pledge.requestId
+                    } else {
+                        doc.reference.parent.parent?.id ?: ""
+                    }
+                    pledge.copy(requestId = resolvedRequestId)
+                }
+            }.sortedByDescending { it.donatedAt ?: it.createdAt }
             Result.success(pledges)
         } catch (e: Exception) {
             Result.failure(e)

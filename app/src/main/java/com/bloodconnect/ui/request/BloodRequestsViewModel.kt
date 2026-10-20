@@ -107,7 +107,28 @@ class BloodRequestsViewModel @Inject constructor(
         return requestRepository.observeMyPledge(requestId, uid)
     }
 
-    fun pledgeToRequest(requestId: String, etaMinutes: Int? = null, onSuccess: () -> Unit = {}) {
+    fun pledgeToRequest(
+        request: BloodRequest,
+        etaMinutes: Int? = null,
+        onSuccess: () -> Unit = {}
+    ) {
+        val reqId = request.id.ifBlank { request.requestId }
+        pledgeToRequest(
+            requestId = reqId,
+            hospital = request.hospital,
+            city = request.city,
+            etaMinutes = etaMinutes,
+            onSuccess = onSuccess
+        )
+    }
+
+    fun pledgeToRequest(
+        requestId: String,
+        hospital: String,
+        city: String,
+        etaMinutes: Int? = null,
+        onSuccess: () -> Unit = {}
+    ) {
         val uid = currentUserId ?: return
         viewModelScope.launch {
             val user = userRepository.getUser(uid).getOrNull()
@@ -122,7 +143,10 @@ class BloodRequestsViewModel @Inject constructor(
                 phone = phone,
                 createdAt = System.currentTimeMillis(),
                 status = "Pledged",
-                etaMinutes = etaMinutes
+                etaMinutes = etaMinutes,
+                requestId = requestId,
+                hospital = hospital,
+                city = city
             )
 
             val result = requestRepository.pledge(requestId, pledge)
@@ -132,6 +156,20 @@ class BloodRequestsViewModel @Inject constructor(
                 errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to submit pledge"
             }
         }
+    }
+
+    fun pledgeToRequest(
+        requestId: String,
+        etaMinutes: Int? = null,
+        onSuccess: () -> Unit = {}
+    ) {
+        pledgeToRequest(
+            requestId = requestId,
+            hospital = "",
+            city = "",
+            etaMinutes = etaMinutes,
+            onSuccess = onSuccess
+        )
     }
 
     fun withdrawPledge(requestId: String, onSuccess: () -> Unit = {}) {
