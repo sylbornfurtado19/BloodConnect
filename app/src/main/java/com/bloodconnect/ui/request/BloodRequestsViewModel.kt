@@ -140,6 +140,8 @@ class BloodRequestsViewModel @Inject constructor(
         urgency: String,
         city: String,
         notes: String = "",
+        contactNumber: String = "",
+        patientReference: String = "",
         onSuccess: () -> Unit
     ) {
         if (isSubmitting) return
@@ -192,7 +194,10 @@ class BloodRequestsViewModel @Inject constructor(
                     status = RequestStatus.PENDING.displayName,
                     createdAt = now,
                     expiresAt = expiresAt,
-                    notes = notes
+                    notes = notes,
+                    contactNumber = contactNumber,
+                    patientReference = patientReference,
+                    verified = false
                 )
                 val result = requestRepository.createRequest(request)
                 if (result.isSuccess) {

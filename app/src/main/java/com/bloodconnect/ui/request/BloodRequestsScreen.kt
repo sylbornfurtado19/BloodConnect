@@ -1,6 +1,8 @@
 package com.bloodconnect.ui.request
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAlert
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
@@ -53,6 +56,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -78,7 +82,9 @@ private data class PendingBloodRequest(
     val hospital: String,
     val city: String,
     val urgency: String,
-    val notes: String
+    val notes: String,
+    val contactNumber: String,
+    val patientReference: String
 )
 
 private val bloodGroups = listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-")
@@ -122,6 +128,8 @@ fun BloodRequestsScreen(
     var unitsNeeded by remember { mutableStateOf("1") }
     var hospital by remember { mutableStateOf("") }
     var cityLocality by remember { mutableStateOf("") }
+    var contactNumber by remember { mutableStateOf("") }
+    var patientReference by remember { mutableStateOf("") }
     var selectedUrgency by remember { mutableStateOf(Urgency.URGENT.displayName) }
     var additionalNotes by remember { mutableStateOf("") }
 
@@ -129,6 +137,8 @@ fun BloodRequestsScreen(
     var unitsError by remember { mutableStateOf<String?>(null) }
     var hospitalError by remember { mutableStateOf<String?>(null) }
     var cityError by remember { mutableStateOf<String?>(null) }
+    var contactNumberError by remember { mutableStateOf<String?>(null) }
+    var patientReferenceError by remember { mutableStateOf<String?>(null) }
     var urgencyError by remember { mutableStateOf<String?>(null) }
 
     var pendingRequest by remember { mutableStateOf<PendingBloodRequest?>(null) }
@@ -140,20 +150,26 @@ fun BloodRequestsScreen(
         val trimmedCity = cityLocality.trim()
         val trimmedUnits = unitsNeeded.trim()
         val trimmedNotes = additionalNotes.trim()
+        val trimmedContact = contactNumber.trim()
+        val trimmedPatientRef = patientReference.trim()
 
         val bgErr = BloodRequestValidator.validateBloodGroup(selectedBloodGroup)
         val unitsErr = BloodRequestValidator.validateUnits(trimmedUnits)
         val hospErr = BloodRequestValidator.validateHospital(trimmedHospital)
         val cityErr = BloodRequestValidator.validateCity(trimmedCity)
         val urgErr = BloodRequestValidator.validateUrgency(selectedUrgency)
+        val contactErr = BloodRequestValidator.validateContactNumber(trimmedContact)
+        val patientRefErr = BloodRequestValidator.validatePatientReference(trimmedPatientRef)
 
         bloodGroupError = bgErr
         unitsError = unitsErr
         hospitalError = hospErr
         cityError = cityErr
         urgencyError = urgErr
+        contactNumberError = contactErr
+        patientReferenceError = patientRefErr
 
-        val isValid = bgErr == null && unitsErr == null && hospErr == null && cityErr == null && urgErr == null
+        val isValid = bgErr == null && unitsErr == null && hospErr == null && cityErr == null && urgErr == null && contactErr == null && patientRefErr == null
         val parsedUnits = trimmedUnits.toIntOrNull()
 
         if (isValid && parsedUnits != null) {
@@ -164,7 +180,9 @@ fun BloodRequestsScreen(
                 hospital = trimmedHospital,
                 city = trimmedCity,
                 urgency = canonicalUrgency,
-                notes = trimmedNotes
+                notes = trimmedNotes,
+                contactNumber = trimmedContact,
+                patientReference = trimmedPatientRef
             )
             showReviewDialog = true
         }
@@ -175,6 +193,8 @@ fun BloodRequestsScreen(
         unitsNeeded = "1"
         hospital = ""
         cityLocality = ""
+        contactNumber = ""
+        patientReference = ""
         selectedUrgency = Urgency.URGENT.displayName
         additionalNotes = ""
         bloodGroupError = null
@@ -182,6 +202,8 @@ fun BloodRequestsScreen(
         hospitalError = null
         cityError = null
         urgencyError = null
+        contactNumberError = null
+        patientReferenceError = null
         pendingRequest = null
     }
 
@@ -329,6 +351,32 @@ fun BloodRequestsScreen(
                         leadingIcon = Icons.Default.LocationCity,
                         isError = cityError != null,
                         errorMessage = cityError
+                    )
+
+                    BloodConnectTextField(
+                        value = contactNumber,
+                        onValueChange = {
+                            contactNumber = it
+                            contactNumberError = null
+                        },
+                        label = "Hospital / ward contact number *",
+                        placeholder = "e.g., +91 98765 43210 or 022-2345-6789",
+                        leadingIcon = Icons.Default.Call,
+                        isError = contactNumberError != null,
+                        errorMessage = contactNumberError,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                    )
+
+                    BloodConnectTextField(
+                        value = patientReference,
+                        onValueChange = {
+                            patientReference = it
+                            patientReferenceError = null
+                        },
+                        label = "Doctor name or patient ID (Optional)",
+                        placeholder = "e.g., Dr. Sharma / Case #402",
+                        isError = patientReferenceError != null,
+                        errorMessage = patientReferenceError
                     )
 
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -547,6 +595,11 @@ fun BloodRequestsScreen(
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                             ReviewDetailRow(label = "Hospital", value = req.hospital)
+                            ReviewDetailRow(label = "Contact Number", value = req.contactNumber)
+                            ReviewDetailRow(
+                                label = "Doctor / Patient ID",
+                                value = req.patientReference.ifBlank { "Not specified" }
+                            )
                             ReviewDetailRow(label = "Locality", value = req.city)
                             ReviewDetailRow(label = "Urgency", value = req.urgency)
                             if (req.notes.isNotBlank()) {
@@ -567,6 +620,8 @@ fun BloodRequestsScreen(
                             urgency = req.urgency,
                             city = req.city,
                             notes = req.notes,
+                            contactNumber = req.contactNumber,
+                            patientReference = req.patientReference,
                             onSuccess = {
                                 resetForm()
                                 showConfirmationDialog = true
@@ -660,6 +715,7 @@ private fun LiveRequestCard(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var showPledgeConfirmDialog by remember { mutableStateOf(false) }
     var selectedEtaMinutes by remember { mutableStateOf(30) } // default 30 min
 
@@ -712,6 +768,24 @@ private fun LiveRequestCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
+                    if (request.verified) {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("Verified", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelSmall) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = Color(0xFFE8F5E9),
+                                labelColor = Color(0xFF2E7D32)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "Not yet verified",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+
                     Text(
                         text = "${request.city} · Requested by ${request.requesterName.ifBlank { "Anonymous" }}",
                         style = MaterialTheme.typography.bodySmall,
@@ -752,6 +826,21 @@ private fun LiveRequestCard(
                     ),
                     shape = RoundedCornerShape(8.dp)
                 )
+            }
+
+            if (request.contactNumber.isNotBlank()) {
+                OutlinedButton(
+                    onClick = {
+                        val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${request.contactNumber}"))
+                        context.startActivity(dialIntent)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Call, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.size(6.dp))
+                    Text("Call hospital")
+                }
             }
 
             if (canPledge) {

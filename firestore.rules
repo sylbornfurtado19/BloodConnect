@@ -44,7 +44,11 @@ service cloud.firestore {
         request.resource.data.unitsNeeded >= 1 &&
         request.resource.data.unitsNeeded <= 20 &&
         request.resource.data.get("unitsReceived", 0) == 0 &&
-        isBloodGroupValid(request.resource.data.bloodGroup);
+        isBloodGroupValid(request.resource.data.bloodGroup) &&
+        request.resource.data.get("verified", false) == false &&
+        request.resource.data.contactNumber is string &&
+        request.resource.data.contactNumber.size() >= 7 && request.resource.data.contactNumber.size() <= 20 &&
+        request.resource.data.get("patientReference", "").size() <= 60;
 
       allow update: if isSignedIn() &&
         request.auth.uid == resource.data.requesterId &&

@@ -49,7 +49,13 @@ data class BloodRequest(
     @set:PropertyName("createdAt")
     var createdAt: Long = System.currentTimeMillis(),
     val expiresAt: Long = 0L,
-    val notes: String = ""
+    val notes: String = "",
+    val contactNumber: String = "",
+    val patientReference: String = "",
+    /**
+     * verified is set to true only by an admin in the Firebase Console (or Admin SDK), never by the app.
+     */
+    val verified: Boolean = false
 ) {
     // ------------------------------------------------------------------------
     // Backward-Compatible Property Aliases & Firestore Field Mappings
@@ -219,7 +225,10 @@ data class BloodRequest(
             createdAt: Long = System.currentTimeMillis(),
             expiresAt: Long = 0L,
             timestamp: Timestamp? = null,
-            notes: String = ""
+            notes: String = "",
+            contactNumber: String = "",
+            patientReference: String = "",
+            verified: Boolean = false
         ): BloodRequest {
             return BloodRequest(
                 id = id.ifBlank { requestId },
@@ -236,7 +245,10 @@ data class BloodRequest(
                 status = status,
                 createdAt = timestamp?.toDate()?.time ?: createdAt,
                 expiresAt = expiresAt,
-                notes = notes
+                notes = notes,
+                contactNumber = contactNumber,
+                patientReference = patientReference,
+                verified = verified
             )
         }
     }

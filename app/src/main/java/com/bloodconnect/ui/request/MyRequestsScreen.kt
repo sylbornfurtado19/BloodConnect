@@ -57,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -400,6 +401,12 @@ fun MyRequestsScreen(
                             RequestDetailRow(label = "Request ID", value = req.id.ifBlank { req.requestId })
                             RequestDetailRow(label = "Date & Time", value = dateFormatted)
                             RequestDetailRow(label = "Hospital", value = req.hospital)
+                            if (req.contactNumber.isNotBlank()) {
+                                RequestDetailRow(label = "Contact Number", value = req.contactNumber)
+                            }
+                            if (req.patientReference.isNotBlank()) {
+                                RequestDetailRow(label = "Doctor / Patient ID", value = req.patientReference)
+                            }
                             RequestDetailRow(label = "Locality", value = req.city)
                             RequestDetailRow(label = "Urgency", value = req.urgencyLevel.displayName)
                             RequestDetailRow(label = "Expiration", value = formatTimeRemaining(req.expiresAt))
@@ -607,6 +614,24 @@ private fun MyRequestCard(
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+
+                    if (entry.verified) {
+                        SuggestionChip(
+                            onClick = onClick,
+                            label = { Text("Verified", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelSmall) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = Color(0xFFE8F5E9),
+                                labelColor = Color(0xFF2E7D32)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "Not yet verified",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

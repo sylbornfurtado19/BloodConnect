@@ -84,4 +84,38 @@ object BloodRequestValidator {
             "Please select a valid urgency level (Routine, Urgent, or Critical)"
         }
     }
+
+    /**
+     * Validates hospital or ward contact number.
+     * Required; after removing spaces, "-", "(" and ")" it must be 7 to 15 digits with an optional leading "+".
+     *
+     * @param value Input contact number.
+     * @return User-readable error message, or null if valid.
+     */
+    fun validateContactNumber(value: String): String? {
+        if (value.isBlank()) {
+            return "Contact number is required"
+        }
+        val cleaned = value.filterNot { it == ' ' || it == '-' || it == '(' || it == ')' }
+        val phoneRegex = Regex("^\\+?[0-9]{7,15}$")
+        return if (phoneRegex.matches(cleaned)) {
+            null
+        } else {
+            "Please enter a valid phone number (7 to 15 digits)"
+        }
+    }
+
+    /**
+     * Validates optional doctor name or patient reference ID (max 60 characters).
+     *
+     * @param value Input patient reference or doctor name.
+     * @return User-readable error message, or null if valid.
+     */
+    fun validatePatientReference(value: String): String? {
+        return if (value.trim().length > 60 || value.length > 60) {
+            "Patient reference cannot exceed 60 characters"
+        } else {
+            null
+        }
+    }
 }
