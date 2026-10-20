@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -100,6 +101,7 @@ fun ProfileScreen(
     var cityLocality by remember { mutableStateOf(FALLBACK_CITY) }
     var contactInfo by remember { mutableStateOf(FALLBACK_CONTACT) }
     var isDonorAvailable by remember { mutableStateOf(false) }
+    var isContactable by remember { mutableStateOf(true) }
 
     var isEditing by remember { mutableStateOf(false) }
     var editName by remember { mutableStateOf(displayName) }
@@ -142,12 +144,14 @@ fun ProfileScreen(
             contactInfo = if (contact.isNotBlank()) contact else FALLBACK_CONTACT
 
             isDonorAvailable = user.isAvailable
+            isContactable = user.contactable
         } else {
             displayName = FALLBACK_NAME
             bloodGroup = FALLBACK_BLOOD_GROUP
             cityLocality = FALLBACK_CITY
             contactInfo = FALLBACK_CONTACT
             isDonorAvailable = false
+            isContactable = true
         }
     }
 
@@ -473,7 +477,7 @@ fun ProfileScreen(
                 }
             }
 
-            // 3. Donor Availability Status Card
+            // 3. Donor Availability & Privacy Settings Card (3G)
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp)
@@ -521,6 +525,46 @@ fun ProfileScreen(
                             onCheckedChange = {
                                 isDonorAvailable = it
                                 viewModel.updateAvailability(it)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                    // Phone Privacy Switch (3G)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Phone,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Text(
+                                text = "Share my phone with requesters I pledge to",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Switch(
+                            checked = isContactable,
+                            onCheckedChange = {
+                                isContactable = it
+                                viewModel.updateContactable(it)
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.onPrimary,

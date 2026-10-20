@@ -14,6 +14,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.round
 
 /**
  * ViewModel managing Home screen dashboard synchronization and background location updates.
@@ -39,11 +40,22 @@ class HomeViewModel @Inject constructor(
         val uid = authRepository.currentUserId
         if (uid != null) {
             viewModelScope.launch(Dispatchers.IO) {
-                donationSyncManager.syncFromPledges(uid)
-                val user = userRepository.getUser(uid).getOrNull()
-                if (user != null && user.bloodGroup.isNotBlank()) {
-                    topicManager.subscribe(user.bloodGroup)
-                }
+                try {
+                    donationSyncManager.syncFromPledges(uid)
+                    val user = userRepository.getUser(uid).getOrNull()
+                    if (user != null) {
+                        if (user.bloodGroup.isNotBlank()) {
+                            topicManager.subscribe(user.bloodGroup)
+                        }
+                        if (user.latitude != 0.0 || user.longitude != 0.0) {
+                            val coarseLat = round(user.latitude * 100) / 100
+                            val coarseLon = round(user.longitude * 100) / 100
+                            if (user.latitude != coarseLat || user.longitude != coarseLon) {
+                                userRepository.updateLocation(uid, user.latitude, user.longitude)
+                            }
+                        }
+                    }
+                } catch (_: Exception) {}
             }
         }
     }

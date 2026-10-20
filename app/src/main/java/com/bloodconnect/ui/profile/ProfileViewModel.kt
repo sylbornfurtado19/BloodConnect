@@ -99,6 +99,14 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    fun updateContactable(contactable: Boolean) {
+        val uid = authRepository.currentUserId ?: return
+        viewModelScope.launch {
+            userRepository.updateContactable(uid, contactable)
+            loadUserProfile()
+        }
+    }
+
     fun signOut(onSignOut: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {

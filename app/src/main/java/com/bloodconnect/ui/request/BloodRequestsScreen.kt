@@ -749,10 +749,17 @@ private fun LiveRequestCard(
     }
 
     if (showPledgeConfirmDialog) {
+        val isContactable = currentUser?.contactable == true
+        val dialogMessage = if (isContactable) {
+            "Share your name and phone number with the requester ONLY for this request?"
+        } else {
+            "Your phone will not be shared. The requester will see only your name and blood group."
+        }
+
         AlertDialog(
             onDismissRequest = { showPledgeConfirmDialog = false },
             title = { Text("Pledge Blood Donation") },
-            text = { Text("Share your name and phone number with the requester so they can contact you?") },
+            text = { Text(dialogMessage) },
             confirmButton = {
                 Button(
                     onClick = {

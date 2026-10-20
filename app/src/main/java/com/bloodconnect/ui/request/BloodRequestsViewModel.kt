@@ -100,7 +100,7 @@ class BloodRequestsViewModel @Inject constructor(
             val user = userRepository.getUser(uid).getOrNull()
             val donorName = user?.fullName?.ifBlank { null } ?: user?.displayName?.ifBlank { "Volunteer Donor" } ?: "Volunteer Donor"
             val bloodGroup = user?.bloodGroup ?: ""
-            val phone = user?.phone ?: user?.email ?: ""
+            val phone = if (user?.contactable == true) user.phone else ""
 
             val pledge = Pledge(
                 donorId = uid,

@@ -24,6 +24,11 @@ service cloud.firestore {
       allow update: if isOwner(uid) &&
         !request.resource.data.diff(resource.data).affectedKeys().hasAny(["livesSaved", "donorTier"]);
       allow delete: if false;
+
+      // Private User Data (e.g. contact details readable/writable only by owner)
+      match /private/{docId} {
+        allow read, write: if isOwner(uid);
+      }
     }
 
     // ------------------------------------------------------------------------

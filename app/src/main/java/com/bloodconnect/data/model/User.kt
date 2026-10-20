@@ -20,7 +20,8 @@ data class User(
     val livesSaved: Int = 0,
     val donorTier: String = "Bronze",
     val fcmToken: String? = null,
-    val lastDonationAt: Long? = null
+    val lastDonationAt: Long? = null,
+    val contactable: Boolean = true
 ) {
     /**
      * Backward-compatibility setter for legacy Firestore documents containing only the old "available" field.
