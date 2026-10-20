@@ -14,6 +14,7 @@ import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.BloodRequestRepository
 import com.bloodconnect.data.repository.ReportRepository
 import com.bloodconnect.data.repository.UserRepository
+import com.bloodconnect.utils.AnalyticsHelper
 import com.bloodconnect.utils.LocationHelper
 import com.google.firebase.firestore.FirebaseFirestoreException
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,7 +33,8 @@ class BloodRequestsViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val reportRepository: ReportRepository,
-    private val locationHelper: LocationHelper
+    private val locationHelper: LocationHelper,
+    private val analyticsHelper: AnalyticsHelper = AnalyticsHelper()
 ) : ViewModel() {
 
     var requests by mutableStateOf<List<BloodRequest>>(emptyList())
@@ -151,6 +153,7 @@ class BloodRequestsViewModel @Inject constructor(
 
             val result = requestRepository.pledge(requestId, pledge)
             if (result.isSuccess) {
+                analyticsHelper.logPledgeMade()
                 onSuccess()
             } else {
                 errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to submit pledge"
@@ -177,6 +180,7 @@ class BloodRequestsViewModel @Inject constructor(
         viewModelScope.launch {
             val result = requestRepository.withdrawPledge(requestId, uid)
             if (result.isSuccess) {
+                analyticsHelper.logPledgeWithdrawn()
                 onSuccess()
             } else {
                 errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to withdraw pledge"
@@ -296,6 +300,7 @@ class BloodRequestsViewModel @Inject constructor(
                 )
                 val result = requestRepository.createRequest(request)
                 if (result.isSuccess) {
+                    analyticsHelper.logRequestCreated(request.bloodGroup, request.urgency)
                     onSuccess()
                 } else {
                     val ex = result.exceptionOrNull()

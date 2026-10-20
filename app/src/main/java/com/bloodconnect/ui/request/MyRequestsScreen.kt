@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -393,7 +394,8 @@ fun MyRequestsScreen(
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     IconButton(
-                                        onClick = { IntentHelpers.shareRequest(context, req) }
+                                        onClick = { IntentHelpers.shareRequest(context, req) },
+                                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Share,
@@ -515,9 +517,10 @@ fun MyRequestsScreen(
                                                     onClick = {
                                                         val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${pledge.phone}"))
                                                         context.startActivity(dialIntent)
-                                                    }
+                                                    },
+                                                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                                                 ) {
-                                                    Icon(imageVector = Icons.Default.Call, contentDescription = "Call Donor", tint = MaterialTheme.colorScheme.primary)
+                                                    Icon(imageVector = Icons.Default.Call, contentDescription = "Call donor", tint = MaterialTheme.colorScheme.primary)
                                                 }
                                             }
 
@@ -525,7 +528,8 @@ fun MyRequestsScreen(
                                                 TextButton(
                                                     onClick = {
                                                         viewModel.markPledgeDonated(req.id.ifBlank { req.requestId }, pledge.donorId)
-                                                    }
+                                                    },
+                                                    modifier = Modifier.sizeIn(minHeight = 48.dp)
                                                 ) {
                                                     Text("Mark donated", style = MaterialTheme.typography.labelSmall)
                                                 }
@@ -534,11 +538,12 @@ fun MyRequestsScreen(
                                             var showPledgeMenu by remember { mutableStateOf(false) }
                                             Box {
                                                 IconButton(
-                                                    onClick = { showPledgeMenu = true }
+                                                    onClick = { showPledgeMenu = true },
+                                                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                                                 ) {
                                                     Icon(
                                                         imageVector = Icons.Default.MoreVert,
-                                                        contentDescription = "Pledge options",
+                                                        contentDescription = "Open menu",
                                                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                                                     )
                                                 }
@@ -587,7 +592,9 @@ fun MyRequestsScreen(
                                     viewModel.updateStatus(req.id.ifBlank { req.requestId }, RequestStatus.FULFILLED)
                                     selectedRequestForDetails = null
                                 },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = 48.dp),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -599,7 +606,9 @@ fun MyRequestsScreen(
                                 onClick = {
                                     showCancelConfirmationDialog = true
                                 },
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = 48.dp),
                                 shape = RoundedCornerShape(8.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                             ) {
@@ -614,6 +623,7 @@ fun MyRequestsScreen(
             confirmButton = {
                 Button(
                     onClick = { selectedRequestForDetails = null },
+                    modifier = Modifier.heightIn(min = 48.dp),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("Close")
@@ -821,7 +831,8 @@ private fun MyRequestCard(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
-                        onClick = { IntentHelpers.shareRequest(context, entry) }
+                        onClick = { IntentHelpers.shareRequest(context, entry) },
+                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,

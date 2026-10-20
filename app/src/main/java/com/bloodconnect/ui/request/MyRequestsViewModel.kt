@@ -12,6 +12,7 @@ import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.BloodRequestRepository
 import com.bloodconnect.data.repository.ReportRepository
 import com.bloodconnect.data.repository.UserRepository
+import com.bloodconnect.utils.AnalyticsHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -23,7 +24,8 @@ class MyRequestsViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val requestRepository: BloodRequestRepository,
     private val userRepository: UserRepository,
-    private val reportRepository: ReportRepository
+    private val reportRepository: ReportRepository,
+    private val analyticsHelper: AnalyticsHelper = AnalyticsHelper()
 ) : ViewModel() {
 
     var requests by mutableStateOf<List<BloodRequest>>(emptyList())
@@ -112,6 +114,7 @@ class MyRequestsViewModel @Inject constructor(
             try {
                 val res = requestRepository.markPledgeDonated(requestId, donorUid)
                 if (res.isSuccess) {
+                    analyticsHelper.logDonationConfirmed()
                     requestRepository.recordUnitReceived(requestId)
                     loadMyRequests()
                 } else {

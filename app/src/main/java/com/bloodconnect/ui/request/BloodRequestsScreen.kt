@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -855,7 +856,7 @@ private fun LiveRequestCard(
 
                     IconButton(
                         onClick = { IntentHelpers.shareRequest(context, request) },
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
@@ -867,11 +868,11 @@ private fun LiveRequestCard(
                     Box {
                         IconButton(
                             onClick = { showMenu = true },
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = "More options",
+                                contentDescription = "Open menu",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -910,7 +911,9 @@ private fun LiveRequestCard(
                         val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${request.contactNumber}"))
                         context.startActivity(dialIntent)
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(imageVector = Icons.Default.Call, contentDescription = null, modifier = Modifier.size(16.dp))
