@@ -11,9 +11,11 @@ import java.util.Date
  * Canonical Kotlin Properties:
  * - [id]: Primary unique request identifier.
  * - [unitsNeeded]: Quantity of blood units requested.
+ * - [unitsReceived]: Quantity of blood units received/confirmed so far.
  * - [hospital]: Medical facility or hospital name.
  * - [createdAt]: Epoch millisecond creation timestamp.
- * - [status]: Standardized status string (e.g. "Pending", "Fulfilled", "Cancelled").
+ * - [expiresAt]: Epoch millisecond expiration timestamp (0L = never expires).
+ * - [status]: Standardized status string (e.g. "Pending", "Partially Fulfilled", "Fulfilled", "Cancelled").
  * - [notes]: Optional additional details or instructions.
  *
  * Preserves bidirectional Firestore compatibility for legacy fields:
@@ -32,6 +34,7 @@ data class BloodRequest(
     @get:PropertyName("unitsNeeded")
     @set:PropertyName("unitsNeeded")
     var unitsNeeded: Int = 1,
+    val unitsReceived: Int = 0,
     @get:PropertyName("hospital")
     @set:PropertyName("hospital")
     var hospital: String = "",
@@ -45,6 +48,7 @@ data class BloodRequest(
     @get:PropertyName("createdAt")
     @set:PropertyName("createdAt")
     var createdAt: Long = System.currentTimeMillis(),
+    val expiresAt: Long = 0L,
     val notes: String = ""
 ) {
     // ------------------------------------------------------------------------
@@ -129,11 +133,33 @@ data class BloodRequest(
 
     /**
      * Resolves the strongly-typed [RequestStatus] enum for this request.
-     * Legacy statuses like "Active" or all-caps "PENDING" are safely resolved to [RequestStatus.PENDING].
      */
     @get:Exclude
     val requestStatus: RequestStatus
         get() = RequestStatus.fromString(status) ?: RequestStatus.PENDING
+
+    /**
+     * Computes the effective request status taking time-based expiration into account.
+     * Derived dynamically so "Expired" status is never written to Firestore.
+     */
+    @get:Exclude
+    val effectiveStatus: RequestStatus
+        get() {
+            val baseStatus = requestStatus
+            val isPendingOrPartial = baseStatus == RequestStatus.PENDING || baseStatus == RequestStatus.PARTIALLY_FULFILLED
+            return if (isPendingOrPartial && expiresAt > 0L && System.currentTimeMillis() > expiresAt) {
+                RequestStatus.EXPIRED
+            } else {
+                baseStatus
+            }
+        }
+
+    /**
+     * Indicates whether the request is active and open for donor pledges.
+     */
+    @get:Exclude
+    val isActive: Boolean
+        get() = effectiveStatus == RequestStatus.PENDING || effectiveStatus == RequestStatus.PARTIALLY_FULFILLED
 
     /**
      * Returns the standardized canonical string representation of [status].
@@ -153,7 +179,6 @@ data class BloodRequest(
 
     /**
      * Resolves the strongly-typed [Urgency] enum for this request.
-     * Legacy values like "Normal" or missing/blank values safely resolve to [Urgency.ROUTINE].
      */
     @get:Exclude
     val urgencyLevel: Urgency
@@ -183,6 +208,7 @@ data class BloodRequest(
             bloodGroup: String = "",
             unitsNeeded: Int = 1,
             unitsRequired: Int = 1,
+            unitsReceived: Int = 0,
             hospital: String = "",
             hospitalName: String = "",
             city: String = "",
@@ -191,6 +217,7 @@ data class BloodRequest(
             longitude: Double = 0.0,
             status: String = RequestStatus.PENDING.displayName,
             createdAt: Long = System.currentTimeMillis(),
+            expiresAt: Long = 0L,
             timestamp: Timestamp? = null,
             notes: String = ""
         ): BloodRequest {
@@ -200,6 +227,7 @@ data class BloodRequest(
                 requesterName = requesterName,
                 bloodGroup = bloodGroup,
                 unitsNeeded = if (unitsNeeded != 1) unitsNeeded else unitsRequired,
+                unitsReceived = unitsReceived,
                 hospital = hospital.ifBlank { hospitalName },
                 city = city,
                 urgency = Urgency.fromStringOrDefault(urgency).displayName,
@@ -207,6 +235,7 @@ data class BloodRequest(
                 longitude = longitude,
                 status = status,
                 createdAt = timestamp?.toDate()?.time ?: createdAt,
+                expiresAt = expiresAt,
                 notes = notes
             )
         }

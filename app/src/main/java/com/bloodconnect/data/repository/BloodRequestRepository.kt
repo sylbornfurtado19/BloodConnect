@@ -40,12 +40,12 @@ class BloodRequestRepository @Inject constructor(
 
     /**
      * Retrieves active blood requests using a single-field status filter.
-     * Note: single-field whereIn needs no composite index.
+     * Filters for active requests (Pending or Partially Fulfilled and not expired).
      */
     suspend fun getActiveRequests(): Result<List<BloodRequest>> {
         return try {
             val snapshot = requestsCollection
-                .whereIn("status", listOf("Pending", "Active", "PENDING"))
+                .whereIn("status", listOf("Pending", "Active", "PENDING", "Partially Fulfilled"))
                 .limit(200)
                 .get()
                 .await()
@@ -55,7 +55,7 @@ class BloodRequestRepository @Inject constructor(
                     if (req.id.isBlank()) req.id = doc.id
                     req.withCanonicalStatus().withCanonicalUrgency()
                 }
-            }.filter { it.requestStatus == RequestStatus.PENDING }
+            }.filter { it.isActive }
              .sortedByDescending { it.createdAt }
 
             Result.success(activeList)
@@ -66,14 +66,12 @@ class BloodRequestRepository @Inject constructor(
 
     /**
      * Observes active blood requests using a single-field status filter.
-     * Note: single-field whereIn needs no composite index.
+     * Filters for active requests (Pending or Partially Fulfilled and not expired).
      */
     fun observeActiveRequests(): Flow<List<BloodRequest>> = callbackFlow {
         val query = requestsCollection
-            .whereIn("status", listOf("Pending", "Active", "PENDING"))
+            .whereIn("status", listOf("Pending", "Active", "PENDING", "Partially Fulfilled"))
             .limit(200)
-
-        val activeStatuses = setOf("Pending", "Active", "PENDING")
 
         val listener = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
@@ -85,9 +83,8 @@ class BloodRequestRepository @Inject constructor(
                     if (req.id.isBlank()) req.id = doc.id
                     req.withCanonicalStatus().withCanonicalUrgency()
                 }
-            }?.filter { req ->
-                req.status in activeStatuses || req.requestStatus == RequestStatus.PENDING
-            }?.sortedByDescending { it.createdAt } ?: emptyList()
+            }?.filter { it.isActive }
+             ?.sortedByDescending { it.createdAt } ?: emptyList()
 
             trySend(list)
         }
@@ -127,7 +124,7 @@ class BloodRequestRepository @Inject constructor(
                     if (req.id.isBlank()) req.id = doc.id
                     req.withCanonicalStatus().withCanonicalUrgency()
                 }
-            }.filter { it.requestStatus == status }
+            }.filter { it.effectiveStatus == status }
              .sortedByDescending { it.createdAt }
 
             Result.success(list)
@@ -188,6 +185,36 @@ class BloodRequestRepository @Inject constructor(
 
     suspend fun updateRequestUrgency(requestId: String, urgency: Urgency): Result<Unit> {
         return updateRequestUrgency(requestId, urgency.displayName)
+    }
+
+    /**
+     * Records a unit received for a request using a Firestore transaction.
+     * Increments unitsReceived capped at unitsNeeded, and updates status to "Fulfilled" or "Partially Fulfilled".
+     */
+    suspend fun recordUnitReceived(requestId: String): Result<Unit> {
+        return try {
+            val docRef = requestsCollection.document(requestId)
+            firestore.runTransaction { tx ->
+                val snap = tx.get(docRef)
+                if (snap.exists()) {
+                    val unitsNeeded = snap.getLong("unitsNeeded")?.toInt() ?: 1
+                    val currentReceived = snap.getLong("unitsReceived")?.toInt() ?: 0
+                    val newReceived = minOf(currentReceived + 1, unitsNeeded)
+                    val newStatus = if (newReceived >= unitsNeeded) "Fulfilled" else "Partially Fulfilled"
+
+                    tx.update(
+                        docRef,
+                        mapOf(
+                            "unitsReceived" to newReceived,
+                            "status" to newStatus
+                        )
+                    )
+                }
+            }.await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     // ------------------------------------------------------------------------
@@ -266,13 +293,6 @@ class BloodRequestRepository @Inject constructor(
         }
     }
 
-    /**
-     * Counts confirmed donations for [uid] from collection group "pledges".
-     *
-     * IMPORTANT: Firestore Collection Group Index Required in Firebase Console:
-     * Collection Group: pledges
-     * Fields: donorId (Ascending), status (Ascending)
-     */
     suspend fun countMyDonations(uid: String): Result<Int> {
         return try {
             val countQuery = firestore.collectionGroup("pledges")
@@ -287,10 +307,6 @@ class BloodRequestRepository @Inject constructor(
         }
     }
 
-    /**
-     * Retrieves all confirmed donated pledges for [uid] from collection group "pledges".
-     * Note: Uses the same collection-group index as [countMyDonations].
-     */
     suspend fun getMyDonatedPledges(uid: String): Result<List<Pledge>> {
         return try {
             val snapshot = firestore.collectionGroup("pledges")

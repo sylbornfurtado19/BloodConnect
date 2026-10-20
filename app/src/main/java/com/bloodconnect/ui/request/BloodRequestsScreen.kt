@@ -1,5 +1,6 @@
 package com.bloodconnect.ui.request
 
+import android.content.Context
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,6 +42,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -50,6 +53,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -79,6 +83,20 @@ private data class PendingBloodRequest(
 
 private val bloodGroups = listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-")
 private val urgencyLevels = Urgency.entries.map { it.displayName }
+private val etaOptions = listOf(15, 30, 60, 120) // minutes
+
+private fun getDismissedRequests(context: Context): Set<String> {
+    val prefs = context.getSharedPreferences("dismissed_requests_prefs", Context.MODE_PRIVATE)
+    return prefs.getStringSet("dismissed_requests", emptySet()) ?: emptySet()
+}
+
+private fun dismissRequest(context: Context, requestId: String) {
+    val prefs = context.getSharedPreferences("dismissed_requests_prefs", Context.MODE_PRIVATE)
+    val set = (prefs.getStringSet("dismissed_requests", emptySet()) ?: emptySet()).toMutableSet()
+    set.add(requestId)
+    val trimmed = if (set.size > 100) set.toList().takeLast(100).toSet() else set
+    prefs.edit().putStringSet("dismissed_requests", trimmed).apply()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,7 +105,14 @@ fun BloodRequestsScreen(
     modifier: Modifier = Modifier,
     viewModel: BloodRequestsViewModel = hiltViewModel()
 ) {
-    val requests = viewModel.requests
+    val context = LocalContext.current
+    var dismissedIds by remember { mutableStateOf(getDismissedRequests(context)) }
+
+    val rawRequests = viewModel.requests
+    val requests = remember(rawRequests, dismissedIds) {
+        rawRequests.filter { it.id !in dismissedIds && it.requestId !in dismissedIds }
+    }
+
     val isLoading = viewModel.isLoading
     val isSubmitting = viewModel.isSubmitting
     val errorMessage = viewModel.errorMessage
@@ -437,7 +462,12 @@ fun BloodRequestsScreen(
                             LiveRequestCard(
                                 request = request,
                                 currentUser = currentUserProfile,
-                                viewModel = viewModel
+                                viewModel = viewModel,
+                                onDismiss = {
+                                    val reqId = request.id.ifBlank { request.requestId }
+                                    dismissRequest(context, reqId)
+                                    dismissedIds = getDismissedRequests(context)
+                                }
                             )
                         }
                     }
@@ -627,9 +657,11 @@ private fun LiveRequestCard(
     request: BloodRequest,
     currentUser: User?,
     viewModel: BloodRequestsViewModel,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showPledgeConfirmDialog by remember { mutableStateOf(false) }
+    var selectedEtaMinutes by remember { mutableStateOf(30) } // default 30 min
 
     val myPledgeState = remember(request.id) {
         viewModel.observeMyPledge(request.id)
@@ -726,22 +758,50 @@ private fun LiveRequestCard(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 if (myPledge == null) {
-                    Button(
-                        onClick = { showPledgeConfirmDialog = true },
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.padding(start = 6.dp))
-                        Text("I can donate")
+                        Button(
+                            onClick = { showPledgeConfirmDialog = true },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.padding(start = 6.dp))
+                            Text("I can donate")
+                        }
+
+                        TextButton(onClick = onDismiss) {
+                            Text("Not now", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 } else {
-                    OutlinedButton(
-                        onClick = { viewModel.withdrawPledge(request.id) },
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("You pledged · Withdraw")
+                        OutlinedButton(
+                            onClick = { viewModel.withdrawPledge(request.id) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Can't make it")
+                        }
+
+                        TextButton(onClick = onDismiss) {
+                            Text("Not now", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Not now", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -759,12 +819,38 @@ private fun LiveRequestCard(
         AlertDialog(
             onDismissRequest = { showPledgeConfirmDialog = false },
             title = { Text("Pledge Blood Donation") },
-            text = { Text(dialogMessage) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(dialogMessage)
+
+                    Text(
+                        text = "I can reach in:",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        etaOptions.forEach { mins ->
+                            val label = if (mins < 60) "$mins min" else "${mins / 60} hour(s)"
+                            FilterChip(
+                                selected = selectedEtaMinutes == mins,
+                                onClick = { selectedEtaMinutes = mins },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                }
+            },
             confirmButton = {
                 Button(
                     onClick = {
                         showPledgeConfirmDialog = false
-                        viewModel.pledgeToRequest(request.id)
+                        viewModel.pledgeToRequest(request.id, etaMinutes = selectedEtaMinutes)
                     },
                     shape = RoundedCornerShape(10.dp)
                 ) {

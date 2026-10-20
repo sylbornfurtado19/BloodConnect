@@ -11,5 +11,6 @@ data class Pledge(
     val phone: String = "",
     val createdAt: Long = System.currentTimeMillis(),
     val status: String = "Pledged",
-    val donatedAt: Long? = null
+    val donatedAt: Long? = null,
+    val etaMinutes: Int? = null
 )

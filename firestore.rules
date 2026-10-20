@@ -43,11 +43,15 @@ service cloud.firestore {
         request.resource.data.unitsNeeded is int &&
         request.resource.data.unitsNeeded >= 1 &&
         request.resource.data.unitsNeeded <= 20 &&
+        request.resource.data.get("unitsReceived", 0) == 0 &&
         isBloodGroupValid(request.resource.data.bloodGroup);
 
       allow update: if isSignedIn() &&
         request.auth.uid == resource.data.requesterId &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "urgency"]);
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "urgency", "unitsReceived"]) &&
+        request.resource.data.status in ["Pending", "Partially Fulfilled", "Fulfilled", "Cancelled"] &&
+        request.resource.data.get("unitsReceived", 0) >= resource.data.get("unitsReceived", 0) &&
+        request.resource.data.get("unitsReceived", 0) <= resource.data.unitsNeeded;
 
       allow delete: if false;
 
@@ -56,7 +60,8 @@ service cloud.firestore {
         allow create: if isSignedIn() &&
           request.auth.uid == donorUid &&
           request.resource.data.donorId == donorUid &&
-          request.resource.data.status == "Pledged";
+          request.resource.data.status == "Pledged" &&
+          (!("etaMinutes" in request.resource.data) || (request.resource.data.etaMinutes is int && request.resource.data.etaMinutes >= 5 && request.resource.data.etaMinutes <= 720));
 
         allow read: if isSignedIn() && (
           request.auth.uid == resource.data.donorId ||

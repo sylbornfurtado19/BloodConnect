@@ -5,17 +5,19 @@ package com.bloodconnect.data.model
  */
 enum class RequestStatus(val displayName: String) {
     PENDING("Pending"),
+    PARTIALLY_FULFILLED("Partially Fulfilled"),
     FULFILLED("Fulfilled"),
-    CANCELLED("Cancelled");
+    CANCELLED("Cancelled"),
+    EXPIRED("Expired");
 
     val canonicalValue: String get() = displayName
 
     companion object {
         /**
          * Resolves a [RequestStatus] from any representation:
-         * - Canonical display strings ("Pending", "Fulfilled", "Cancelled")
-         * - Standard enum names ("PENDING", "FULFILLED", "CANCELLED")
-         * - Legacy or alternative values ("Active", "active", "Canceled", etc.)
+         * - Canonical display strings ("Pending", "Partially Fulfilled", "Fulfilled", "Cancelled", "Expired")
+         * - Standard enum names ("PENDING", "PARTIALLY_FULFILLED", "FULFILLED", "CANCELLED", "EXPIRED")
+         * - Legacy or alternative values ("Active", "active", "Partial", "Canceled", etc.)
          * - Demonstration formats (e.g. "Pending (Demo)")
          */
         fun fromString(value: String?): RequestStatus? {
@@ -25,9 +27,12 @@ enum class RequestStatus(val displayName: String) {
             return when {
                 base.equals("Active", ignoreCase = true) -> PENDING
                 base.equals("Pending", ignoreCase = true) || base.equals("PENDING", ignoreCase = true) -> PENDING
+                base.equals("Partially Fulfilled", ignoreCase = true) || base.equals("PARTIALLY_FULFILLED", ignoreCase = true) ||
+                    base.equals("Partial", ignoreCase = true) || base.equals("PARTIAL", ignoreCase = true) -> PARTIALLY_FULFILLED
                 base.equals("Fulfilled", ignoreCase = true) || base.equals("FULFILLED", ignoreCase = true) -> FULFILLED
                 base.equals("Cancelled", ignoreCase = true) || base.equals("CANCELLED", ignoreCase = true) ||
                     base.equals("Canceled", ignoreCase = true) || base.equals("CANCELED", ignoreCase = true) -> CANCELLED
+                base.equals("Expired", ignoreCase = true) || base.equals("EXPIRED", ignoreCase = true) -> EXPIRED
                 else -> entries.find {
                     it.displayName.equals(base, ignoreCase = true) ||
                     it.name.equals(base, ignoreCase = true) ||

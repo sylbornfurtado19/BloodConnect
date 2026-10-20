@@ -65,7 +65,13 @@ class MyRequestsViewModel @Inject constructor(
     fun markPledgeDonated(requestId: String, donorUid: String) {
         viewModelScope.launch {
             try {
-                requestRepository.markPledgeDonated(requestId, donorUid)
+                val res = requestRepository.markPledgeDonated(requestId, donorUid)
+                if (res.isSuccess) {
+                    requestRepository.recordUnitReceived(requestId)
+                    loadMyRequests()
+                } else {
+                    errorMessage = res.exceptionOrNull()?.localizedMessage ?: "Failed to update pledge status"
+                }
             } catch (e: Exception) {
                 errorMessage = e.localizedMessage ?: "Failed to update pledge status"
             }

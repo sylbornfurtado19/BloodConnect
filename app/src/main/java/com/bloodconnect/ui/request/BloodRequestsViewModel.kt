@@ -94,7 +94,7 @@ class BloodRequestsViewModel @Inject constructor(
         return requestRepository.observeMyPledge(requestId, uid)
     }
 
-    fun pledgeToRequest(requestId: String, onSuccess: () -> Unit = {}) {
+    fun pledgeToRequest(requestId: String, etaMinutes: Int? = null, onSuccess: () -> Unit = {}) {
         val uid = currentUserId ?: return
         viewModelScope.launch {
             val user = userRepository.getUser(uid).getOrNull()
@@ -108,7 +108,8 @@ class BloodRequestsViewModel @Inject constructor(
                 bloodGroup = bloodGroup,
                 phone = phone,
                 createdAt = System.currentTimeMillis(),
-                status = "Pledged"
+                status = "Pledged",
+                etaMinutes = etaMinutes
             )
 
             val result = requestRepository.pledge(requestId, pledge)
@@ -167,17 +168,30 @@ class BloodRequestsViewModel @Inject constructor(
                 val lon = locResult?.getOrNull()?.longitude ?: 0.0
 
                 val canonicalUrgency = Urgency.fromStringOrDefault(urgency).displayName
+                val urgencyEnum = Urgency.fromStringOrDefault(urgency)
+
+                val now = System.currentTimeMillis()
+                val durationMillis = when (urgencyEnum) {
+                    Urgency.CRITICAL -> 24 * 60 * 60 * 1000L
+                    Urgency.URGENT -> 48 * 60 * 60 * 1000L
+                    Urgency.ROUTINE -> 7 * 24 * 60 * 60 * 1000L
+                }
+                val expiresAt = now + durationMillis
+
                 val request = BloodRequest(
                     requesterId = uid,
                     requesterName = requesterName,
                     bloodGroup = bloodGroup,
                     hospital = hospital,
                     unitsNeeded = unitsNeeded,
+                    unitsReceived = 0,
                     urgency = canonicalUrgency,
                     city = city,
                     latitude = lat,
                     longitude = lon,
                     status = RequestStatus.PENDING.displayName,
+                    createdAt = now,
+                    expiresAt = expiresAt,
                     notes = notes
                 )
                 val result = requestRepository.createRequest(request)
