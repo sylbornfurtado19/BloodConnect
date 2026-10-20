@@ -163,8 +163,14 @@ exports.widenEmergencyRadius = onSchedule(
       for (const doc of snapshot.docs) {
         const req = doc.data();
         const requestId = doc.id;
-        const stage = req.broadcastStage || 1;
-        const lastBroadcast = req.lastBroadcastAt || req.createdAt || 0;
+        const stage = req.broadcastStage;
+        const lastBroadcast = req.lastBroadcastAt;
+
+        // Skip requests created before the radius feature (no numeric broadcastStage or lastBroadcastAt)
+        if (typeof stage !== "number" || typeof lastBroadcast !== "number") {
+          continue;
+        }
+
         const expiresAt = req.expiresAt || 0;
 
         // In-memory filters: stage 1 or 2, at least 5 mins elapsed, not expired
@@ -184,7 +190,7 @@ exports.widenEmergencyRadius = onSchedule(
               const freshSnap = await tx.get(doc.ref);
               if (!freshSnap.exists) return;
               const freshReq = freshSnap.data();
-              const freshStage = freshReq.broadcastStage || 1;
+              const freshStage = freshReq.broadcastStage;
 
               if (freshStage === stage) {
                 tx.update(doc.ref, {

@@ -21,16 +21,15 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 private fun isAlreadyNotified(context: Context, requestId: String): Boolean {
     val prefs = context.getSharedPreferences("notified_requests_prefs", Context.MODE_PRIVATE)
-    val set = prefs.getStringSet("notified_requests", emptySet()) ?: emptySet()
-    return requestId in set
+    val csv = prefs.getString("notified_requests_csv", "") ?: ""
+    return NotifiedRequests.contains(csv, requestId)
 }
 
 private fun markAsNotified(context: Context, requestId: String) {
     val prefs = context.getSharedPreferences("notified_requests_prefs", Context.MODE_PRIVATE)
-    val set = (prefs.getStringSet("notified_requests", emptySet()) ?: emptySet()).toMutableSet()
-    set.add(requestId)
-    val trimmed = if (set.size > 50) set.toList().takeLast(50).toSet() else set
-    prefs.edit().putStringSet("notified_requests", trimmed).apply()
+    val csv = prefs.getString("notified_requests_csv", "") ?: ""
+    val updated = NotifiedRequests.add(csv, requestId, 50)
+    prefs.edit().putString("notified_requests_csv", updated).apply()
 }
 
 class BloodConnectMessagingService : FirebaseMessagingService() {
@@ -49,11 +48,10 @@ class BloodConnectMessagingService : FirebaseMessagingService() {
 
         val requestId = data["requestId"] ?: System.currentTimeMillis().toString()
 
-        // De-duplication: return silently if already notified for this request ID
+        // De-duplication check at top
         if (isAlreadyNotified(applicationContext, requestId)) {
             return
         }
-        markAsNotified(applicationContext, requestId)
 
         // Dynamic Radius check from payload (default 30.0 km)
         val radiusKm = data["radiusKm"]?.toDoubleOrNull() ?: 30.0
@@ -126,6 +124,8 @@ class BloodConnectMessagingService : FirebaseMessagingService() {
             .build()
 
         try {
+            // Mark as notified only immediately before showing notification
+            markAsNotified(applicationContext, requestId)
             NotificationManagerCompat.from(this).notify(requestId.hashCode(), notification)
         } catch (_: SecurityException) {
             // Ignore permission security exceptions
