@@ -4,7 +4,33 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 
+import com.bloodconnect.data.model.BloodRequest
+
 object IntentHelpers {
+    fun buildShareText(request: BloodRequest): String {
+        val units = if (request.unitsNeeded > 0) request.unitsNeeded else request.unitsRequired
+        val unitsText = if (units == 1) "1 unit" else "$units units"
+        val urgencyText = request.urgency.trim().ifBlank { request.urgencyLevel.displayName }
+        val contactPart = if (request.contactNumber.isNotBlank()) " Hospital contact: ${request.contactNumber.trim()}." else ""
+        return "URGENT: ${request.bloodGroup.trim()} blood needed at ${request.hospital.trim()}, ${request.city.trim()}. $unitsText. $urgencyText.$contactPart Posted on BloodConnect."
+    }
+
+    fun shareRequest(context: Context, request: BloodRequest) {
+        val text = buildShareText(request)
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        val chooser = Intent.createChooser(sendIntent, "Share request").apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        try {
+            context.startActivity(chooser)
+        } catch (_: Exception) {
+            // Swallowed if no application can handle share intent
+        }
+    }
+
     fun openDirections(
         context: Context,
         latitude: Double,
@@ -60,3 +86,5 @@ object IntentHelpers {
         )
     }
 }
+
+fun buildShareText(request: BloodRequest): String = IntentHelpers.buildShareText(request)

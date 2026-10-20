@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -390,27 +391,39 @@ fun MyRequestsScreen(
                                     }
                                 }
 
-                                SuggestionChip(
-                                    onClick = {},
-                                    label = { Text(effectiveStatus.displayName) },
-                                    colors = SuggestionChipDefaults.suggestionChipColors(
-                                        containerColor = when (effectiveStatus) {
-                                            RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
-                                            RequestStatus.PARTIALLY_FULFILLED -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
-                                            RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                            RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
-                                            RequestStatus.EXPIRED -> MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
-                                        },
-                                        labelColor = when (effectiveStatus) {
-                                            RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary
-                                            RequestStatus.PARTIALLY_FULFILLED -> MaterialTheme.colorScheme.secondary
-                                            RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary
-                                            RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error
-                                            RequestStatus.EXPIRED -> MaterialTheme.colorScheme.outline
-                                        }
-                                    ),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = { IntentHelpers.shareRequest(context, req) }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Share,
+                                            contentDescription = "Share request",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    SuggestionChip(
+                                        onClick = {},
+                                        label = { Text(effectiveStatus.displayName) },
+                                        colors = SuggestionChipDefaults.suggestionChipColors(
+                                            containerColor = when (effectiveStatus) {
+                                                RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                                                RequestStatus.PARTIALLY_FULFILLED -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                                                RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                                RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+                                                RequestStatus.EXPIRED -> MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+                                            },
+                                            labelColor = when (effectiveStatus) {
+                                                RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary
+                                                RequestStatus.PARTIALLY_FULFILLED -> MaterialTheme.colorScheme.secondary
+                                                RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary
+                                                RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error
+                                                RequestStatus.EXPIRED -> MaterialTheme.colorScheme.outline
+                                            }
+                                        ),
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                }
                             }
 
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -669,6 +682,7 @@ private fun MyRequestCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val dateFormatted = remember(entry.createdAt) {
         SimpleDateFormat("MMM dd, yyyy · hh:mm a", Locale.getDefault()).format(Date(entry.createdAt))
     }
@@ -805,27 +819,39 @@ private fun MyRequestCard(
                     }
                 }
 
-                SuggestionChip(
-                    onClick = onClick,
-                    label = { Text(effectiveStatus.displayName) },
-                    colors = SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = when (effectiveStatus) {
-                            RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
-                            RequestStatus.PARTIALLY_FULFILLED -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
-                            RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                            RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
-                            RequestStatus.EXPIRED -> MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
-                        },
-                        labelColor = when (effectiveStatus) {
-                            RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary
-                            RequestStatus.PARTIALLY_FULFILLED -> MaterialTheme.colorScheme.secondary
-                            RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary
-                            RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error
-                            RequestStatus.EXPIRED -> MaterialTheme.colorScheme.outline
-                        }
-                    ),
-                    shape = RoundedCornerShape(8.dp)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { IntentHelpers.shareRequest(context, entry) }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share request",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    SuggestionChip(
+                        onClick = onClick,
+                        label = { Text(effectiveStatus.displayName) },
+                        colors = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = when (effectiveStatus) {
+                                RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+                                RequestStatus.PARTIALLY_FULFILLED -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+                                RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                                RequestStatus.EXPIRED -> MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)
+                            },
+                            labelColor = when (effectiveStatus) {
+                                RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary
+                                RequestStatus.PARTIALLY_FULFILLED -> MaterialTheme.colorScheme.secondary
+                                RequestStatus.FULFILLED -> MaterialTheme.colorScheme.primary
+                                RequestStatus.CANCELLED -> MaterialTheme.colorScheme.error
+                                RequestStatus.EXPIRED -> MaterialTheme.colorScheme.outline
+                            }
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                }
             }
 
             Row(
