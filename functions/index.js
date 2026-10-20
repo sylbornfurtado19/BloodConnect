@@ -1,4 +1,5 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
@@ -34,6 +35,53 @@ function topicFor(group) {
   return "bg_" + g.slice(0, -1) + (g.endsWith("+") ? "_POS" : "_NEG");
 }
 
+function buildPayload(requestId, request, radiusKm) {
+  const normalizedGroup = normalizeGroup(request.bloodGroup);
+  const urgency = request.urgency || "Routine";
+  const hospital = request.hospital || request.hospitalName || "Hospital";
+  const city = request.city ? `, ${request.city}` : "";
+  const units = request.unitsNeeded || request.unitsRequired || 1;
+  const lat = String(Number(request.latitude) || 0);
+  const lon = String(Number(request.longitude) || 0);
+
+  return {
+    title: `${urgency}: ${normalizedGroup} blood needed`,
+    body: `${hospital}${city} - ${units} unit(s)`,
+    requestId: String(requestId),
+    requesterId: String(request.requesterId || ""),
+    bloodGroup: String(normalizedGroup || request.bloodGroup),
+    urgency: String(urgency),
+    latitude: lat,
+    longitude: lon,
+    radiusKm: String(radiusKm)
+  };
+}
+
+async function sendToTopics(requestId, topics, data) {
+  const sendResults = await Promise.allSettled(
+    topics.map((topic) =>
+      admin.messaging().send({
+        topic: topic,
+        data: data,
+        android: {
+          priority: "high",
+          ttl: 3600000 // 1 hour
+        }
+      })
+    )
+  );
+
+  sendResults.forEach((result, idx) => {
+    const targetTopic = topics[idx];
+    if (result.status === "fulfilled") {
+      console.log(`[sent] ${requestId} -> ${targetTopic} (${data.radiusKm} km)`);
+    } else {
+      const reason = result.reason && (result.reason.message || result.reason.code) || "Unknown error";
+      console.error(`[fail] ${requestId} -> ${targetTopic}: ${reason}`);
+    }
+  });
+}
+
 exports.sendEmergencyBloodRequestNotification = onDocumentCreated(
   {
     document: "blood_requests/{requestId}",
@@ -53,16 +101,21 @@ exports.sendEmergencyBloodRequestNotification = onDocumentCreated(
       return;
     }
 
-    // Idempotency: Claim request in a Firestore transaction so it is never notified twice
     const db = admin.firestore();
     const docRef = snap.ref;
+    const now = Date.now();
 
     const claimed = await db.runTransaction(async (tx) => {
       const docSnap = await tx.get(docRef);
       if (!docSnap.exists || docSnap.get("notifiedAt")) {
         return false;
       }
-      tx.update(docRef, { notifiedAt: Date.now() });
+      tx.update(docRef, {
+        notifiedAt: now,
+        broadcastStage: 1,
+        radiusKm: 10,
+        lastBroadcastAt: now
+      });
       return true;
     });
 
@@ -82,45 +135,82 @@ exports.sendEmergencyBloodRequestNotification = onDocumentCreated(
       return;
     }
 
-    const urgency = request.urgency || "Routine";
-    const hospital = request.hospital || request.hospitalName || "Hospital";
-    const city = request.city ? `, ${request.city}` : "";
-    const units = request.unitsNeeded || request.unitsRequired || 1;
-    const lat = String(Number(request.latitude) || 0);
-    const lon = String(Number(request.longitude) || 0);
+    const payloadData = buildPayload(requestId, request, 10);
+    await sendToTopics(requestId, topics, payloadData);
+  }
+);
 
-    const payloadData = {
-      title: `${urgency}: ${normalizedGroup} blood needed`,
-      body: `${hospital}${city} - ${units} unit(s)`,
-      requestId: String(requestId),
-      requesterId: String(request.requesterId || ""),
-      bloodGroup: String(normalizedGroup),
-      urgency: String(urgency),
-      latitude: lat,
-      longitude: lon
-    };
+// Scheduled cron job running every 5 minutes to widen radius for unpledged requests
+exports.widenEmergencyRadius = onSchedule(
+  {
+    schedule: "every 5 minutes",
+    region: REGION,
+    timeZone: "Asia/Kolkata"
+  },
+  async (event) => {
+    const db = admin.firestore();
+    const now = Date.now();
+    const fiveMinutes = 5 * 60 * 1000;
+    const ladder = [10, 20, 30];
 
-    const sendResults = await Promise.allSettled(
-      topics.map((topic) =>
-        admin.messaging().send({
-          topic: topic,
-          data: payloadData,
-          android: {
-            priority: "high",
-            ttl: 3600000 // 1 hour
+    try {
+      const snapshot = await db.collection("blood_requests")
+        .where("status", "in", ["Pending", "Partially Fulfilled"])
+        .get();
+
+      if (snapshot.empty) return;
+
+      for (const doc of snapshot.docs) {
+        const req = doc.data();
+        const requestId = doc.id;
+        const stage = req.broadcastStage || 1;
+        const lastBroadcast = req.lastBroadcastAt || req.createdAt || 0;
+        const expiresAt = req.expiresAt || 0;
+
+        // In-memory filters: stage 1 or 2, at least 5 mins elapsed, not expired
+        if ((stage === 1 || stage === 2) && (now - lastBroadcast >= fiveMinutes) && (expiresAt === 0 || expiresAt > now)) {
+          // Check pledge count
+          const pledgeSnap = await doc.ref.collection("pledges").count().get();
+          const pledgeCount = pledgeSnap.data().count;
+
+          if (pledgeCount === 0) {
+            const nextStage = stage + 1;
+            const nextRadius = ladder[nextStage - 1] || 30;
+
+            let updatedSuccessfully = false;
+            let finalRadius = nextRadius;
+
+            await db.runTransaction(async (tx) => {
+              const freshSnap = await tx.get(doc.ref);
+              if (!freshSnap.exists) return;
+              const freshReq = freshSnap.data();
+              const freshStage = freshReq.broadcastStage || 1;
+
+              if (freshStage === stage) {
+                tx.update(doc.ref, {
+                  broadcastStage: nextStage,
+                  radiusKm: nextRadius,
+                  lastBroadcastAt: now
+                });
+                updatedSuccessfully = true;
+              }
+            });
+
+            if (updatedSuccessfully) {
+              const normalizedGroup = normalizeGroup(req.bloodGroup);
+              if (normalizedGroup) {
+                const donorGroups = COMPATIBLE_DONORS[normalizedGroup] || [];
+                const topics = donorGroups.map(topicFor).filter(Boolean);
+                const payloadData = buildPayload(requestId, req, finalRadius);
+                await sendToTopics(requestId, topics, payloadData);
+                console.log(`[widen] ${requestId} -> ${finalRadius} km`);
+              }
+            }
           }
-        })
-      )
-    );
-
-    sendResults.forEach((result, idx) => {
-      const targetTopic = topics[idx];
-      if (result.status === "fulfilled") {
-        console.log(`[sent] ${requestId} -> ${targetTopic}`);
-      } else {
-        const reason = result.reason && (result.reason.message || result.reason.code) || "Unknown error";
-        console.error(`[fail] ${requestId} -> ${targetTopic}: ${reason}`);
+        }
       }
-    });
+    } catch (e) {
+      console.error("[error] widenEmergencyRadius:", e.message);
+    }
   }
 );

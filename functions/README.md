@@ -1,7 +1,10 @@
 # BloodConnect Firebase Cloud Functions
 
-Serverless Cloud Functions (2nd Gen) triggering on Firestore document creation (`blood_requests/{requestId}`).
-Sends data-only FCM emergency notifications directly to matching blood group topics (`bg_O_POS`, `bg_A_NEG`, etc.).
+Serverless Cloud Functions (2nd Gen) triggering on Firestore document creation (`blood_requests/{requestId}`) and scheduled radius widening via Cloud Scheduler (`widenEmergencyRadius` every 5 minutes).
+
+## Requirements
+- Firebase **Blaze Plan** (Pay-as-you-go).
+- Cloud Scheduler API (automatically enabled upon deployment on the Blaze plan).
 
 ## Deployment Instructions
 

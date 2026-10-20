@@ -2,6 +2,7 @@ package com.bloodconnect.notifications
 
 import android.Manifest
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -18,6 +19,20 @@ import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 
+private fun isAlreadyNotified(context: Context, requestId: String): Boolean {
+    val prefs = context.getSharedPreferences("notified_requests_prefs", Context.MODE_PRIVATE)
+    val set = prefs.getStringSet("notified_requests", emptySet()) ?: emptySet()
+    return requestId in set
+}
+
+private fun markAsNotified(context: Context, requestId: String) {
+    val prefs = context.getSharedPreferences("notified_requests_prefs", Context.MODE_PRIVATE)
+    val set = (prefs.getStringSet("notified_requests", emptySet()) ?: emptySet()).toMutableSet()
+    set.add(requestId)
+    val trimmed = if (set.size > 50) set.toList().takeLast(50).toSet() else set
+    prefs.edit().putStringSet("notified_requests", trimmed).apply()
+}
+
 class BloodConnectMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
@@ -32,7 +47,16 @@ class BloodConnectMessagingService : FirebaseMessagingService() {
         val requesterId = data["requesterId"]
         if (requesterId == currentUser.uid) return
 
-        // Radius check (30 km threshold)
+        val requestId = data["requestId"] ?: System.currentTimeMillis().toString()
+
+        // De-duplication: return silently if already notified for this request ID
+        if (isAlreadyNotified(applicationContext, requestId)) {
+            return
+        }
+        markAsNotified(applicationContext, requestId)
+
+        // Dynamic Radius check from payload (default 30.0 km)
+        val radiusKm = data["radiusKm"]?.toDoubleOrNull() ?: 30.0
         val requestLat = data["latitude"]?.toDoubleOrNull() ?: 0.0
         val requestLon = data["longitude"]?.toDoubleOrNull() ?: 0.0
 
@@ -55,8 +79,8 @@ class BloodConnectMessagingService : FirebaseMessagingService() {
                     donorLat = requestLat,
                     donorLon = requestLon
                 )
-                if (distance > 30.0) {
-                    return // Ignore requests beyond 30 km radius
+                if (distance > radiusKm) {
+                    return // Ignore requests beyond current broadcast radius
                 }
             }
         }
@@ -70,7 +94,6 @@ class BloodConnectMessagingService : FirebaseMessagingService() {
 
         val title = data["title"] ?: "Emergency Blood Needed"
         val body = data["body"] ?: "A new emergency blood request matching your group was posted nearby."
-        val requestId = data["requestId"] ?: System.currentTimeMillis().toString()
         val urgency = data["urgency"] ?: "Routine"
 
         val intent = Intent(this, MainActivity::class.java).apply {
