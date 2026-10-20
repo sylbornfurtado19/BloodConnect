@@ -10,6 +10,7 @@ package com.bloodconnect.data.model
  * @property latitude Optional geographic latitude coordinate for radius calculation.
  * @property longitude Optional geographic longitude coordinate for radius calculation.
  * @property isAvailable Current donation availability status.
+ * @property lastDonationAt Optional epoch millisecond timestamp of the donor's last blood donation.
  */
 data class Donor(
     val id: String,
@@ -18,5 +19,6 @@ data class Donor(
     val locality: String,
     val latitude: Double? = null,
     val longitude: Double? = null,
-    val isAvailable: Boolean = true
+    val isAvailable: Boolean = true,
+    val lastDonationAt: Long? = null
 )

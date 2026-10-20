@@ -42,6 +42,7 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -415,11 +416,14 @@ fun DonorSearchScreen(
                         )
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                    ) {
                         FilterChip(
-                            selected = uiState.sortOrder == DistanceSortOrder.NEAREST,
-                            onClick = { viewModel.setSortOrder(DistanceSortOrder.NEAREST) },
-                            label = { Text("Nearest first", style = MaterialTheme.typography.labelSmall) },
+                            selected = uiState.sortMode == SortMode.BEST_MATCH,
+                            onClick = { viewModel.setSortMode(SortMode.BEST_MATCH) },
+                            label = { Text("Best match", style = MaterialTheme.typography.labelSmall) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -427,9 +431,19 @@ fun DonorSearchScreen(
                         )
 
                         FilterChip(
-                            selected = uiState.sortOrder == DistanceSortOrder.FARTHEST,
-                            onClick = { viewModel.setSortOrder(DistanceSortOrder.FARTHEST) },
-                            label = { Text("Farthest first", style = MaterialTheme.typography.labelSmall) },
+                            selected = uiState.sortMode == SortMode.NEAREST,
+                            onClick = { viewModel.setSortMode(SortMode.NEAREST) },
+                            label = { Text("Nearest", style = MaterialTheme.typography.labelSmall) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        )
+
+                        FilterChip(
+                            selected = uiState.sortMode == SortMode.FARTHEST,
+                            onClick = { viewModel.setSortMode(SortMode.FARTHEST) },
+                            label = { Text("Farthest", style = MaterialTheme.typography.labelSmall) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -502,11 +516,12 @@ fun DonorSearchScreen(
                 )
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    uiState.donors.forEach { donor ->
+                    uiState.donors.forEachIndexed { index, donor ->
                         DonorResultCard(
                             donor = donor,
                             distanceKm = uiState.donorDistances[donor.id],
                             isDistanceFilterAvailable = uiState.isDistanceFilterAvailable,
+                            isBestMatch = index == 0,
                             onViewDetails = { onNavigateToDonorDetail(donor.id) }
                         )
                     }
@@ -532,6 +547,7 @@ private fun DonorResultCard(
     donor: Donor,
     distanceKm: Double?,
     isDistanceFilterAvailable: Boolean,
+    isBestMatch: Boolean = false,
     onViewDetails: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -563,12 +579,31 @@ private fun DonorResultCard(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    Text(
-                        text = donor.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = donor.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (isBestMatch) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ) {
+                                Text(
+                                    text = "Best match",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

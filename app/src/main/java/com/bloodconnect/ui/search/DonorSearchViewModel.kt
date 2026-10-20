@@ -20,6 +20,15 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
+ * Sorting modes available for donor search results.
+ */
+enum class SortMode {
+    BEST_MATCH,
+    NEAREST,
+    FARTHEST
+}
+
+/**
  * UI state for the Donor Search destination.
  *
  * @property isLoading Indicates whether a donor retrieval request is in progress.
@@ -34,6 +43,7 @@ import kotlin.math.sqrt
  * @property locationQuery Active locality text query filter.
  * @property maxDistanceKm Maximum proximity distance threshold in kilometers.
  * @property sortOrder Sorting order by distance ([DistanceSortOrder.NEAREST] or [DistanceSortOrder.FARTHEST]).
+ * @property sortMode Active sorting mode ([SortMode.BEST_MATCH], [SortMode.NEAREST], or [SortMode.FARTHEST]).
  * @property errorMessage User-readable error message explaining any load failure, or null if healthy.
  * @property isEmpty True when search yielded 0 matching donors and no load is active.
  */
@@ -50,6 +60,7 @@ data class DonorSearchUiState(
     val locationQuery: String = "",
     val maxDistanceKm: Int = 50,
     val sortOrder: DistanceSortOrder = DistanceSortOrder.NEAREST,
+    val sortMode: SortMode = SortMode.BEST_MATCH,
     val errorMessage: String? = null,
     val isEmpty: Boolean = false
 )
@@ -85,9 +96,9 @@ class DonorSearchViewModel @Inject constructor(
                         bloodGroup = currentState.selectedBloodGroup,
                         locationQuery = currentState.locationQuery,
                         maxDistanceKm = currentState.maxDistanceKm,
-                        sortOrder = currentState.sortOrder,
                         userLocation = currentState.userLocation,
-                        includeCompatible = currentState.includeCompatible
+                        includeCompatible = currentState.includeCompatible,
+                        sortMode = currentState.sortMode
                     )
                     _uiState.update {
                         it.copy(
@@ -124,9 +135,9 @@ class DonorSearchViewModel @Inject constructor(
                 bloodGroup = state.selectedBloodGroup,
                 locationQuery = state.locationQuery,
                 maxDistanceKm = state.maxDistanceKm,
-                sortOrder = state.sortOrder,
                 userLocation = location,
-                includeCompatible = state.includeCompatible
+                includeCompatible = state.includeCompatible,
+                sortMode = state.sortMode
             )
             state.copy(
                 userLocation = location,
@@ -160,9 +171,9 @@ class DonorSearchViewModel @Inject constructor(
                 bloodGroup = bloodGroup,
                 locationQuery = state.locationQuery,
                 maxDistanceKm = state.maxDistanceKm,
-                sortOrder = state.sortOrder,
                 userLocation = state.userLocation,
-                includeCompatible = state.includeCompatible
+                includeCompatible = state.includeCompatible,
+                sortMode = state.sortMode
             )
             state.copy(
                 selectedBloodGroup = bloodGroup,
@@ -191,9 +202,9 @@ class DonorSearchViewModel @Inject constructor(
                 bloodGroup = state.selectedBloodGroup,
                 locationQuery = state.locationQuery,
                 maxDistanceKm = state.maxDistanceKm,
-                sortOrder = state.sortOrder,
                 userLocation = state.userLocation,
-                includeCompatible = include
+                includeCompatible = include,
+                sortMode = state.sortMode
             )
             state.copy(
                 includeCompatible = include,
@@ -214,9 +225,9 @@ class DonorSearchViewModel @Inject constructor(
                 bloodGroup = state.selectedBloodGroup,
                 locationQuery = query,
                 maxDistanceKm = state.maxDistanceKm,
-                sortOrder = state.sortOrder,
                 userLocation = state.userLocation,
-                includeCompatible = state.includeCompatible
+                includeCompatible = state.includeCompatible,
+                sortMode = state.sortMode
             )
             state.copy(
                 locationQuery = query,
@@ -237,9 +248,9 @@ class DonorSearchViewModel @Inject constructor(
                 bloodGroup = state.selectedBloodGroup,
                 locationQuery = state.locationQuery,
                 maxDistanceKm = distanceKm,
-                sortOrder = state.sortOrder,
                 userLocation = state.userLocation,
-                includeCompatible = state.includeCompatible
+                includeCompatible = state.includeCompatible,
+                sortMode = state.sortMode
             )
             state.copy(
                 maxDistanceKm = distanceKm,
@@ -254,18 +265,35 @@ class DonorSearchViewModel @Inject constructor(
      * Updates the distance sort order (nearest first or farthest first).
      */
     fun setSortOrder(sortOrder: DistanceSortOrder) {
+        val mode = when (sortOrder) {
+            DistanceSortOrder.NEAREST -> SortMode.NEAREST
+            DistanceSortOrder.FARTHEST -> SortMode.FARTHEST
+        }
+        setSortMode(mode)
+    }
+
+    /**
+     * Updates the active sorting mode (Best match, Nearest, or Farthest).
+     */
+    fun setSortMode(sortMode: SortMode) {
+        val distanceOrder = when (sortMode) {
+            SortMode.FARTHEST -> DistanceSortOrder.FARTHEST
+            else -> DistanceSortOrder.NEAREST
+        }
         _uiState.update { state ->
             val (filtered, distances) = applyFiltersAndSort(
                 donors = state.allDonors,
                 bloodGroup = state.selectedBloodGroup,
                 locationQuery = state.locationQuery,
                 maxDistanceKm = state.maxDistanceKm,
-                sortOrder = sortOrder,
+                sortOrder = null,
                 userLocation = state.userLocation,
-                includeCompatible = state.includeCompatible
+                includeCompatible = state.includeCompatible,
+                sortMode = sortMode
             )
             state.copy(
-                sortOrder = sortOrder,
+                sortMode = sortMode,
+                sortOrder = distanceOrder,
                 donorDistances = distances,
                 donors = filtered,
                 isEmpty = filtered.isEmpty()
@@ -283,9 +311,10 @@ class DonorSearchViewModel @Inject constructor(
                 bloodGroup = null,
                 locationQuery = "",
                 maxDistanceKm = 50,
-                sortOrder = DistanceSortOrder.NEAREST,
+                sortOrder = null,
                 userLocation = state.userLocation,
-                includeCompatible = true
+                includeCompatible = true,
+                sortMode = SortMode.BEST_MATCH
             )
             state.copy(
                 selectedBloodGroup = null,
@@ -293,6 +322,7 @@ class DonorSearchViewModel @Inject constructor(
                 locationQuery = "",
                 maxDistanceKm = 50,
                 sortOrder = DistanceSortOrder.NEAREST,
+                sortMode = SortMode.BEST_MATCH,
                 donorDistances = distances,
                 donors = filtered,
                 isEmpty = filtered.isEmpty(),
@@ -306,9 +336,11 @@ class DonorSearchViewModel @Inject constructor(
         bloodGroup: BloodGroup?,
         locationQuery: String,
         maxDistanceKm: Int,
-        sortOrder: DistanceSortOrder,
+        sortOrder: DistanceSortOrder? = null,
         userLocation: UserLocation?,
-        includeCompatible: Boolean = true
+        includeCompatible: Boolean = true,
+        sortMode: SortMode = SortMode.BEST_MATCH,
+        now: Long = System.currentTimeMillis()
     ): Pair<List<Donor>, Map<String, Double>> {
         return filterAndSortDonors(
             donors = donors,
@@ -317,14 +349,16 @@ class DonorSearchViewModel @Inject constructor(
             maxDistanceKm = maxDistanceKm,
             sortOrder = sortOrder,
             userLocation = userLocation,
-            includeCompatible = includeCompatible
+            includeCompatible = includeCompatible,
+            sortMode = sortMode,
+            now = now
         )
     }
 }
 
 /**
  * Pure function executing donor filtering by blood group, locality query,
- * and distance radius, as well as distance-aware sorting.
+ * and distance radius, as well as distance-aware and smart ranking sorting.
  * Excludes donors with latitude == 0.0 && longitude == 0.0 from distance calculation.
  */
 fun filterAndSortDonors(
@@ -332,9 +366,11 @@ fun filterAndSortDonors(
     bloodGroup: BloodGroup? = null,
     locationQuery: String = "",
     maxDistanceKm: Int = 50,
-    sortOrder: DistanceSortOrder = DistanceSortOrder.NEAREST,
+    sortOrder: DistanceSortOrder? = null,
     userLocation: UserLocation? = null,
-    includeCompatible: Boolean = true
+    includeCompatible: Boolean = true,
+    sortMode: SortMode = SortMode.BEST_MATCH,
+    now: Long = System.currentTimeMillis()
 ): Pair<List<Donor>, Map<String, Double>> {
     val distances = mutableMapOf<String, Double>()
     if (userLocation != null) {
@@ -377,8 +413,28 @@ fun filterAndSortDonors(
         matchesBlood && matchesLocation && matchesDistance
     }
 
-    val sorted = when (sortOrder) {
-        DistanceSortOrder.NEAREST -> {
+    val effectiveSortMode = when {
+        sortOrder == DistanceSortOrder.NEAREST -> SortMode.NEAREST
+        sortOrder == DistanceSortOrder.FARTHEST -> SortMode.FARTHEST
+        else -> sortMode
+    }
+
+    val sorted = when (effectiveSortMode) {
+        SortMode.BEST_MATCH -> {
+            filtered.sortedWith(
+                compareByDescending<Donor> { donor ->
+                    val dist = distances[donor.id]
+                    DonorScorer.score(
+                        donor = donor,
+                        requested = bloodGroup,
+                        distanceKm = dist,
+                        maxDistanceKm = maxDistanceKm,
+                        now = now
+                    )
+                }.thenBy { distances[it.id] ?: Double.MAX_VALUE }
+            )
+        }
+        SortMode.NEAREST -> {
             if (userLocation == null) {
                 filtered
             } else {
@@ -388,7 +444,7 @@ fun filterAndSortDonors(
                 )
             }
         }
-        DistanceSortOrder.FARTHEST -> {
+        SortMode.FARTHEST -> {
             if (userLocation == null) {
                 filtered
             } else {

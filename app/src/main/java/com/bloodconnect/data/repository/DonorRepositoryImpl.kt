@@ -146,7 +146,8 @@ class DonorRepositoryImpl @Inject constructor(
                     locality = locality,
                     latitude = lat,
                     longitude = lon,
-                    isAvailable = true
+                    isAvailable = true,
+                    lastDonationAt = lastDonated
                 )
             }
 
@@ -222,7 +223,8 @@ class DonorRepositoryImpl @Inject constructor(
                     locality = locality,
                     latitude = lat,
                     longitude = lon,
-                    isAvailable = true
+                    isAvailable = true,
+                    lastDonationAt = lastDonated
                 )
             } ?: emptyList()
 
@@ -265,7 +267,8 @@ class DonorRepositoryImpl @Inject constructor(
                     locality = locality,
                     latitude = lat,
                     longitude = lon,
-                    isAvailable = available
+                    isAvailable = available,
+                    lastDonationAt = lastDonated
                 )
                 Result.success(donor)
             } else if (shouldUseSampleDonors()) {
