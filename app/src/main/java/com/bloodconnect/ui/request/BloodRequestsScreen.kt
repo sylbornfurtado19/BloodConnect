@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,12 +27,15 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocationCity
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -42,6 +46,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
@@ -53,6 +59,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,8 +80,10 @@ import com.bloodconnect.ui.components.BloodConnectButton
 import com.bloodconnect.ui.components.BloodConnectTextField
 import com.bloodconnect.ui.components.BloodGroupBadge
 import com.bloodconnect.ui.components.EmptyState
+import com.bloodconnect.ui.components.ReportDialog
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
+import kotlinx.coroutines.launch
 
 private data class PendingBloodRequest(
     val bloodGroup: String,
@@ -207,7 +216,11 @@ fun BloodRequestsScreen(
         pendingRequest = null
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -515,6 +528,11 @@ fun BloodRequestsScreen(
                                     val reqId = request.id.ifBlank { request.requestId }
                                     dismissRequest(context, reqId)
                                     dismissedIds = getDismissedRequests(context)
+                                },
+                                onShowSnackbar = { msg ->
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(msg)
+                                    }
                                 }
                             )
                         }
@@ -713,11 +731,14 @@ private fun LiveRequestCard(
     currentUser: User?,
     viewModel: BloodRequestsViewModel,
     onDismiss: () -> Unit,
+    onShowSnackbar: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var showPledgeConfirmDialog by remember { mutableStateOf(false) }
     var selectedEtaMinutes by remember { mutableStateOf(30) } // default 30 min
+    var showMenu by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
 
     val myPledgeState = remember(request.id) {
         viewModel.observeMyPledge(request.id)
@@ -808,24 +829,64 @@ private fun LiveRequestCard(
                     }
                 }
 
-                val chipUrgency = request.urgencyLevel
-                SuggestionChip(
-                    onClick = {},
-                    label = { Text(chipUrgency.displayName) },
-                    colors = SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = when (chipUrgency) {
-                            Urgency.CRITICAL -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
-                            Urgency.URGENT -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                            Urgency.ROUTINE -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
-                        },
-                        labelColor = when (chipUrgency) {
-                            Urgency.CRITICAL -> MaterialTheme.colorScheme.error
-                            Urgency.URGENT -> MaterialTheme.colorScheme.primary
-                            Urgency.ROUTINE -> MaterialTheme.colorScheme.secondary
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val chipUrgency = request.urgencyLevel
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text(chipUrgency.displayName) },
+                        colors = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = when (chipUrgency) {
+                                Urgency.CRITICAL -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                                Urgency.URGENT -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                Urgency.ROUTINE -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+                            },
+                            labelColor = when (chipUrgency) {
+                                Urgency.CRITICAL -> MaterialTheme.colorScheme.error
+                                Urgency.URGENT -> MaterialTheme.colorScheme.primary
+                                Urgency.ROUTINE -> MaterialTheme.colorScheme.secondary
+                            }
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    Box {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More options",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                    ),
-                    shape = RoundedCornerShape(8.dp)
-                )
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Report request") },
+                                onClick = {
+                                    showMenu = false
+                                    showReportDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Block requester") },
+                                onClick = {
+                                    showMenu = false
+                                    viewModel.blockRequester(
+                                        targetUid = request.requesterId,
+                                        targetName = request.requesterName,
+                                        onSuccess = {
+                                            onShowSnackbar("Blocked ${request.requesterName.ifBlank { "requester" }}")
+                                        }
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
             }
 
             if (request.contactNumber.isNotBlank()) {
@@ -953,6 +1014,25 @@ private fun LiveRequestCard(
                 ) {
                     Text("Cancel")
                 }
+            }
+        )
+    }
+
+    if (showReportDialog) {
+        ReportDialog(
+            title = "Report request",
+            onDismiss = { showReportDialog = false },
+            onSubmit = { reason, details ->
+                viewModel.submitReport(
+                    targetType = "request",
+                    targetId = request.id,
+                    requestId = request.id,
+                    reason = reason,
+                    details = details,
+                    onSuccess = {
+                        onShowSnackbar("Thanks, we will review it")
+                    }
+                )
             }
         )
     }

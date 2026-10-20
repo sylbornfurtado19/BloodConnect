@@ -4,9 +4,12 @@ import com.bloodconnect.data.model.BloodRequest
 import com.bloodconnect.data.model.Pledge
 import com.bloodconnect.data.model.RequestStatus
 import com.bloodconnect.data.model.Urgency
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.AggregateSource
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -16,12 +19,14 @@ import javax.inject.Singleton
 
 @Singleton
 class BloodRequestRepository @Inject constructor(
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val auth: FirebaseAuth
 ) {
     private val requestsCollection = firestore.collection("blood_requests")
 
     suspend fun createRequest(request: BloodRequest): Result<String> {
         return try {
+            val uid = auth.currentUser?.uid ?: request.requesterId
             val docRef = requestsCollection.document()
             val canonicalStatus = RequestStatus.fromString(request.status)?.displayName
                 ?: RequestStatus.PENDING.displayName
@@ -31,7 +36,23 @@ class BloodRequestRepository @Inject constructor(
                 status = canonicalStatus,
                 urgency = canonicalUrgency
             )
-            docRef.set(newRequest).await()
+
+            val batch = firestore.batch()
+            batch.set(docRef, newRequest)
+
+            if (uid.isNotBlank()) {
+                val limitsRef = firestore.collection("users")
+                    .document(uid)
+                    .collection("private")
+                    .document("limits")
+                batch.set(
+                    limitsRef,
+                    mapOf("lastRequestAt" to FieldValue.serverTimestamp()),
+                    SetOptions.merge()
+                )
+            }
+
+            batch.commit().await()
             Result.success(docRef.id)
         } catch (e: Exception) {
             Result.failure(e)

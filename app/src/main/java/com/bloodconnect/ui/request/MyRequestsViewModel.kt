@@ -10,15 +10,20 @@ import com.bloodconnect.data.model.Pledge
 import com.bloodconnect.data.model.RequestStatus
 import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.BloodRequestRepository
+import com.bloodconnect.data.repository.ReportRepository
+import com.bloodconnect.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class MyRequestsViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val requestRepository: BloodRequestRepository
+    private val requestRepository: BloodRequestRepository,
+    private val userRepository: UserRepository,
+    private val reportRepository: ReportRepository
 ) : ViewModel() {
 
     var requests by mutableStateOf<List<BloodRequest>>(emptyList())
@@ -59,7 +64,47 @@ class MyRequestsViewModel @Inject constructor(
     }
 
     fun observePledges(requestId: String): Flow<List<Pledge>> {
-        return requestRepository.observePledges(requestId)
+        val uid = authRepository.currentUserId
+        val pledgesFlow = requestRepository.observePledges(requestId)
+        if (uid == null) return pledgesFlow
+        return combine(pledgesFlow, userRepository.observeBlocked(uid)) { pledges, blocked ->
+            pledges.filter { it.donorId !in blocked.keys }
+        }
+    }
+
+    fun blockDonor(targetUid: String, targetName: String, onSuccess: () -> Unit = {}) {
+        val uid = authRepository.currentUserId ?: return
+        viewModelScope.launch {
+            val result = userRepository.blockUser(uid, targetUid, targetName)
+            if (result.isSuccess) {
+                onSuccess()
+            }
+        }
+    }
+
+    fun submitReport(
+        targetType: String,
+        targetId: String,
+        requestId: String?,
+        reason: String,
+        details: String,
+        onSuccess: () -> Unit = {},
+        onFailure: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = reportRepository.submitReport(
+                targetType = targetType,
+                targetId = targetId,
+                requestId = requestId,
+                reason = reason,
+                details = details
+            )
+            if (result.isSuccess) {
+                onSuccess()
+            } else {
+                onFailure(result.exceptionOrNull()?.localizedMessage ?: "Failed to submit report")
+            }
+        }
     }
 
     fun markPledgeDonated(requestId: String, donorUid: String) {

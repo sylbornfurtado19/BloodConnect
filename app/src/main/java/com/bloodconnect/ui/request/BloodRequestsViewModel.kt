@@ -12,12 +12,16 @@ import com.bloodconnect.data.model.Urgency
 import com.bloodconnect.data.model.User
 import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.BloodRequestRepository
+import com.bloodconnect.data.repository.ReportRepository
 import com.bloodconnect.data.repository.UserRepository
 import com.bloodconnect.utils.LocationHelper
+import com.google.firebase.firestore.FirebaseFirestoreException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
@@ -27,6 +31,7 @@ class BloodRequestsViewModel @Inject constructor(
     private val requestRepository: BloodRequestRepository,
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
+    private val reportRepository: ReportRepository,
     private val locationHelper: LocationHelper
 ) : ViewModel() {
 
@@ -66,18 +71,26 @@ class BloodRequestsViewModel @Inject constructor(
         listJob?.cancel()
         isLoading = true
         errorMessage = null
+        val uid = currentUserId
         listJob = viewModelScope.launch {
             try {
-                requestRepository.observeActiveRequests()
-                    .catch { e ->
-                        errorMessage = e.localizedMessage ?: "Failed to load active requests"
-                        isLoading = false
-                    }
-                    .collect { list ->
-                        requests = list
-                        isLoading = false
-                        errorMessage = null
-                    }
+                val requestsFlow = requestRepository.observeActiveRequests()
+                val blockedFlow = if (uid != null) {
+                    userRepository.observeBlocked(uid)
+                } else {
+                    flowOf(emptyMap())
+                }
+
+                combine(requestsFlow, blockedFlow) { reqList, blocked ->
+                    reqList.filter { it.requesterId !in blocked.keys }
+                }.catch { e ->
+                    errorMessage = e.localizedMessage ?: "Failed to load active requests"
+                    isLoading = false
+                }.collect { list ->
+                    requests = list
+                    isLoading = false
+                    errorMessage = null
+                }
             } catch (e: Exception) {
                 errorMessage = e.localizedMessage ?: "Failed to load requests"
                 isLoading = false
@@ -133,6 +146,41 @@ class BloodRequestsViewModel @Inject constructor(
         }
     }
 
+    fun blockRequester(targetUid: String, targetName: String, onSuccess: () -> Unit = {}) {
+        val uid = currentUserId ?: return
+        viewModelScope.launch {
+            val result = userRepository.blockUser(uid, targetUid, targetName)
+            if (result.isSuccess) {
+                onSuccess()
+            }
+        }
+    }
+
+    fun submitReport(
+        targetType: String,
+        targetId: String,
+        requestId: String?,
+        reason: String,
+        details: String,
+        onSuccess: () -> Unit = {},
+        onFailure: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = reportRepository.submitReport(
+                targetType = targetType,
+                targetId = targetId,
+                requestId = requestId,
+                reason = reason,
+                details = details
+            )
+            if (result.isSuccess) {
+                onSuccess()
+            } else {
+                onFailure(result.exceptionOrNull()?.localizedMessage ?: "Failed to submit report")
+            }
+        }
+    }
+
     fun createRequestWithLocation(
         bloodGroup: String,
         hospital: String,
@@ -156,6 +204,15 @@ class BloodRequestsViewModel @Inject constructor(
         errorMessage = null
         viewModelScope.launch {
             try {
+                // Client check: user cannot have 3 or more active requests
+                val existingRequests = requestRepository.getRequestsByRequester(uid).getOrDefault(emptyList())
+                val activeCount = existingRequests.count { it.isActive }
+                if (activeCount >= 3) {
+                    errorMessage = "You already have 3 active requests. Fulfil or cancel one first."
+                    isSubmitting = false
+                    return@launch
+                }
+
                 val userResult = userRepository.getUser(uid)
                 val userObj = userResult.getOrNull()
                 val requesterName = userObj?.fullName?.ifBlank { null }
@@ -203,10 +260,23 @@ class BloodRequestsViewModel @Inject constructor(
                 if (result.isSuccess) {
                     onSuccess()
                 } else {
-                    errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to create request"
+                    val ex = result.exceptionOrNull()
+                    val msg = ex?.message.orEmpty()
+                    if (msg.contains("PERMISSION_DENIED", ignoreCase = true) ||
+                        (ex is FirebaseFirestoreException && ex.code == FirebaseFirestoreException.Code.PERMISSION_DENIED)) {
+                        errorMessage = "Please wait a couple of minutes before posting another request."
+                    } else {
+                        errorMessage = ex?.localizedMessage ?: "Failed to create request"
+                    }
                 }
             } catch (e: Exception) {
-                errorMessage = e.localizedMessage ?: "Failed to create request"
+                val msg = e.message.orEmpty()
+                if (msg.contains("PERMISSION_DENIED", ignoreCase = true) ||
+                    (e is FirebaseFirestoreException && e.code == FirebaseFirestoreException.Code.PERMISSION_DENIED)) {
+                    errorMessage = "Please wait a couple of minutes before posting another request."
+                } else {
+                    errorMessage = e.localizedMessage ?: "Failed to create request"
+                }
             } finally {
                 isSubmitting = false
             }

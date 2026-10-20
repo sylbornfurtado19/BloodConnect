@@ -15,6 +15,10 @@ service cloud.firestore {
       return bg in ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
     }
 
+    function limitsPath(uid) {
+      return /databases/$(database)/documents/users/$(uid)/private/limits;
+    }
+
     // ------------------------------------------------------------------------
     // User Profiles Rules
     // ------------------------------------------------------------------------
@@ -48,7 +52,9 @@ service cloud.firestore {
         request.resource.data.get("verified", false) == false &&
         request.resource.data.contactNumber is string &&
         request.resource.data.contactNumber.size() >= 7 && request.resource.data.contactNumber.size() <= 20 &&
-        request.resource.data.get("patientReference", "").size() <= 60;
+        request.resource.data.get("patientReference", "").size() <= 60 &&
+        getAfter(limitsPath(request.auth.uid)).data.lastRequestAt == request.time &&
+        (!exists(limitsPath(request.auth.uid)) || request.time > get(limitsPath(request.auth.uid)).data.lastRequestAt + duration.value(2, 'm'));
 
       allow update: if isSignedIn() &&
         request.auth.uid == resource.data.requesterId &&
@@ -86,6 +92,18 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
     match /{path=**}/pledges/{p} {
       allow read: if isSignedIn() && request.auth.uid == resource.data.donorId;
+    }
+
+    // ------------------------------------------------------------------------
+    // User Reports Rules
+    // ------------------------------------------------------------------------
+    match /reports/{id} {
+      allow create: if isSignedIn() &&
+        request.resource.data.reporterId == request.auth.uid &&
+        request.resource.data.reason is string &&
+        request.resource.data.reason.size() <= 40 &&
+        request.resource.data.get("details", "").size() <= 300;
+      allow read, update, delete: if false;
     }
 
     // Default Deny

@@ -40,6 +40,9 @@ class ProfileViewModel @Inject constructor(
     var badges by mutableStateOf<List<Badge>>(emptyList())
         private set
 
+    var blockedUsers by mutableStateOf<Map<String, String>>(emptyMap())
+        private set
+
     val donorTier: DonorTier
         get() = DonorTier.fromCount(donationCount)
 
@@ -51,6 +54,23 @@ class ProfileViewModel @Inject constructor(
 
     init {
         loadUserProfile()
+        observeBlockedUsers()
+    }
+
+    private fun observeBlockedUsers() {
+        val uid = authRepository.currentUserId ?: return
+        viewModelScope.launch {
+            userRepository.observeBlocked(uid).collect {
+                blockedUsers = it
+            }
+        }
+    }
+
+    fun unblockUser(targetUid: String) {
+        val uid = authRepository.currentUserId ?: return
+        viewModelScope.launch {
+            userRepository.unblockUser(uid, targetUid)
+        }
     }
 
     fun loadUserProfile() {

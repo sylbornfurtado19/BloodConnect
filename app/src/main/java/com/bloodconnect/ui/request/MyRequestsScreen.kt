@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.LocationCity
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -31,6 +33,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -42,6 +46,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
@@ -53,6 +59,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,8 +76,10 @@ import com.bloodconnect.data.model.RequestStatus
 import com.bloodconnect.data.model.Urgency
 import com.bloodconnect.ui.components.BloodGroupBadge
 import com.bloodconnect.ui.components.EmptyState
+import com.bloodconnect.ui.components.ReportDialog
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -111,6 +120,10 @@ fun MyRequestsScreen(
     var selectedUrgencyFilter by remember { mutableStateOf("All") }
     var selectedRequestForDetails by remember { mutableStateOf<BloodRequest?>(null) }
     var showCancelConfirmationDialog by remember { mutableStateOf(false) }
+    var reportingDonor by remember { mutableStateOf<Pair<Pledge, String>?>(null) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     val displayedRequests = remember(requests, selectedFilter, selectedUrgencyFilter) {
         requests.filter { req ->
@@ -133,6 +146,7 @@ fun MyRequestsScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -452,7 +466,10 @@ fun MyRequestsScreen(
                                             )
                                         }
 
-                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
                                             if (pledge.phone.isNotBlank()) {
                                                 IconButton(
                                                     onClick = {
@@ -471,6 +488,46 @@ fun MyRequestsScreen(
                                                     }
                                                 ) {
                                                     Text("Mark donated", style = MaterialTheme.typography.labelSmall)
+                                                }
+                                            }
+
+                                            var showPledgeMenu by remember { mutableStateOf(false) }
+                                            Box {
+                                                IconButton(
+                                                    onClick = { showPledgeMenu = true }
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.MoreVert,
+                                                        contentDescription = "Pledge options",
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                DropdownMenu(
+                                                    expanded = showPledgeMenu,
+                                                    onDismissRequest = { showPledgeMenu = false }
+                                                ) {
+                                                    DropdownMenuItem(
+                                                        text = { Text("Report donor") },
+                                                        onClick = {
+                                                            showPledgeMenu = false
+                                                            reportingDonor = pledge to (req.id.ifBlank { req.requestId })
+                                                        }
+                                                    )
+                                                    DropdownMenuItem(
+                                                        text = { Text("Block donor") },
+                                                        onClick = {
+                                                            showPledgeMenu = false
+                                                            viewModel.blockDonor(
+                                                                targetUid = pledge.donorId,
+                                                                targetName = pledge.donorName,
+                                                                onSuccess = {
+                                                                    coroutineScope.launch {
+                                                                        snackbarHostState.showSnackbar("Blocked ${pledge.donorName.ifBlank { "donor" }}")
+                                                                    }
+                                                                }
+                                                            )
+                                                        }
+                                                    )
                                                 }
                                             }
                                         }
@@ -551,6 +608,28 @@ fun MyRequestsScreen(
                 ) {
                     Text("Keep it")
                 }
+            }
+        )
+    }
+
+    if (reportingDonor != null) {
+        val (pledge, reqId) = reportingDonor!!
+        ReportDialog(
+            title = "Report donor",
+            onDismiss = { reportingDonor = null },
+            onSubmit = { reason, details ->
+                viewModel.submitReport(
+                    targetType = "user",
+                    targetId = pledge.donorId,
+                    requestId = reqId,
+                    reason = reason,
+                    details = details,
+                    onSuccess = {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Thanks, we will review it")
+                        }
+                    }
+                )
             }
         )
     }
