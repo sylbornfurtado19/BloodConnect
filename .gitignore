@@ -12,4 +12,4 @@
 /app/build
 *firebase-adminsdk*.json
 *service-account*.json
-/notifier/node_modules
+/functions/node_modules
