@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -23,6 +24,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Directions
+import com.bloodconnect.utils.IntentHelpers
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalHospital
@@ -902,6 +905,30 @@ private fun LiveRequestCard(
                     Spacer(modifier = Modifier.size(6.dp))
                     Text("Call hospital")
                 }
+            }
+
+            OutlinedButton(
+                onClick = {
+                    IntentHelpers.openDirections(
+                        context = context,
+                        latitude = request.latitude,
+                        longitude = request.longitude,
+                        hospital = request.hospital,
+                        city = request.city
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Directions,
+                    contentDescription = "Get directions to hospital",
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.size(6.dp))
+                Text("Directions")
             }
 
             if (canPledge) {
