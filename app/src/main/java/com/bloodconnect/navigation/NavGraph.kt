@@ -1,6 +1,7 @@
 package com.bloodconnect.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -19,14 +20,25 @@ import com.bloodconnect.ui.profile.ProfileScreen
 
 /**
  * Top-level Navigation Graph for BloodConnect.
- * Orchestrates navigation transitions between app destinations.
+ * Orchestrates navigation transitions between app destinations and handles push notification navigation intents.
  */
 @Composable
 fun BloodConnectNavHost(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    startDestination: String = Screen.Login.route
+    startDestination: String = Screen.Login.route,
+    pendingRequestId: String? = null,
+    onPendingRequestIdHandled: () -> Unit = {}
 ) {
+    LaunchedEffect(pendingRequestId) {
+        if (!pendingRequestId.isNullOrBlank()) {
+            navController.navigate(Screen.BloodRequests.route) {
+                launchSingleTop = true
+            }
+            onPendingRequestIdHandled()
+        }
+    }
+
     NavHost(
         navController = navController,
         startDestination = startDestination,

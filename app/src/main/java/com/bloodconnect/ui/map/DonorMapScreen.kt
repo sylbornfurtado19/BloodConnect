@@ -25,12 +25,17 @@ import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberMarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 private val bloodGroupsFilterList = listOf("Any") + listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-")
+
+/**
+ * Privacy helper rounding latitude or longitude to 2 decimal places (~1 km radius) for donor markers.
+ */
+fun Double.coarse(): Double = kotlin.math.round(this * 100) / 100
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -40,6 +45,7 @@ fun DonorMapScreen(
     viewModel: DonorMapViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val locationPermissionState = rememberMultiplePermissionsState(
         permissions = listOf(
@@ -67,30 +73,52 @@ fun DonorMapScreen(
         position = CameraPosition.fromLatLngZoom(defaultLocation, 12f)
     }
 
-    // Animate camera on userLocation change or first marker
-    LaunchedEffect(uiState.userLocation, uiState.donors, uiState.requests) {
+    // A6: Camera animation tracking flags
+    val hasAnimatedToUser = remember { mutableStateOf(false) }
+    val cameraHasMoved = remember { mutableStateOf(false) }
+
+    // A6: Animate camera to user location ONCE when uiState.userLocation becomes non-null
+    LaunchedEffect(uiState.userLocation) {
         val loc = uiState.userLocation
-        if (loc != null) {
+        if (loc != null && !hasAnimatedToUser.value) {
+            hasAnimatedToUser.value = true
+            cameraHasMoved.value = true
             cameraPositionState.animate(
                 CameraUpdateFactory.newLatLngZoom(LatLng(loc.latitude, loc.longitude), 13f),
                 1000
             )
-        } else {
+        }
+    }
+
+    // Fall back to first marker only if no user location exists and camera has not moved yet
+    LaunchedEffect(uiState.donors, uiState.requests) {
+        if (!cameraHasMoved.value && uiState.userLocation == null) {
             val firstDonor = uiState.donors.firstOrNull { it.latitude != null && it.longitude != null }
             if (firstDonor != null) {
+                cameraHasMoved.value = true
                 cameraPositionState.animate(
-                    CameraUpdateFactory.newLatLngZoom(LatLng(firstDonor.latitude!!, firstDonor.longitude!!), 13f),
+                    CameraUpdateFactory.newLatLngZoom(LatLng(firstDonor.latitude!!.coarse(), firstDonor.longitude!!.coarse()), 13f),
                     1000
                 )
             } else {
                 val firstReq = uiState.requests.firstOrNull { it.latitude != 0.0 && it.longitude != 0.0 }
                 if (firstReq != null) {
+                    cameraHasMoved.value = true
                     cameraPositionState.animate(
                         CameraUpdateFactory.newLatLngZoom(LatLng(firstReq.latitude, firstReq.longitude), 13f),
                         1000
                     )
                 }
             }
+        }
+    }
+
+    // A5: SnackbarHost for errorMessage
+    val errorMessage = uiState.errorMessage
+    LaunchedEffect(errorMessage) {
+        if (!errorMessage.isNullOrBlank()) {
+            snackbarHostState.showSnackbar(errorMessage)
+            viewModel.clearError()
         }
     }
 
@@ -125,10 +153,12 @@ fun DonorMapScreen(
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        modifier = modifier
     ) { innerPadding ->
         Box(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
@@ -141,27 +171,34 @@ fun DonorMapScreen(
                     myLocationButtonEnabled = permissionGranted
                 )
             ) {
-                // Donor Markers (Green)
+                // A7 & A8: Donor Markers (Green, Coarse privacy coordinates, stable marker keys)
                 visibleDonors.forEach { donor ->
                     if (donor.latitude != null && donor.longitude != null) {
-                        Marker(
-                            state = MarkerState(position = LatLng(donor.latitude, donor.longitude)),
-                            title = "${donor.bloodGroup.displayName} donor",
-                            snippet = donor.locality,
-                            icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
-                        )
+                        val coarseLat = donor.latitude.coarse()
+                        val coarseLon = donor.longitude.coarse()
+                        key(donor.id) {
+                            Marker(
+                                state = rememberMarkerState(key = donor.id, position = LatLng(coarseLat, coarseLon)),
+                                title = "${donor.bloodGroup.displayName} donor",
+                                snippet = donor.locality,
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
+                            )
+                        }
                     }
                 }
 
-                // Request Markers (Red)
+                // A8: Request Markers (Red, exact coordinates, stable marker keys)
                 visibleRequests.forEach { req ->
                     if (req.latitude != 0.0 && req.longitude != 0.0) {
-                        Marker(
-                            state = MarkerState(position = LatLng(req.latitude, req.longitude)),
-                            title = "${req.bloodGroup} needed - ${req.hospital}",
-                            snippet = "${req.urgency} - ${req.unitsNeeded} unit(s) - ${req.city}",
-                            icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
-                        )
+                        val reqId = req.id.ifBlank { req.requestId }
+                        key(reqId) {
+                            Marker(
+                                state = rememberMarkerState(key = reqId, position = LatLng(req.latitude, req.longitude)),
+                                title = "${req.bloodGroup} needed - ${req.hospital}",
+                                snippet = "${req.urgency} - ${req.unitsNeeded} unit(s) - ${req.city}",
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                            )
+                        }
                     }
                 }
             }
@@ -179,7 +216,6 @@ fun DonorMapScreen(
                     modifier = Modifier.padding(10.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Filter Chips (All / Donors / Requests)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -198,7 +234,6 @@ fun DonorMapScreen(
                         }
                     }
 
-                    // Blood Group Horizontal Scroll Chips
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -248,7 +283,6 @@ fun DonorMapScreen(
                     }
                 }
             } else {
-                // Counts Caption at bottom center
                 Surface(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)

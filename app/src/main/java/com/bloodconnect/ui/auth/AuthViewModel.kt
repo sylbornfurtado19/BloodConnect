@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.bloodconnect.data.model.User
 import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.UserRepository
+import com.bloodconnect.notifications.TopicManager
 import com.bloodconnect.utils.LocationSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -37,7 +38,8 @@ sealed interface AuthUiState {
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
-    private val locationSyncManager: LocationSyncManager
+    private val locationSyncManager: LocationSyncManager,
+    private val topicManager: TopicManager
 ) : ViewModel() {
 
     private val _uiStateFlow = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
@@ -72,6 +74,10 @@ class AuthViewModel @Inject constructor(
                     if (uid != null) {
                         viewModelScope.launch(Dispatchers.IO) {
                             locationSyncManager.captureLocationIfMissing(uid)
+                            val user = userRepository.getUser(uid).getOrNull()
+                            if (user != null && user.bloodGroup.isNotBlank()) {
+                                topicManager.subscribe(user.bloodGroup)
+                            }
                         }
                     }
                     withContext(Dispatchers.Main) {
@@ -89,7 +95,7 @@ class AuthViewModel @Inject constructor(
 
     /**
      * Registers a new donor account with profile details and credentials.
-     * Location capture is non-blocking and executes after success/navigation.
+     * Location capture and topic subscription are non-blocking and execute after success/navigation.
      */
     fun signUp(
         fullName: String,
@@ -130,6 +136,9 @@ class AuthViewModel @Inject constructor(
                             updateState(AuthUiState.Success)
                             viewModelScope.launch(Dispatchers.IO) {
                                 locationSyncManager.captureLocationIfMissing(firebaseUser.uid)
+                                if (trimmedBloodGroup.isNotBlank()) {
+                                    topicManager.subscribe(trimmedBloodGroup)
+                                }
                             }
                             withContext(Dispatchers.Main) {
                                 onSuccess()
@@ -153,7 +162,7 @@ class AuthViewModel @Inject constructor(
 
     /**
      * Authenticates with Google and creates a Firestore profile if it's a new user.
-     * Location capture is non-blocking and runs asynchronously after success.
+     * Location capture and topic subscription are non-blocking and run asynchronously after success.
      */
     fun signInWithGoogle(idToken: String, onSuccess: () -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -179,6 +188,10 @@ class AuthViewModel @Inject constructor(
                         updateState(AuthUiState.Success)
                         viewModelScope.launch(Dispatchers.IO) {
                             locationSyncManager.captureLocationIfMissing(firebaseUser.uid)
+                            val user = userRepository.getUser(firebaseUser.uid).getOrNull()
+                            if (user != null && user.bloodGroup.isNotBlank()) {
+                                topicManager.subscribe(user.bloodGroup)
+                            }
                         }
                         withContext(Dispatchers.Main) {
                             onSuccess()
@@ -216,10 +229,13 @@ class AuthViewModel @Inject constructor(
     ) = signUp(fullName, bloodGroup, email, pass, phone, onSuccess)
 
     /**
-     * Signs out the currently authenticated user.
+     * Signs out the currently authenticated user and unsubscribes from topics.
      */
     fun signOut(onSuccess: () -> Unit = {}) {
         viewModelScope.launch(Dispatchers.IO) {
+            try {
+                topicManager.unsubscribeAll()
+            } catch (_: Exception) {}
             authRepository.signOut()
             updateState(AuthUiState.Idle)
             withContext(Dispatchers.Main) {

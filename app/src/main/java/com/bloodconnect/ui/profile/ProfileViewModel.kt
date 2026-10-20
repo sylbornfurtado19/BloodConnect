@@ -8,14 +8,17 @@ import androidx.lifecycle.viewModelScope
 import com.bloodconnect.data.model.User
 import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.UserRepository
+import com.bloodconnect.notifications.TopicManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val topicManager: TopicManager
 ) : ViewModel() {
 
     var user by mutableStateOf<User?>(null)
@@ -44,7 +47,13 @@ class ProfileViewModel @Inject constructor(
             try {
                 val result = userRepository.getUser(uid)
                 if (result.isSuccess) {
-                    user = result.getOrNull()
+                    val loadedUser = result.getOrNull()
+                    user = loadedUser
+                    if (loadedUser != null && loadedUser.bloodGroup.isNotBlank()) {
+                        viewModelScope.launch(Dispatchers.IO) {
+                            topicManager.subscribe(loadedUser.bloodGroup)
+                        }
+                    }
                 } else {
                     errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to load profile"
                 }
@@ -57,7 +66,14 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun signOut(onSignOut: () -> Unit) {
-        authRepository.signOut()
-        onSignOut()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                topicManager.unsubscribeAll()
+            } catch (_: Exception) {}
+            authRepository.signOut()
+            viewModelScope.launch(Dispatchers.Main) {
+                onSignOut()
+            }
+        }
     }
 }

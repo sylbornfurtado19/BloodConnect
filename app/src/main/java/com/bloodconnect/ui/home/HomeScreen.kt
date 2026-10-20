@@ -1,6 +1,7 @@
 package com.bloodconnect.ui.home
 
 import android.Manifest
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +18,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AddAlert
@@ -49,12 +49,14 @@ import com.bloodconnect.ui.components.BloodGroupBadge
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.accompanist.permissions.rememberPermissionState
 
 /**
  * Main Home & Dashboard screen for BloodConnect.
- * Displays quick actions, blood group shortcuts, and sample urgent requests.
- * Triggers background location permission requests only ONCE per app session via [HomeViewModel].
+ * Displays quick actions and blood group shortcuts for finding donors, broadcasting blood needs, and viewing nearby maps.
+ * Triggers background location and POST_NOTIFICATIONS permission requests only ONCE per app session via [HomeViewModel].
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -85,6 +87,17 @@ fun HomeScreen(
     LaunchedEffect(locationPermissionState.allPermissionsGranted) {
         if (locationPermissionState.allPermissionsGranted) {
             homeViewModel.syncLocation()
+        }
+    }
+
+    // B6: Request POST_NOTIFICATIONS ONCE per app session on API 33+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val notificationPermissionState = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
+        LaunchedEffect(Unit) {
+            if (!notificationPermissionState.status.isGranted && !homeViewModel.notificationPermissionRequested) {
+                homeViewModel.markNotificationPermissionRequested()
+                notificationPermissionState.launchPermissionRequest()
+            }
         }
     }
 
@@ -374,53 +387,6 @@ fun HomeScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-        }
-    }
-}
-
-/**
- * Compact illustrative card for sample blood request entries.
- */
-@Composable
-private fun SampleRequestCard(
-    bloodGroup: String,
-    hospital: String = "",
-    urgencyStatus: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    hospitalName: String = hospital
-) {
-    val facilityName = hospital.ifBlank { hospitalName }
-    OutlinedCard(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            BloodGroupBadge(
-                bloodGroup = bloodGroup,
-                size = 46.dp
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = facilityName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = urgencyStatus,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Medium
-                )
-            }
         }
     }
 }

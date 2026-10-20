@@ -6,6 +6,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bloodconnect.data.repository.AuthRepository
+import com.bloodconnect.data.repository.UserRepository
+import com.bloodconnect.notifications.TopicManager
 import com.bloodconnect.utils.LocationSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -14,19 +16,42 @@ import javax.inject.Inject
 
 /**
  * ViewModel managing Home screen dashboard synchronization and background location updates.
- * Tracks [permissionRequested] so location permissions are prompted only once per app session.
+ * Tracks [permissionRequested] and [notificationPermissionRequested] so location and notification permissions
+ * are prompted only once per app session.
  */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val locationSyncManager: LocationSyncManager
+    private val userRepository: UserRepository,
+    private val locationSyncManager: LocationSyncManager,
+    private val topicManager: TopicManager
 ) : ViewModel() {
 
     var permissionRequested by mutableStateOf(false)
         private set
 
+    var notificationPermissionRequested by mutableStateOf(false)
+        private set
+
+    init {
+        // B2: Subscribe to user's blood group topic if signed in
+        val uid = authRepository.currentUserId
+        if (uid != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                val user = userRepository.getUser(uid).getOrNull()
+                if (user != null && user.bloodGroup.isNotBlank()) {
+                    topicManager.subscribe(user.bloodGroup)
+                }
+            }
+        }
+    }
+
     fun markPermissionRequested() {
         permissionRequested = true
+    }
+
+    fun markNotificationPermissionRequested() {
+        notificationPermissionRequested = true
     }
 
     fun syncLocation() {
