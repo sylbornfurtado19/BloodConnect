@@ -87,6 +87,7 @@ dependencies {
     implementation(libs.play.services.maps)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.accompanist.permissions)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Testing
     testImplementation(libs.junit)

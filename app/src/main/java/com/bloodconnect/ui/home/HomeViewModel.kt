@@ -5,12 +5,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
+import com.bloodconnect.data.model.DonationEligibility
 import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.UserRepository
+import com.bloodconnect.notifications.DonationReminderScheduler
 import com.bloodconnect.notifications.TopicManager
 import com.bloodconnect.utils.DonationSyncManager
 import com.bloodconnect.utils.LocationSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -27,7 +31,8 @@ class HomeViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val locationSyncManager: LocationSyncManager,
     private val topicManager: TopicManager,
-    private val donationSyncManager: DonationSyncManager
+    private val donationSyncManager: DonationSyncManager,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     var permissionRequested by mutableStateOf(false)
@@ -44,6 +49,12 @@ class HomeViewModel @Inject constructor(
                     donationSyncManager.syncFromPledges(uid)
                     val user = userRepository.getUser(uid).getOrNull()
                     if (user != null) {
+                        val lastDonation = user.lastDonationAt
+                        if (lastDonation != null && lastDonation > 0L) {
+                            if (!DonationEligibility.isEligible(lastDonation)) {
+                                DonationReminderScheduler.schedule(context, lastDonation)
+                            }
+                        }
                         if (user.bloodGroup.isNotBlank()) {
                             topicManager.subscribe(user.bloodGroup)
                         }

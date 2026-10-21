@@ -39,16 +39,25 @@ class BloodConnectApp : Application() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Emergency blood requests"
-            val descriptionText = "High priority emergency blood donation alerts"
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel("emergency_requests", name, importance).apply {
-                description = descriptionText
-                enableVibration(true)
-            }
             val notificationManager: NotificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+
+            val emergencyName = "Emergency blood requests"
+            val emergencyDesc = "High priority emergency blood donation alerts"
+            val emergencyImportance = NotificationManager.IMPORTANCE_HIGH
+            val emergencyChannel = NotificationChannel("emergency_requests", emergencyName, emergencyImportance).apply {
+                description = emergencyDesc
+                enableVibration(true)
+            }
+            notificationManager.createNotificationChannel(emergencyChannel)
+
+            val reminderName = "Donation reminders"
+            val reminderDesc = "Reminders when your 90-day donation cooldown has ended"
+            val reminderImportance = NotificationManager.IMPORTANCE_DEFAULT
+            val reminderChannel = NotificationChannel("donation_reminders", reminderName, reminderImportance).apply {
+                description = reminderDesc
+            }
+            notificationManager.createNotificationChannel(reminderChannel)
         }
     }
 }

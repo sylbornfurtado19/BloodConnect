@@ -12,9 +12,12 @@ import com.bloodconnect.data.model.User
 import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.BloodRequestRepository
 import com.bloodconnect.data.repository.UserRepository
+import android.content.Context
+import com.bloodconnect.notifications.DonationReminderScheduler
 import com.bloodconnect.notifications.TopicManager
 import com.bloodconnect.utils.DonationSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,7 +28,8 @@ class ProfileViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val requestRepository: BloodRequestRepository,
     private val topicManager: TopicManager,
-    private val donationSyncManager: DonationSyncManager
+    private val donationSyncManager: DonationSyncManager,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     var user by mutableStateOf<User?>(null)
@@ -119,7 +123,11 @@ class ProfileViewModel @Inject constructor(
     fun markDonatedToday() {
         val uid = authRepository.currentUserId ?: return
         viewModelScope.launch {
-            userRepository.markDonatedToday(uid)
+            val now = System.currentTimeMillis()
+            val result = userRepository.markDonatedToday(uid)
+            if (result.isSuccess) {
+                DonationReminderScheduler.schedule(context, now)
+            }
             loadUserProfile()
         }
     }
@@ -142,6 +150,9 @@ class ProfileViewModel @Inject constructor(
 
     fun signOut(onSignOut: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
+            try {
+                DonationReminderScheduler.cancel(context)
+            } catch (_: Exception) {}
             try {
                 topicManager.unsubscribeAll()
             } catch (_: Exception) {}
