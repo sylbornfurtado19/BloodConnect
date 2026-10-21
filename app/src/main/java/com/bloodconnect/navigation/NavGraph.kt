@@ -17,6 +17,7 @@ import com.bloodconnect.ui.search.DonorSearchScreen
 import com.bloodconnect.ui.request.BloodRequestsScreen
 import com.bloodconnect.ui.request.MyRequestsScreen
 import com.bloodconnect.ui.profile.ProfileScreen
+import com.bloodconnect.ui.profile.DonationHistoryScreen
 import com.bloodconnect.ui.community.BloodDrivesScreen
 import com.bloodconnect.ui.community.BloodBanksScreen
 
@@ -181,6 +182,11 @@ fun BloodConnectNavHost(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
+                onNavigateToDonationHistory = {
+                    navController.navigate(Screen.DonationHistory.route) {
+                        launchSingleTop = true
+                    }
+                },
                 onSignOut = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }
@@ -200,6 +206,14 @@ fun BloodConnectNavHost(
 
         composable(route = Screen.BloodBanks.route) {
             BloodBanksScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(route = Screen.DonationHistory.route) {
+            DonationHistoryScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 }

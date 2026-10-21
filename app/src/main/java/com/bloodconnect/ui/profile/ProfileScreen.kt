@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.Person
@@ -99,6 +100,7 @@ private const val FALLBACK_CONTACT = "Not provided"
 fun ProfileScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onNavigateToDonationHistory: () -> Unit = {},
     onSignOut: (() -> Unit)? = null,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
@@ -523,6 +525,20 @@ fun ProfileScreen(
                         Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Share my impact")
+                    }
+
+                    OutlinedButton(
+                        onClick = onNavigateToDonationHistory,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Donation history")
                     }
                 }
             }
