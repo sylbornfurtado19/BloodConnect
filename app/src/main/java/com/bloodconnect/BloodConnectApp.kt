@@ -9,6 +9,7 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.hilt.android.HiltAndroidApp
 
 /*
@@ -31,6 +32,10 @@ class BloodConnectApp : Application() {
                     PlayIntegrityAppCheckProviderFactory.getInstance()
                 }
             )
+        } catch (_: Exception) {}
+
+        try {
+            FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(!BuildConfig.DEBUG)
         } catch (_: Exception) {}
 
         super.onCreate()
