@@ -17,6 +17,8 @@ import com.bloodconnect.ui.search.DonorSearchScreen
 import com.bloodconnect.ui.request.BloodRequestsScreen
 import com.bloodconnect.ui.request.MyRequestsScreen
 import com.bloodconnect.ui.profile.ProfileScreen
+import com.bloodconnect.ui.community.BloodDrivesScreen
+import com.bloodconnect.ui.community.BloodBanksScreen
 
 /**
  * Top-level Navigation Graph for BloodConnect.
@@ -106,6 +108,16 @@ fun BloodConnectNavHost(
                     navController.navigate(Screen.DonorMap.route) {
                         launchSingleTop = true
                     }
+                },
+                onNavigateToBloodDrives = {
+                    navController.navigate(Screen.BloodDrives.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToBloodBanks = {
+                    navController.navigate(Screen.BloodBanks.route) {
+                        launchSingleTop = true
+                    }
                 }
             )
         }
@@ -174,6 +186,22 @@ fun BloodConnectNavHost(
                         popUpTo(Screen.Home.route) { inclusive = true }
                         launchSingleTop = true
                     }
+                }
+            )
+        }
+
+        composable(route = Screen.BloodDrives.route) {
+            BloodDrivesScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(route = Screen.BloodBanks.route) {
+            BloodBanksScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }

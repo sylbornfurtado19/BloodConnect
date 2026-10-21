@@ -106,6 +106,28 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // ------------------------------------------------------------------------
+    // Blood Camps / Drives Rules
+    // ------------------------------------------------------------------------
+    match /camps/{id} {
+      allow read: if isSignedIn();
+      allow write: if false;
+
+      match /rsvps/{uid} {
+        allow read: if isSignedIn();
+        allow create, delete: if isOwner(uid);
+        allow update: if false;
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // Blood Banks Rules
+    // ------------------------------------------------------------------------
+    match /blood_banks/{id} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
     // Default Deny
     match /{document=**} {
       allow read, write: if false;
