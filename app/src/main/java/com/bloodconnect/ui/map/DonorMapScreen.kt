@@ -1,6 +1,7 @@
 package com.bloodconnect.ui.map
 
 import android.Manifest
+import android.util.Log
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,7 +19,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.bloodconnect.data.model.BloodGroup
 import com.bloodconnect.ui.components.EmptyState
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
@@ -73,11 +73,11 @@ fun DonorMapScreen(
         position = CameraPosition.fromLatLngZoom(defaultLocation, 12f)
     }
 
-    // A6: Camera animation tracking flags
+    // Camera animation tracking flags
     val hasAnimatedToUser = remember { mutableStateOf(false) }
     val cameraHasMoved = remember { mutableStateOf(false) }
 
-    // A6: Animate camera to user location ONCE when uiState.userLocation becomes non-null
+    // Animate camera to user location ONCE when uiState.userLocation becomes non-null
     LaunchedEffect(uiState.userLocation) {
         val loc = uiState.userLocation
         if (loc != null && !hasAnimatedToUser.value) {
@@ -113,7 +113,7 @@ fun DonorMapScreen(
         }
     }
 
-    // A5: SnackbarHost for errorMessage
+    // SnackbarHost for errorMessage
     val errorMessage = uiState.errorMessage
     LaunchedEffect(errorMessage) {
         if (!errorMessage.isNullOrBlank()) {
@@ -132,6 +132,17 @@ fun DonorMapScreen(
         uiState.requests
     } else {
         emptyList()
+    }
+
+    // Log marker counts & coordinates for debugging
+    LaunchedEffect(visibleDonors, visibleRequests) {
+        Log.d("DonorMapScreen", "Rendering ${visibleDonors.size} donors and ${visibleRequests.size} requests on map.")
+        visibleDonors.forEach { d ->
+            Log.d("DonorMapScreen", "Donor ${d.name}: lat=${d.latitude}, lon=${d.longitude}")
+        }
+        visibleRequests.forEach { r ->
+            Log.d("DonorMapScreen", "Request ${r.hospital}: lat=${r.latitude}, lon=${r.longitude}")
+        }
     }
 
     Scaffold(
@@ -173,40 +184,30 @@ fun DonorMapScreen(
                     mapToolbarEnabled = true
                 )
             ) {
-                // A7 & A8: Donor Markers (Green, Coarse privacy coordinates, stable marker keys)
+                // Donor Markers
                 visibleDonors.forEach { donor ->
                     if (donor.latitude != null && donor.longitude != null) {
                         val coarseLat = donor.latitude.coarse()
                         val coarseLon = donor.longitude.coarse()
                         key(donor.id) {
-                            val markerState = rememberMarkerState(key = donor.id, position = LatLng(coarseLat, coarseLon))
-                            LaunchedEffect(coarseLat, coarseLon) {
-                                markerState.position = LatLng(coarseLat, coarseLon)
-                            }
                             Marker(
-                                state = markerState,
+                                state = rememberMarkerState(position = LatLng(coarseLat, coarseLon)),
                                 title = "${donor.bloodGroup.displayName} donor",
-                                snippet = donor.locality,
-                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
+                                snippet = donor.locality
                             )
                         }
                     }
                 }
 
-                // A8: Request Markers (Red, exact coordinates, stable marker keys)
+                // Request Markers
                 visibleRequests.forEach { req ->
                     if (req.latitude != 0.0 && req.longitude != 0.0) {
                         val reqId = req.id.ifBlank { req.requestId }
                         key(reqId) {
-                            val markerState = rememberMarkerState(key = reqId, position = LatLng(req.latitude, req.longitude))
-                            LaunchedEffect(req.latitude, req.longitude) {
-                                markerState.position = LatLng(req.latitude, req.longitude)
-                            }
                             Marker(
-                                state = markerState,
+                                state = rememberMarkerState(position = LatLng(req.latitude, req.longitude)),
                                 title = "${req.bloodGroup} needed - ${req.hospital}",
-                                snippet = "${req.urgency} - ${req.unitsNeeded} unit(s) - ${req.city}",
-                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                                snippet = "${req.urgency} - ${req.unitsNeeded} unit(s) - ${req.city}"
                             )
                         }
                     }

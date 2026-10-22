@@ -23,7 +23,7 @@ class EligibilityAssistant @Inject constructor() {
 
     private val generativeModel: GenerativeModel by lazy {
         Firebase.ai(backend = GenerativeBackend.googleAI()).generativeModel(
-            modelName = "gemini-2.5-flash",
+            modelName = "gemini-3.8-flash",
             generationConfig = generationConfig {
                 temperature = 0.3f
             },
