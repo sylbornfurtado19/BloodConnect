@@ -389,6 +389,8 @@ fun filterAndSortDonors(
         }
     }
 
+    val sanitizedQuery = locationQuery.trim()
+
     val filtered = donors.filter { donor ->
         val matchesBlood = if (bloodGroup == null) {
             true
@@ -398,7 +400,11 @@ fun filterAndSortDonors(
             donor.bloodGroup == bloodGroup
         }
 
-        val matchesLocation = locationQuery.isBlank() || donor.locality.contains(locationQuery.trim(), ignoreCase = true)
+        val matchesQuery = sanitizedQuery.isBlank() ||
+            donor.locality.contains(sanitizedQuery, ignoreCase = true) ||
+            donor.name.contains(sanitizedQuery, ignoreCase = true) ||
+            donor.bloodGroup.displayName.equals(sanitizedQuery, ignoreCase = true) ||
+            donor.bloodGroup.name.equals(sanitizedQuery, ignoreCase = true)
 
         val matchesDistance = if (userLocation == null) {
             true
@@ -410,7 +416,7 @@ fun filterAndSortDonors(
                 true
             }
         }
-        matchesBlood && matchesLocation && matchesDistance
+        matchesBlood && matchesQuery && matchesDistance
     }
 
     val effectiveSortMode = when {
