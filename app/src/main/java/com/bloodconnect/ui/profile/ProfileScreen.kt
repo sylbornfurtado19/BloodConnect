@@ -58,6 +58,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,11 +70,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bloodconnect.utils.AnalyticsHelper
 import com.bloodconnect.data.model.Badge
 import com.bloodconnect.data.model.DonationEligibility
 import com.bloodconnect.data.model.DonorTier
@@ -105,6 +109,7 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val analyticsHelper = remember(context) { AnalyticsHelper(context) }
     var displayName by remember { mutableStateOf(FALLBACK_NAME) }
     var bloodGroup by remember { mutableStateOf(FALLBACK_BLOOD_GROUP) }
     var cityLocality by remember { mutableStateOf(FALLBACK_CITY) }
@@ -233,7 +238,10 @@ fun ProfileScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(
+                        onClick = onNavigateBack,
+                        modifier = Modifier.minimumInteractiveComponentSize()
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -379,7 +387,8 @@ fun ProfileScreen(
                                 text = "Donor Tier: ${donorTier.displayName}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.semantics { heading() }
                             )
                             Text(
                                 text = "Lives Saved: $donationCount",
@@ -457,7 +466,8 @@ fun ProfileScreen(
                             text = "Badges & Achievements",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.semantics { heading() }
                         )
                         Text(
                             text = "Donation streak: $donationStreak",
@@ -510,6 +520,7 @@ fun ProfileScreen(
 
                     Button(
                         onClick = {
+                            analyticsHelper.logShareImpact()
                             val shareText = "I've donated blood $donationCount time(s) as a ${donorTier.displayName} donor on BloodConnect. Be a hero too! #BloodConnect"
                             val sendIntent = Intent().apply {
                                 action = Intent.ACTION_SEND
@@ -519,17 +530,25 @@ fun ProfileScreen(
                             val shareIntent = Intent.createChooser(sendIntent, null)
                             context.startActivity(shareIntent)
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .minimumInteractiveComponentSize(),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share my impact",
+                            modifier = Modifier.size(18.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Share my impact")
                     }
 
                     OutlinedButton(
                         onClick = onNavigateToDonationHistory,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .minimumInteractiveComponentSize(),
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Icon(
@@ -558,7 +577,8 @@ fun ProfileScreen(
                         text = "Donation Status & Cooldown",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.semantics { heading() }
                     )
 
                     if (!isEligibleToDonate && eligibleOnDateStr != null) {
@@ -586,7 +606,9 @@ fun ProfileScreen(
 
                     Button(
                         onClick = { showDonatedTodayDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .minimumInteractiveComponentSize(),
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Icon(imageVector = Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -624,18 +646,19 @@ fun ProfileScreen(
                                 modifier = Modifier.size(28.dp)
                             )
                             Column {
-                                Text(
-                                    text = if (isDonorAvailable) "Available to Donate" else "Currently Unavailable",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isDonorAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = if (isDonorAvailable) "Status: Active Donor" else "Status: Inactive / On Cooldown",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Medium,
-                                    color = if (isDonorAvailable) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
-                                )
+                                 Text(
+                                     text = if (isDonorAvailable) "Available to Donate" else "Currently Unavailable",
+                                     style = MaterialTheme.typography.titleMedium,
+                                     fontWeight = FontWeight.Bold,
+                                     color = if (isDonorAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                     modifier = Modifier.semantics { heading() }
+                                 )
+                                 Text(
+                                     text = if (isDonorAvailable) "Status: Active Donor" else "Status: Inactive / On Cooldown",
+                                     style = MaterialTheme.typography.bodySmall,
+                                     fontWeight = FontWeight.Medium,
+                                     color = if (isDonorAvailable) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+                                 )
                             }
                         }
 
@@ -727,11 +750,15 @@ fun ProfileScreen(
                             text = if (isEditing) "Edit Profile Details" else "Profile Information",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.semantics { heading() }
                         )
 
                         if (!isEditing) {
-                            TextButton(onClick = { startEditing() }) {
+                            TextButton(
+                                onClick = { startEditing() },
+                                modifier = Modifier.minimumInteractiveComponentSize()
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.Edit,
                                     contentDescription = "Edit Profile",
@@ -813,14 +840,18 @@ fun ProfileScreen(
                             BloodConnectOutlinedButton(
                                 text = "Cancel",
                                 onClick = { cancelEditing() },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .minimumInteractiveComponentSize()
                             )
 
                             BloodConnectButton(
                                 text = "Save Profile",
                                 icon = Icons.Default.Save,
                                 onClick = { validateAndSave() },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .minimumInteractiveComponentSize()
                             )
                         }
                     } else {
@@ -891,7 +922,9 @@ fun ProfileScreen(
                             text = "Edit Profile Information",
                             icon = Icons.Default.Edit,
                             onClick = { startEditing() },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .minimumInteractiveComponentSize()
                         )
                     }
                 }
@@ -914,7 +947,8 @@ fun ProfileScreen(
                             text = "Blocked users",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.semantics { heading() }
                         )
                         viewModel.blockedUsers.forEach { (targetUid, targetName) ->
                             Row(
@@ -930,6 +964,7 @@ fun ProfileScreen(
                                 )
                                 OutlinedButton(
                                     onClick = { viewModel.unblockUser(targetUid) },
+                                    modifier = Modifier.minimumInteractiveComponentSize(),
                                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                                 ) {
                                     Text("Unblock")
@@ -946,7 +981,9 @@ fun ProfileScreen(
                     text = "Sign Out",
                     icon = Icons.AutoMirrored.Filled.ExitToApp,
                     onClick = onSignOut,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .minimumInteractiveComponentSize()
                 )
             }
 

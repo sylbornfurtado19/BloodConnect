@@ -43,6 +43,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -50,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -58,7 +60,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.bloodconnect.utils.dialNumber
 import com.bloodconnect.ui.components.BloodConnectOutlinedButton
 import com.bloodconnect.ui.components.BloodGroupBadge
-import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -128,7 +129,10 @@ fun HomeScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = onNavigateToProfile) {
+                    IconButton(
+                        onClick = onNavigateToProfile,
+                        modifier = Modifier.minimumInteractiveComponentSize()
+                    ) {
                         Icon(
                             imageVector = Icons.Default.AccountCircle,
                             contentDescription = "My Profile",
@@ -170,7 +174,8 @@ fun HomeScreen(
                         text = "Welcome to BloodConnect",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.semantics { heading() }
                     )
                     Text(
                         text = "Every donation can save up to three lives. Discover available donors or broadcast emergency blood requests.",
@@ -186,7 +191,8 @@ fun HomeScreen(
                     text = "Quick Actions",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.semantics { heading() }
                 )
 
                 Row(
@@ -196,7 +202,9 @@ fun HomeScreen(
                     // Action 1: Find Donors
                     Card(
                         onClick = onNavigateToDonorSearch,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .minimumInteractiveComponentSize(),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer
                         ),
@@ -229,7 +237,9 @@ fun HomeScreen(
                     // Action 2: Request Blood
                     Card(
                         onClick = onNavigateToBloodRequests,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .minimumInteractiveComponentSize(),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         ),
@@ -267,7 +277,9 @@ fun HomeScreen(
                     // Action 3: Nearby Map
                     OutlinedCard(
                         onClick = onNavigateToDonorMap,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .minimumInteractiveComponentSize(),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Row(
@@ -310,7 +322,9 @@ fun HomeScreen(
                     // Action 4: My Requests (Request History)
                     OutlinedCard(
                         onClick = onNavigateToMyRequests,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .minimumInteractiveComponentSize(),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Row(
@@ -358,7 +372,9 @@ fun HomeScreen(
                     // Action 5: Blood drives
                     OutlinedCard(
                         onClick = onNavigateToBloodDrives,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .minimumInteractiveComponentSize(),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Row(
@@ -401,7 +417,9 @@ fun HomeScreen(
                     // Action 6: Blood banks
                     OutlinedCard(
                         onClick = onNavigateToBloodBanks,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .minimumInteractiveComponentSize(),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Row(
@@ -445,7 +463,9 @@ fun HomeScreen(
                 // Action 7: Demand trends
                 OutlinedCard(
                     onClick = onNavigateToDemandTrends,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .minimumInteractiveComponentSize(),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Row(
@@ -488,7 +508,9 @@ fun HomeScreen(
                 // Action 8: Ask the assistant
                 OutlinedCard(
                     onClick = onNavigateToAssistant,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .minimumInteractiveComponentSize(),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Row(
@@ -531,10 +553,24 @@ fun HomeScreen(
 
             // C. Blood Group Shortcuts
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SectionHeader(
-                    title = "Blood Group Shortcuts",
-                    subtitle = "Tap any group to search donors"
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Blood Group Shortcuts",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.semantics { heading() }
+                    )
+                    Text(
+                        text = "Tap any group to search donors",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 val row1 = listOf("A+", "A-", "B+", "B-")
                 val row2 = listOf("AB+", "AB-", "O+", "O-")
@@ -548,6 +584,7 @@ fun HomeScreen(
                             bloodGroup = group,
                             size = 54.dp,
                             modifier = Modifier
+                                .minimumInteractiveComponentSize()
                                 .clip(RoundedCornerShape(10.dp))
                                 .clickable(onClick = onNavigateToDonorSearch)
                         )
@@ -563,6 +600,7 @@ fun HomeScreen(
                             bloodGroup = group,
                             size = 54.dp,
                             modifier = Modifier
+                                .minimumInteractiveComponentSize()
                                 .clip(RoundedCornerShape(10.dp))
                                 .clickable(onClick = onNavigateToDonorSearch)
                         )
@@ -598,7 +636,8 @@ fun HomeScreen(
                             text = "Emergency numbers",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.semantics { heading() }
                         )
                     }
 
@@ -608,6 +647,7 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 48.dp)
+                            .minimumInteractiveComponentSize()
                             .semantics { contentDescription = "Call ambulance, 108" },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
@@ -638,6 +678,7 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 48.dp)
+                            .minimumInteractiveComponentSize()
                             .semantics { contentDescription = "Call medical helpline, 102" },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
@@ -668,6 +709,7 @@ fun HomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 48.dp)
+                            .minimumInteractiveComponentSize()
                             .semantics { contentDescription = "Call emergency, 112" },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
@@ -701,7 +743,9 @@ fun HomeScreen(
                 text = "Sign Out",
                 icon = Icons.AutoMirrored.Filled.ExitToApp,
                 onClick = onSignOut,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .minimumInteractiveComponentSize()
             )
 
             Spacer(modifier = Modifier.height(16.dp))

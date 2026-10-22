@@ -9,6 +9,7 @@ import com.bloodconnect.data.model.User
 import com.bloodconnect.data.repository.AuthRepository
 import com.bloodconnect.data.repository.UserRepository
 import com.bloodconnect.notifications.TopicManager
+import com.bloodconnect.utils.AnalyticsHelper
 import com.bloodconnect.utils.LocationSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +40,8 @@ class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val locationSyncManager: LocationSyncManager,
-    private val topicManager: TopicManager
+    private val topicManager: TopicManager,
+    private val analyticsHelper: AnalyticsHelper = AnalyticsHelper()
 ) : ViewModel() {
 
     private val _uiStateFlow = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
@@ -134,6 +136,7 @@ class AuthViewModel @Inject constructor(
                         val saveResult = userRepository.saveUser(user)
                         if (saveResult.isSuccess) {
                             updateState(AuthUiState.Success)
+                            analyticsHelper.logSignUp()
                             viewModelScope.launch(Dispatchers.IO) {
                                 locationSyncManager.captureLocationIfMissing(firebaseUser.uid)
                                 if (trimmedBloodGroup.isNotBlank()) {
@@ -183,6 +186,7 @@ class AuthViewModel @Inject constructor(
                                 displayName = firebaseUser.displayName ?: "Google User"
                             )
                             userRepository.saveUser(newUser)
+                            analyticsHelper.logSignUp()
                         }
 
                         updateState(AuthUiState.Success)
