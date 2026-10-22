@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -76,26 +77,26 @@ fun LoginScreen(
                 if (idToken != null) {
                     authViewModel.signInWithGoogle(idToken, onNavigateToHome)
                 } else {
-                    val errorMsg = "Google Sign-In Error: ID Token was null. Ensure Google Sign-In is enabled in Firebase Console and Web Client ID is configured."
+                    val errorMsg = context.getString(R.string.login_error_token_null)
                     authViewModel.setError(errorMsg)
                     Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
                 }
             } catch (e: ApiException) {
                 val msg = when (e.statusCode) {
-                    10 -> "Google Sign-In Error (10): Developer Error. Ensure your SHA-1 is added in Firebase Console."
-                    12500 -> "Google Sign-In Error (12500): Check OAuth Web Client ID in Firebase."
-                    12501 -> "Google Sign-In Error (12501): Sign-in was canceled by the user or system."
-                    else -> "Google Sign-In failed with status code ${e.statusCode}"
+                    10 -> context.getString(R.string.login_error_dev)
+                    12500 -> context.getString(R.string.login_error_oauth)
+                    12501 -> context.getString(R.string.login_error_canceled_user)
+                    else -> context.getString(R.string.login_error_status_code, e.statusCode)
                 }
                 authViewModel.setError(msg)
                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             }
         } else if (result.resultCode == Activity.RESULT_CANCELED) {
-            val msg = "Google Sign-In canceled (Result Code 0). Please check your SHA-1 fingerprint in Firebase and ensure the Web Client ID is correct."
+            val msg = context.getString(R.string.login_error_canceled)
             authViewModel.setError(msg)
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
         } else {
-            val msg = "Google Sign-In returned result code ${result.resultCode}"
+            val msg = context.getString(R.string.login_error_result_code, result.resultCode)
             authViewModel.setError(msg)
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
         }
@@ -109,14 +110,14 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "BloodConnect",
+            text = stringResource(R.string.login_title_app),
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
         )
 
         Text(
-            text = "Blood Donation & Emergency Network",
+            text = stringResource(R.string.login_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -137,7 +138,7 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Welcome Back",
+                    text = stringResource(R.string.login_title),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -150,7 +151,7 @@ fun LoginScreen(
                         email = it
                         if (uiState is AuthUiState.Error) authViewModel.clearError()
                     },
-                    label = { Text("Email Address") },
+                    label = { Text(stringResource(R.string.login_email_label)) },
                     singleLine = true,
                     enabled = uiState !is AuthUiState.Loading,
                     modifier = Modifier.fillMaxWidth()
@@ -158,19 +159,22 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                val hidePasswordDesc = stringResource(R.string.login_cd_hide_password)
+                val showPasswordDesc = stringResource(R.string.login_cd_show_password)
+
                 BloodConnectTextField(
                     value = password,
                     onValueChange = {
                         password = it
                         if (uiState is AuthUiState.Error) authViewModel.clearError()
                     },
-                    label = "Password",
+                    label = stringResource(R.string.login_password_label),
                     singleLine = true,
                     enabled = uiState !is AuthUiState.Loading,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                        val description = if (passwordVisible) "Hide password" else "Show password"
+                        val description = if (passwordVisible) hidePasswordDesc else showPasswordDesc
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 imageVector = image,
@@ -181,9 +185,15 @@ fun LoginScreen(
                 )
 
                 if (uiState is AuthUiState.Error) {
+                    val errorState = uiState as AuthUiState.Error
+                    val displayText = if (errorState.messageResId != null) {
+                        stringResource(errorState.messageResId)
+                    } else {
+                        errorState.message
+                    }
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = (uiState as AuthUiState.Error).message,
+                        text = displayText,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center,
@@ -207,7 +217,7 @@ fun LoginScreen(
                             strokeWidth = 2.5.dp
                         )
                     } else {
-                        Text("Sign In")
+                        Text(stringResource(R.string.login_btn_sign_in))
                     }
                 }
 
@@ -233,7 +243,7 @@ fun LoginScreen(
                     enabled = uiState !is AuthUiState.Loading,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Sign in with Google Account")
+                    Text(stringResource(R.string.login_btn_google))
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -245,9 +255,10 @@ fun LoginScreen(
                     },
                     enabled = uiState !is AuthUiState.Loading
                 ) {
-                    Text("New donor? Create an account")
+                    Text(stringResource(R.string.login_btn_register))
                 }
             }
         }
     }
 }
+

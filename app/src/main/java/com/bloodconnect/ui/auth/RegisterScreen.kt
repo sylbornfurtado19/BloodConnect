@@ -31,15 +31,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bloodconnect.R
 import com.bloodconnect.ui.components.BloodConnectTextField
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+
 
 /**
  * Register Screen connected to [AuthViewModel].
@@ -84,14 +87,14 @@ fun RegisterScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "BloodConnect",
+            text = stringResource(R.string.register_title_app),
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
         )
 
         Text(
-            text = "Join the Life-Saving Donor Network",
+            text = stringResource(R.string.register_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -112,7 +115,7 @@ fun RegisterScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Register as Donor",
+                    text = stringResource(R.string.register_title),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -125,7 +128,7 @@ fun RegisterScreen(
                         fullName = it
                         if (uiState is AuthUiState.Error) authViewModel.clearError()
                     },
-                    label = { Text("Full Name") },
+                    label = { Text(stringResource(R.string.register_label_full_name)) },
                     singleLine = true,
                     enabled = uiState !is AuthUiState.Loading,
                     modifier = Modifier.fillMaxWidth()
@@ -139,7 +142,7 @@ fun RegisterScreen(
                         bloodGroup = it
                         if (uiState is AuthUiState.Error) authViewModel.clearError()
                     },
-                    label = { Text("Blood Group (e.g. O+, A-, B+)") },
+                    label = { Text(stringResource(R.string.register_label_blood_group)) },
                     singleLine = true,
                     enabled = uiState !is AuthUiState.Loading,
                     modifier = Modifier.fillMaxWidth()
@@ -153,7 +156,7 @@ fun RegisterScreen(
                         phone = it
                         if (uiState is AuthUiState.Error) authViewModel.clearError()
                     },
-                    label = { Text("Phone Number") },
+                    label = { Text(stringResource(R.string.register_label_phone)) },
                     singleLine = true,
                     enabled = uiState !is AuthUiState.Loading,
                     modifier = Modifier.fillMaxWidth()
@@ -167,7 +170,7 @@ fun RegisterScreen(
                         email = it
                         if (uiState is AuthUiState.Error) authViewModel.clearError()
                     },
-                    label = { Text("Email Address") },
+                    label = { Text(stringResource(R.string.register_label_email)) },
                     singleLine = true,
                     enabled = uiState !is AuthUiState.Loading,
                     modifier = Modifier.fillMaxWidth()
@@ -175,19 +178,22 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                val hidePasswordDesc = stringResource(R.string.register_cd_hide_password)
+                val showPasswordDesc = stringResource(R.string.register_cd_show_password)
+
                 BloodConnectTextField(
                     value = password,
                     onValueChange = {
                         password = it
                         if (uiState is AuthUiState.Error) authViewModel.clearError()
                     },
-                    label = "Password",
+                    label = stringResource(R.string.register_label_password),
                     singleLine = true,
                     enabled = uiState !is AuthUiState.Loading,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                        val description = if (passwordVisible) "Hide password" else "Show password"
+                        val description = if (passwordVisible) hidePasswordDesc else showPasswordDesc
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 imageVector = image,
@@ -198,9 +204,15 @@ fun RegisterScreen(
                 )
 
                 if (uiState is AuthUiState.Error) {
+                    val errorState = uiState as AuthUiState.Error
+                    val displayText = if (errorState.messageResId != null) {
+                        stringResource(errorState.messageResId)
+                    } else {
+                        errorState.message
+                    }
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = (uiState as AuthUiState.Error).message,
+                        text = displayText,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center,
@@ -224,7 +236,7 @@ fun RegisterScreen(
                             strokeWidth = 2.5.dp
                         )
                     } else {
-                        Text("Register")
+                        Text(stringResource(R.string.register_btn_register))
                     }
                 }
 
@@ -237,7 +249,7 @@ fun RegisterScreen(
                     },
                     enabled = uiState !is AuthUiState.Loading
                 ) {
-                    Text("Already registered? Sign In")
+                    Text(stringResource(R.string.register_btn_sign_in))
                 }
             }
         }

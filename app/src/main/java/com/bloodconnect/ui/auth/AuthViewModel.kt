@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import androidx.annotation.StringRes
+import com.bloodconnect.R
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -27,7 +29,7 @@ sealed interface AuthUiState {
     data object Idle : AuthUiState
     data object Loading : AuthUiState
     data object Success : AuthUiState
-    data class Error(val message: String) : AuthUiState
+    data class Error(val message: String = "", @StringRes val messageResId: Int? = null) : AuthUiState
 }
 
 /**
@@ -62,7 +64,7 @@ class AuthViewModel @Inject constructor(
     fun signIn(email: String, pass: String, onSuccess: () -> Unit = {}) {
         val trimmedEmail = email.trim()
         if (trimmedEmail.isBlank() || pass.isBlank()) {
-            updateState(AuthUiState.Error("Please fill in all fields"))
+            updateState(AuthUiState.Error("Please fill in all fields", R.string.auth_error_fill_all_fields))
             return
         }
 
@@ -87,10 +89,10 @@ class AuthViewModel @Inject constructor(
                     }
                 } else {
                     val errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Sign in failed"
-                    updateState(AuthUiState.Error(errorMessage))
+                    updateState(AuthUiState.Error(errorMessage, if (result.exceptionOrNull() == null) R.string.auth_error_sign_in_failed else null))
                 }
             } catch (e: Exception) {
-                updateState(AuthUiState.Error(e.localizedMessage ?: "Sign in failed"))
+                updateState(AuthUiState.Error(e.localizedMessage ?: "Sign in failed", if (e.localizedMessage.isNullOrBlank()) R.string.auth_error_sign_in_failed else null))
             }
         }
     }
@@ -113,7 +115,7 @@ class AuthViewModel @Inject constructor(
         val trimmedPhone = phone.trim()
 
         if (trimmedFullName.isBlank() || trimmedBloodGroup.isBlank() || trimmedEmail.isBlank() || pass.isBlank()) {
-            updateState(AuthUiState.Error("Please fill in all required fields"))
+            updateState(AuthUiState.Error("Please fill in all required fields", R.string.auth_error_fill_all_required_fields))
             return
         }
 
@@ -148,17 +150,17 @@ class AuthViewModel @Inject constructor(
                             }
                         } else {
                             val errorMessage = saveResult.exceptionOrNull()?.localizedMessage ?: "Failed to save profile"
-                            updateState(AuthUiState.Error(errorMessage))
+                            updateState(AuthUiState.Error(errorMessage, if (saveResult.exceptionOrNull() == null) R.string.auth_error_save_profile_failed else null))
                         }
                     } else {
-                        updateState(AuthUiState.Error("User creation failed"))
+                        updateState(AuthUiState.Error("User creation failed", R.string.auth_error_user_creation_failed))
                     }
                 } else {
                     val errorMessage = authResult.exceptionOrNull()?.localizedMessage ?: "Sign up failed"
-                    updateState(AuthUiState.Error(errorMessage))
+                    updateState(AuthUiState.Error(errorMessage, if (authResult.exceptionOrNull() == null) R.string.auth_error_sign_up_failed else null))
                 }
             } catch (e: Exception) {
-                updateState(AuthUiState.Error(e.localizedMessage ?: "Sign up failed"))
+                updateState(AuthUiState.Error(e.localizedMessage ?: "Sign up failed", if (e.localizedMessage.isNullOrBlank()) R.string.auth_error_sign_up_failed else null))
             }
         }
     }

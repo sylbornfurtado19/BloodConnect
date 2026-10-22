@@ -70,6 +70,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -77,7 +78,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bloodconnect.R
 import com.bloodconnect.utils.AnalyticsHelper
+
 import com.bloodconnect.data.model.Badge
 import com.bloodconnect.data.model.DonationEligibility
 import com.bloodconnect.data.model.DonorTier
@@ -199,20 +202,20 @@ fun ProfileScreen(
         var isValid = true
 
         if (trimmedName.isBlank()) {
-            nameError = "Display name cannot be empty"
+            nameError = context.getString(R.string.profile_error_name_empty)
             isValid = false
         } else if (trimmedName.length < 2) {
-            nameError = "Display name must be at least 2 characters"
+            nameError = context.getString(R.string.profile_error_name_min)
             isValid = false
         } else {
             nameError = null
         }
 
         if (trimmedCity.isBlank()) {
-            cityError = "City/locality cannot be empty"
+            cityError = context.getString(R.string.profile_error_city_empty)
             isValid = false
         } else if (trimmedCity.length < 2) {
-            cityError = "City/locality must be at least 2 characters"
+            cityError = context.getString(R.string.profile_error_city_min)
             isValid = false
         } else {
             cityError = null
@@ -233,7 +236,7 @@ fun ProfileScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Donor Profile",
+                        text = stringResource(R.string.profile_title),
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -244,7 +247,7 @@ fun ProfileScreen(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.profile_cd_back),
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
@@ -317,7 +320,7 @@ fun ProfileScreen(
                     }
 
                     Text(
-                        text = displayName,
+                        text = if (displayName != FALLBACK_NAME) displayName else stringResource(R.string.profile_fallback_name),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -333,9 +336,9 @@ fun ProfileScreen(
                         )
                         Text(
                             text = if (bloodGroup in standardBloodGroups) {
-                                "Registered Blood Group ($bloodGroup)"
+                                stringResource(R.string.profile_registered_blood_group, bloodGroup)
                             } else {
-                                "Blood Group Not Specified"
+                                stringResource(R.string.profile_blood_group_not_specified)
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
@@ -346,7 +349,13 @@ fun ProfileScreen(
                     SuggestionChip(
                         onClick = {},
                         label = {
-                            Text(if (isDonorAvailable && isEligibleToDonate) "Active Donor" else "Inactive / Cooldown")
+                            Text(
+                                if (isDonorAvailable && isEligibleToDonate) {
+                                    stringResource(R.string.profile_status_active_donor)
+                                } else {
+                                    stringResource(R.string.profile_status_inactive_cooldown)
+                                }
+                            )
                         },
                         colors = SuggestionChipDefaults.suggestionChipColors(
                             containerColor = if (isDonorAvailable && isEligibleToDonate) {
@@ -384,14 +393,14 @@ fun ProfileScreen(
                     ) {
                         Column {
                             Text(
-                                text = "Donor Tier: ${donorTier.displayName}",
+                                text = stringResource(R.string.profile_donor_tier, donorTier.displayName),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.semantics { heading() }
                             )
                             Text(
-                                text = "Lives Saved: $donationCount",
+                                text = stringResource(R.string.profile_lives_saved_count, donationCount),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -410,7 +419,7 @@ fun ProfileScreen(
                     }
 
                     Text(
-                        text = "* Each confirmed donation counts as 1 life saved.",
+                        text = stringResource(R.string.profile_lives_saved_footnote),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -429,14 +438,14 @@ fun ProfileScreen(
                                 trackColor = MaterialTheme.colorScheme.surfaceVariant
                             )
                             Text(
-                                text = "$donationCount / $nextThreshold donations to reach next tier",
+                                text = stringResource(R.string.profile_donations_to_next_tier, donationCount, nextThreshold),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     } else {
                         Text(
-                            text = "Maximum tier reached! Thank you for your extraordinary lifesaving contributions.",
+                            text = stringResource(R.string.profile_max_tier_reached),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -463,14 +472,14 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Badges & Achievements",
+                            text = stringResource(R.string.profile_section_badges),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.semantics { heading() }
                         )
                         Text(
-                            text = "Donation streak: $donationStreak",
+                            text = stringResource(R.string.profile_donation_streak, donationStreak),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.tertiary
@@ -508,7 +517,7 @@ fun ProfileScreen(
                                         color = if (isEarned) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                                     )
                                     Text(
-                                        text = if (isEarned) "Unlocked" else badge.description,
+                                        text = if (isEarned) stringResource(R.string.profile_badge_unlocked) else badge.description,
                                         style = MaterialTheme.typography.labelSmall,
                                         color = if (isEarned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                         textAlign = TextAlign.Center
@@ -521,7 +530,11 @@ fun ProfileScreen(
                     Button(
                         onClick = {
                             analyticsHelper.logShareImpact()
-                            val shareText = "I've donated blood $donationCount time(s) as a ${donorTier.displayName} donor on BloodConnect. Be a hero too! #BloodConnect"
+                            val shareText = context.getString(
+                                R.string.profile_share_impact_template,
+                                donationCount,
+                                donorTier.displayName
+                            )
                             val sendIntent = Intent().apply {
                                 action = Intent.ACTION_SEND
                                 putExtra(Intent.EXTRA_TEXT, shareText)
@@ -537,11 +550,11 @@ fun ProfileScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
-                            contentDescription = "Share my impact",
+                            contentDescription = stringResource(R.string.profile_cd_share_impact),
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Share my impact")
+                        Text(stringResource(R.string.profile_btn_share_impact))
                     }
 
                     OutlinedButton(
@@ -557,7 +570,7 @@ fun ProfileScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Donation history")
+                        Text(stringResource(R.string.profile_btn_donation_history))
                     }
                 }
             }
@@ -574,7 +587,7 @@ fun ProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Donation Status & Cooldown",
+                        text = stringResource(R.string.profile_section_cooldown),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -583,21 +596,21 @@ fun ProfileScreen(
 
                     if (!isEligibleToDonate && eligibleOnDateStr != null) {
                         Text(
-                            text = "You are currently in a 90-day donation cooldown. Eligible again on $eligibleOnDateStr.",
+                            text = stringResource(R.string.profile_cooldown_active_msg, eligibleOnDateStr),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
                             fontWeight = FontWeight.SemiBold
                         )
                     } else {
                         Text(
-                            text = "You are currently eligible to donate blood.",
+                            text = stringResource(R.string.profile_eligible_msg),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.tertiary,
                             fontWeight = FontWeight.SemiBold
                         )
                         if (!isDonorAvailable) {
                             Text(
-                                text = "You can switch availability back on when your cooldown ends.",
+                                text = stringResource(R.string.profile_cooldown_switch_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -613,7 +626,7 @@ fun ProfileScreen(
                     ) {
                         Icon(imageVector = Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("I donated today")
+                        Text(stringResource(R.string.profile_btn_donated_today))
                     }
                 }
             }
@@ -647,14 +660,22 @@ fun ProfileScreen(
                             )
                             Column {
                                  Text(
-                                     text = if (isDonorAvailable) "Available to Donate" else "Currently Unavailable",
+                                     text = if (isDonorAvailable) {
+                                         stringResource(R.string.profile_available_to_donate)
+                                     } else {
+                                         stringResource(R.string.profile_currently_unavailable)
+                                     },
                                      style = MaterialTheme.typography.titleMedium,
                                      fontWeight = FontWeight.Bold,
                                      color = if (isDonorAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                      modifier = Modifier.semantics { heading() }
                                  )
                                  Text(
-                                     text = if (isDonorAvailable) "Status: Active Donor" else "Status: Inactive / On Cooldown",
+                                     text = if (isDonorAvailable) {
+                                         stringResource(R.string.profile_status_active_label)
+                                     } else {
+                                         stringResource(R.string.profile_status_inactive_label)
+                                     },
                                      style = MaterialTheme.typography.bodySmall,
                                      fontWeight = FontWeight.Medium,
                                      color = if (isDonorAvailable) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
@@ -695,7 +716,7 @@ fun ProfileScreen(
                                 modifier = Modifier.size(24.dp)
                             )
                             Text(
-                                text = "Share my phone with requesters I pledge to",
+                                text = stringResource(R.string.profile_share_phone_toggle),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -719,9 +740,9 @@ fun ProfileScreen(
 
                     Text(
                         text = if (isDonorAvailable) {
-                            "You are currently marked as an active volunteer donor. You will receive emergency blood request notifications."
+                            stringResource(R.string.profile_volunteer_active_desc)
                         } else {
-                            "You are currently marked as unavailable. Requests and emergency alerts are paused while inactive."
+                            stringResource(R.string.profile_volunteer_inactive_desc)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -747,7 +768,7 @@ fun ProfileScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (isEditing) "Edit Profile Details" else "Profile Information",
+                            text = if (isEditing) stringResource(R.string.profile_section_edit_details) else stringResource(R.string.profile_section_info),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -761,11 +782,11 @@ fun ProfileScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Edit,
-                                    contentDescription = "Edit Profile",
+                                    contentDescription = stringResource(R.string.profile_cd_edit_profile),
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Edit")
+                                Text(stringResource(R.string.profile_btn_edit))
                             }
                         }
                     }
@@ -777,8 +798,8 @@ fun ProfileScreen(
                                 editName = it
                                 nameError = null
                             },
-                            label = "Display Name *",
-                            placeholder = "Enter your full name",
+                            label = stringResource(R.string.profile_label_display_name_req),
+                            placeholder = stringResource(R.string.profile_placeholder_display_name),
                             leadingIcon = Icons.Default.Person,
                             isError = nameError != null,
                             errorMessage = nameError
@@ -786,7 +807,7 @@ fun ProfileScreen(
 
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(
-                                text = "Blood Group *",
+                                text = stringResource(R.string.profile_label_blood_group_req),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -818,8 +839,8 @@ fun ProfileScreen(
                                 editCity = it
                                 cityError = null
                             },
-                            label = "City / Locality *",
-                            placeholder = "e.g., Central Sector, Downtown",
+                            label = stringResource(R.string.profile_label_city_req),
+                            placeholder = stringResource(R.string.profile_placeholder_city),
                             leadingIcon = Icons.Default.LocationCity,
                             isError = cityError != null,
                             errorMessage = cityError
@@ -828,8 +849,8 @@ fun ProfileScreen(
                         BloodConnectTextField(
                             value = editContact,
                             onValueChange = { editContact = it },
-                            label = "Contact Info (Email/Phone)",
-                            placeholder = "e.g., user@example.com",
+                            label = stringResource(R.string.profile_label_contact_info),
+                            placeholder = stringResource(R.string.profile_placeholder_contact),
                             leadingIcon = Icons.Default.Email
                         )
 
@@ -838,7 +859,7 @@ fun ProfileScreen(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             BloodConnectOutlinedButton(
-                                text = "Cancel",
+                                text = stringResource(R.string.profile_btn_cancel),
                                 onClick = { cancelEditing() },
                                 modifier = Modifier
                                     .weight(1f)
@@ -846,7 +867,7 @@ fun ProfileScreen(
                             )
 
                             BloodConnectButton(
-                                text = "Save Profile",
+                                text = stringResource(R.string.profile_btn_save_profile),
                                 icon = Icons.Default.Save,
                                 onClick = { validateAndSave() },
                                 modifier = Modifier
@@ -870,8 +891,8 @@ fun ProfileScreen(
                             ) {
                                 ProfileInfoItem(
                                     icon = Icons.Default.Person,
-                                    label = "Full Name",
-                                    value = displayName
+                                    label = stringResource(R.string.profile_label_full_name),
+                                    value = if (displayName != FALLBACK_NAME) displayName else stringResource(R.string.profile_fallback_name)
                                 )
 
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -887,12 +908,16 @@ fun ProfileScreen(
                                     )
                                     Column {
                                         Text(
-                                            text = "Blood Group",
+                                            text = stringResource(R.string.profile_label_blood_group),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         Text(
-                                            text = if (bloodGroup in standardBloodGroups) "$bloodGroup Donor" else "Not Specified",
+                                            text = if (bloodGroup in standardBloodGroups) {
+                                                stringResource(R.string.profile_donor_blood_group, bloodGroup)
+                                            } else {
+                                                stringResource(R.string.profile_not_specified)
+                                            },
                                             style = MaterialTheme.typography.bodyLarge,
                                             fontWeight = FontWeight.SemiBold,
                                             color = MaterialTheme.colorScheme.onSurface
@@ -904,22 +929,22 @@ fun ProfileScreen(
 
                                 ProfileInfoItem(
                                     icon = Icons.Default.LocationCity,
-                                    label = "City / Locality",
-                                    value = cityLocality
+                                    label = stringResource(R.string.profile_label_city),
+                                    value = if (cityLocality != FALLBACK_CITY) cityLocality else stringResource(R.string.profile_fallback_city)
                                 )
 
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                                 ProfileInfoItem(
                                     icon = Icons.Default.Email,
-                                    label = "Contact Info",
-                                    value = contactInfo.ifBlank { "Not provided" }
+                                    label = stringResource(R.string.profile_label_contact),
+                                    value = if (contactInfo != FALLBACK_CONTACT && contactInfo.isNotBlank()) contactInfo else stringResource(R.string.profile_fallback_contact)
                                 )
                             }
                         }
 
                         BloodConnectOutlinedButton(
-                            text = "Edit Profile Information",
+                            text = stringResource(R.string.profile_btn_edit_profile_info),
                             icon = Icons.Default.Edit,
                             onClick = { startEditing() },
                             modifier = Modifier
@@ -944,7 +969,7 @@ fun ProfileScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Blocked users",
+                            text = stringResource(R.string.profile_section_blocked_users),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -957,7 +982,7 @@ fun ProfileScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = targetName.ifBlank { "User $targetUid" },
+                                    text = targetName.ifBlank { stringResource(R.string.profile_user_uid_template, targetUid) },
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -967,7 +992,7 @@ fun ProfileScreen(
                                     modifier = Modifier.minimumInteractiveComponentSize(),
                                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                                 ) {
-                                    Text("Unblock")
+                                    Text(stringResource(R.string.profile_btn_unblock))
                                 }
                             }
                         }
@@ -978,7 +1003,7 @@ fun ProfileScreen(
             // 5. Sign Out Action
             if (onSignOut != null) {
                 BloodConnectOutlinedButton(
-                    text = "Sign Out",
+                    text = stringResource(R.string.profile_btn_sign_out),
                     icon = Icons.AutoMirrored.Filled.ExitToApp,
                     onClick = onSignOut,
                     modifier = Modifier
@@ -1004,16 +1029,16 @@ fun ProfileScreen(
             },
             title = {
                 Text(
-                    text = "Profile Updated",
+                    text = stringResource(R.string.profile_dialog_updated_title),
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
-                Text(text = "Updated profile for $displayName ($bloodGroup) in $cityLocality.")
+                Text(text = stringResource(R.string.profile_dialog_updated_msg, displayName, bloodGroup, cityLocality))
             },
             confirmButton = {
                 TextButton(onClick = { showSuccessDialog = false }) {
-                    Text("OK")
+                    Text(stringResource(R.string.profile_dialog_ok))
                 }
             }
         )
@@ -1022,8 +1047,8 @@ fun ProfileScreen(
     if (showDonatedTodayDialog) {
         AlertDialog(
             onDismissRequest = { showDonatedTodayDialog = false },
-            title = { Text("Confirm Blood Donation") },
-            text = { Text("Did you donate blood today? This will record your donation and start your 90-day cooldown period.") },
+            title = { Text(stringResource(R.string.profile_dialog_confirm_donation_title)) },
+            text = { Text(stringResource(R.string.profile_dialog_confirm_donation_msg)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -1032,7 +1057,7 @@ fun ProfileScreen(
                     },
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Confirm")
+                    Text(stringResource(R.string.profile_dialog_confirm))
                 }
             },
             dismissButton = {
@@ -1040,7 +1065,7 @@ fun ProfileScreen(
                     onClick = { showDonatedTodayDialog = false },
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.profile_btn_cancel))
                 }
             }
         )

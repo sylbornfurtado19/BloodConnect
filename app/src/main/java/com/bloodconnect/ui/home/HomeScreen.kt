@@ -50,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -57,7 +58,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bloodconnect.R
 import com.bloodconnect.utils.dialNumber
+
 import com.bloodconnect.ui.components.BloodConnectOutlinedButton
 import com.bloodconnect.ui.components.BloodGroupBadge
 import com.bloodconnect.ui.theme.BloodConnectTheme
@@ -124,7 +127,7 @@ fun HomeScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "BloodConnect",
+                        text = stringResource(R.string.home_title),
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -135,7 +138,7 @@ fun HomeScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "My Profile",
+                            contentDescription = stringResource(R.string.home_cd_profile),
                             tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(28.dp)
                         )
@@ -171,14 +174,14 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "Welcome to BloodConnect",
+                        text = stringResource(R.string.home_welcome_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.semantics { heading() }
                     )
                     Text(
-                        text = "Every donation can save up to three lives. Discover available donors or broadcast emergency blood requests.",
+                        text = stringResource(R.string.home_welcome_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -188,7 +191,7 @@ fun HomeScreen(
             // B. Main Actions - Find Donors & Request Blood & Nearby Map
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "Quick Actions",
+                    text = stringResource(R.string.home_section_quick_actions),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -221,13 +224,13 @@ fun HomeScreen(
                                 modifier = Modifier.size(32.dp)
                             )
                             Text(
-                                text = "Find Donors",
+                                text = stringResource(R.string.home_card_find_donors),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Text(
-                                text = "Search donors by group & radius",
+                                text = stringResource(R.string.home_card_find_donors_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                             )
@@ -256,13 +259,13 @@ fun HomeScreen(
                                 modifier = Modifier.size(32.dp)
                             )
                             Text(
-                                text = "Request Blood",
+                                text = stringResource(R.string.home_card_request_blood),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "Broadcast emergency blood needs",
+                                text = stringResource(R.string.home_card_request_blood_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
                             )
@@ -305,13 +308,13 @@ fun HomeScreen(
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Nearby Map",
+                                    text = stringResource(R.string.home_card_nearby_map),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "View donors & requests",
+                                    text = stringResource(R.string.home_card_nearby_map_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -350,13 +353,13 @@ fun HomeScreen(
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "My Requests",
+                                    text = stringResource(R.string.home_card_my_requests),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Manage your requests",
+                                    text = stringResource(R.string.home_card_my_requests_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -400,13 +403,13 @@ fun HomeScreen(
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Blood drives",
+                                    text = stringResource(R.string.home_card_blood_drives),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Upcoming donation camps",
+                                    text = stringResource(R.string.home_card_blood_drives_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -445,13 +448,13 @@ fun HomeScreen(
                             }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Blood banks",
+                                    text = stringResource(R.string.home_card_blood_banks),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "Check stock & contact",
+                                    text = stringResource(R.string.home_card_blood_banks_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -491,13 +494,13 @@ fun HomeScreen(
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Demand trends",
+                                text = stringResource(R.string.home_card_demand_trends),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "14-day blood demand insights",
+                                text = stringResource(R.string.home_card_demand_trends_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -536,13 +539,13 @@ fun HomeScreen(
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Ask the assistant",
+                                text = stringResource(R.string.home_card_ask_assistant),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Instant answers on eligibility & prep",
+                                text = stringResource(R.string.home_card_ask_assistant_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -559,14 +562,14 @@ fun HomeScreen(
                         .padding(vertical = 4.dp)
                 ) {
                     Text(
-                        text = "Blood Group Shortcuts",
+                        text = stringResource(R.string.home_section_blood_group_shortcuts),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.semantics { heading() }
                     )
                     Text(
-                        text = "Tap any group to search donors",
+                        text = stringResource(R.string.home_blood_group_shortcuts_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -610,6 +613,10 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            val ambulanceCd = stringResource(R.string.home_cd_call_ambulance)
+            val helplineCd = stringResource(R.string.home_cd_call_helpline)
+            val emergencyCd = stringResource(R.string.home_cd_call_emergency)
+
             // D. Emergency Numbers Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -633,7 +640,7 @@ fun HomeScreen(
                             modifier = Modifier.size(24.dp)
                         )
                         Text(
-                            text = "Emergency numbers",
+                            text = stringResource(R.string.home_section_emergency_numbers),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -648,7 +655,7 @@ fun HomeScreen(
                             .fillMaxWidth()
                             .heightIn(min = 48.dp)
                             .minimumInteractiveComponentSize()
-                            .semantics { contentDescription = "Call ambulance, 108" },
+                            .semantics { contentDescription = ambulanceCd },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
                             contentColor = MaterialTheme.colorScheme.onError
@@ -661,11 +668,11 @@ fun HomeScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Phone,
-                                contentDescription = "Call ambulance, 108",
+                                contentDescription = ambulanceCd,
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
-                                text = "Ambulance 108",
+                                text = stringResource(R.string.home_emergency_ambulance),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -679,7 +686,7 @@ fun HomeScreen(
                             .fillMaxWidth()
                             .heightIn(min = 48.dp)
                             .minimumInteractiveComponentSize()
-                            .semantics { contentDescription = "Call medical helpline, 102" },
+                            .semantics { contentDescription = helplineCd },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
                             contentColor = MaterialTheme.colorScheme.onError
@@ -692,11 +699,11 @@ fun HomeScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Phone,
-                                contentDescription = "Call medical helpline, 102",
+                                contentDescription = helplineCd,
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
-                                text = "Medical helpline 102",
+                                text = stringResource(R.string.home_emergency_helpline),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -710,7 +717,7 @@ fun HomeScreen(
                             .fillMaxWidth()
                             .heightIn(min = 48.dp)
                             .minimumInteractiveComponentSize()
-                            .semantics { contentDescription = "Call emergency, 112" },
+                            .semantics { contentDescription = emergencyCd },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
                             contentColor = MaterialTheme.colorScheme.onError
@@ -723,11 +730,11 @@ fun HomeScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Phone,
-                                contentDescription = "Call emergency, 112",
+                                contentDescription = emergencyCd,
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
-                                text = "Emergency 112",
+                                text = stringResource(R.string.home_emergency_112),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -740,7 +747,7 @@ fun HomeScreen(
 
             // E. Sign-Out Action
             BloodConnectOutlinedButton(
-                text = "Sign Out",
+                text = stringResource(R.string.home_btn_sign_out),
                 icon = Icons.AutoMirrored.Filled.ExitToApp,
                 onClick = onSignOut,
                 modifier = Modifier
