@@ -32,17 +32,20 @@ import com.bloodconnect.ui.theme.BloodConnectTheme
 
 /**
  * Reusable empty state display with circular coral-tinted icon container,
- * clear title, supporting message, and optional action button.
+ * clear title, optional supporting message/subtitle, and optional action button.
  */
 @Composable
 fun EmptyState(
     title: String,
-    description: String,
+    description: String? = null,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     icon: ImageVector? = null,
     actionLabel: String? = null,
     onActionClick: (() -> Unit)? = null
 ) {
+    val effectiveSubtitle = subtitle?.takeIf { it.isNotBlank() } ?: description?.takeIf { it.isNotBlank() }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -67,6 +70,7 @@ fun EmptyState(
             }
             Spacer(modifier = Modifier.height(18.dp))
         }
+
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
@@ -74,18 +78,23 @@ fun EmptyState(
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-        if (!actionLabel.isNullOrBlank() && onActionClick != null) {
+
+        if (!effectiveSubtitle.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = effectiveSubtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
+
+        val hasAction = !actionLabel.isNullOrBlank() && onActionClick != null
+        if (hasAction) {
             Spacer(modifier = Modifier.height(20.dp))
             OutlinedButton(
-                onClick = onActionClick,
+                onClick = onActionClick!!,
                 shape = RoundedCornerShape(22.dp),
                 border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
                 colors = ButtonDefaults.outlinedButtonColors(
