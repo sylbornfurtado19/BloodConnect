@@ -88,6 +88,7 @@ dependencies {
     implementation(libs.play.services.auth)
     implementation(libs.maps.compose)
     implementation(libs.play.services.maps)
+    implementation(libs.android.maps.utils)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.accompanist.permissions)
     implementation(libs.androidx.work.runtime.ktx)

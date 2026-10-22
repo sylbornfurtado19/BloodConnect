@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.Event
@@ -79,6 +80,7 @@ fun HomeScreen(
     onNavigateToDonorMap: () -> Unit = {},
     onNavigateToBloodDrives: () -> Unit = {},
     onNavigateToBloodBanks: () -> Unit = {},
+    onNavigateToDemandTrends: () -> Unit = {},
     modifier: Modifier = Modifier,
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -437,6 +439,49 @@ fun HomeScreen(
                         }
                     }
                 }
+
+                // Action 7: Demand trends
+                OutlinedCard(
+                    onClick = onNavigateToDemandTrends,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.tertiaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Demand trends",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "14-day blood demand insights",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
 
             // C. Blood Group Shortcuts
@@ -631,7 +676,8 @@ private fun HomeScreenPreview() {
             onNavigateToMyRequests = {},
             onNavigateToDonorMap = {},
             onNavigateToBloodDrives = {},
-            onNavigateToBloodBanks = {}
+            onNavigateToBloodBanks = {},
+            onNavigateToDemandTrends = {}
         )
     }
 }

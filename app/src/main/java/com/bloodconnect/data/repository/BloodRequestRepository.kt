@@ -86,6 +86,33 @@ class BloodRequestRepository @Inject constructor(
     }
 
     /**
+     * Retrieves recent blood requests across all statuses ordered by timestamp descending (limit 500),
+     * filtered in memory to createdAt >= now - days to avoid composite index requirements.
+     */
+    suspend fun getRecentRequests(days: Int = 30): Result<List<BloodRequest>> {
+        return try {
+            val now = System.currentTimeMillis()
+            val cutoff = now - (days.toLong() * 24L * 60L * 60L * 1000L)
+            val snapshot = requestsCollection
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(500)
+                .get()
+                .await()
+
+            val recentList = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(BloodRequest::class.java)?.let { req ->
+                    if (req.id.isBlank()) req.id = doc.id
+                    req.withCanonicalStatus().withCanonicalUrgency()
+                }
+            }.filter { it.createdAt >= cutoff }
+
+            Result.success(recentList)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Observes active blood requests using a single-field status filter.
      * Filters for active requests (Pending or Partially Fulfilled and not expired).
      */
