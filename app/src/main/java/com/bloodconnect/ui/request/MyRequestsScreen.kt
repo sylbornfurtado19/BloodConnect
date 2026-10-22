@@ -2,6 +2,8 @@ package com.bloodconnect.ui.request
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +17,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -24,10 +28,9 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Directions
-import com.bloodconnect.utils.IntentHelpers
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
@@ -84,6 +87,7 @@ import com.bloodconnect.ui.components.EmptyState
 import com.bloodconnect.ui.components.ReportDialog
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
+import com.bloodconnect.utils.IntentHelpers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -157,7 +161,8 @@ fun MyRequestsScreen(
                 title = {
                     Text(
                         text = "My Requests",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
@@ -165,17 +170,18 @@ fun MyRequestsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onPrimary
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { innerPadding ->
         Column(
@@ -186,30 +192,70 @@ fun MyRequestsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = "Request History",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "Review your past emergency blood requests and manage their statuses.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
+            // Hero header card
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surface
                 ),
-                shape = RoundedCornerShape(14.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(50.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Inbox,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text(
+                            text = "Request History",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Review your past emergency blood broadcasts and manage donor responses.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Filters Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = "Filter by Status",
@@ -225,19 +271,32 @@ fun MyRequestsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         statusFilterOptions.forEach { filterOption ->
+                            val isSelected = selectedFilter == filterOption
                             FilterChip(
-                                selected = selectedFilter == filterOption,
+                                selected = isSelected,
                                 onClick = { selectedFilter = filterOption },
-                                label = { Text(filterOption) },
+                                label = {
+                                    Text(
+                                        text = filterOption,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                },
+                                shape = RoundedCornerShape(12.dp),
                                 colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     selectedContainerColor = MaterialTheme.colorScheme.primary,
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                                )
+                                ),
+                                border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                             )
                         }
                     }
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    )
 
                     Text(
                         text = "Filter by Urgency",
@@ -253,20 +312,31 @@ fun MyRequestsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         urgencyFilterOptions.forEach { urgencyOption ->
+                            val isSelected = selectedUrgencyFilter == urgencyOption
                             FilterChip(
-                                selected = selectedUrgencyFilter == urgencyOption,
+                                selected = isSelected,
                                 onClick = { selectedUrgencyFilter = urgencyOption },
-                                label = { Text(urgencyOption) },
+                                label = {
+                                    Text(
+                                        text = urgencyOption,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                },
+                                shape = RoundedCornerShape(12.dp),
                                 colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     selectedContainerColor = MaterialTheme.colorScheme.secondary,
                                     selectedLabelColor = MaterialTheme.colorScheme.onSecondary
-                                )
+                                ),
+                                border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                             )
                         }
                     }
                 }
             }
 
+            // Results Section
             SectionHeader(
                 title = "My Requests",
                 subtitle = if (displayedRequests.isNotEmpty()) {
@@ -284,8 +354,12 @@ fun MyRequestsScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Loading your requests...", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Loading your requests...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             } else if (displayedRequests.isEmpty()) {
                 EmptyState(
@@ -296,7 +370,7 @@ fun MyRequestsScreen(
                     onActionClick = { viewModel.loadMyRequests() }
                 )
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     displayedRequests.forEach { request ->
                         MyRequestCard(
                             entry = request,
@@ -309,7 +383,7 @@ fun MyRequestsScreen(
 
             if (errorMessage != null) {
                 Text(
-                    text = errorMessage!!,
+                    text = errorMessage,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -331,13 +405,25 @@ fun MyRequestsScreen(
 
         AlertDialog(
             onDismissRequest = { selectedRequestForDetails = null },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
             icon = {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(36.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
             },
             title = {
                 Text(
@@ -353,15 +439,16 @@ fun MyRequestsScreen(
                 ) {
                     OutlinedCard(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.outlinedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
+                            containerColor = MaterialTheme.colorScheme.background
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(14.dp),
+                                .padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Row(
@@ -371,17 +458,18 @@ fun MyRequestsScreen(
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     BloodGroupBadge(
                                         bloodGroup = req.bloodGroup,
-                                        size = 40.dp
+                                        size = 44.dp
                                     )
                                     Column {
                                         Text(
                                             text = "${req.bloodGroup} Blood Request",
                                             style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
                                             text = "${req.unitsReceived} of ${req.unitsNeeded} Unit(s) Received",
@@ -395,7 +483,7 @@ fun MyRequestsScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     IconButton(
                                         onClick = { IntentHelpers.shareRequest(context, req) },
-                                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                        modifier = Modifier.sizeIn(minWidth = 44.dp, minHeight = 44.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Share,
@@ -406,7 +494,12 @@ fun MyRequestsScreen(
 
                                     SuggestionChip(
                                         onClick = {},
-                                        label = { Text(effectiveStatus.displayName) },
+                                        label = {
+                                            Text(
+                                                text = effectiveStatus.displayName,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        },
                                         colors = SuggestionChipDefaults.suggestionChipColors(
                                             containerColor = when (effectiveStatus) {
                                                 RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
@@ -428,7 +521,10 @@ fun MyRequestsScreen(
                                 }
                             }
 
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
 
                             RequestDetailRow(label = "Request ID", value = req.id.ifBlank { req.requestId })
                             RequestDetailRow(label = "Date & Time", value = dateFormatted)
@@ -461,15 +557,15 @@ fun MyRequestsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 48.dp),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Directions,
                             contentDescription = "Get directions to hospital",
                             modifier = Modifier.size(18.dp)
                         )
-                        Spacer(modifier = Modifier.size(6.dp))
-                        Text("Directions")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Directions", fontWeight = FontWeight.Medium)
                     }
 
                     // Pledges List with ETA
@@ -478,19 +574,20 @@ fun MyRequestsScreen(
                             text = "Pledged Donors (${pledges.size})",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
 
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             pledges.forEach { pledge ->
                                 OutlinedCard(
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(10.dp)
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                                 ) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(10.dp),
+                                            .padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
@@ -498,7 +595,8 @@ fun MyRequestsScreen(
                                             Text(
                                                 text = pledge.donorName,
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Bold
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
                                             )
                                             val etaText = pledge.etaMinutes?.let { " · ETA: ${if (it < 60) "$it min" else "${it / 60}h"}" } ?: ""
                                             Text(
@@ -518,7 +616,7 @@ fun MyRequestsScreen(
                                                         val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${pledge.phone}"))
                                                         context.startActivity(dialIntent)
                                                     },
-                                                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                                    modifier = Modifier.sizeIn(minWidth = 44.dp, minHeight = 44.dp)
                                                 ) {
                                                     Icon(imageVector = Icons.Default.Call, contentDescription = "Call donor", tint = MaterialTheme.colorScheme.primary)
                                                 }
@@ -529,9 +627,9 @@ fun MyRequestsScreen(
                                                     onClick = {
                                                         viewModel.markPledgeDonated(req.id.ifBlank { req.requestId }, pledge.donorId)
                                                     },
-                                                    modifier = Modifier.sizeIn(minHeight = 48.dp)
+                                                    modifier = Modifier.sizeIn(minHeight = 44.dp)
                                                 ) {
-                                                    Text("Mark donated", style = MaterialTheme.typography.labelSmall)
+                                                    Text("Mark donated", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
                                                 }
                                             }
 
@@ -539,7 +637,7 @@ fun MyRequestsScreen(
                                             Box {
                                                 IconButton(
                                                     onClick = { showPledgeMenu = true },
-                                                    modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                                                    modifier = Modifier.sizeIn(minWidth = 44.dp, minHeight = 44.dp)
                                                 ) {
                                                     Icon(
                                                         imageVector = Icons.Default.MoreVert,
@@ -595,11 +693,11 @@ fun MyRequestsScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .heightIn(min = 48.dp),
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(12.dp)
                             ) {
                                 Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.size(4.dp))
-                                Text("Mark Fulfilled")
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Mark Fulfilled", fontWeight = FontWeight.Medium)
                             }
 
                             OutlinedButton(
@@ -609,12 +707,12 @@ fun MyRequestsScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .heightIn(min = 48.dp),
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                             ) {
                                 Icon(imageVector = Icons.Default.Cancel, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.size(4.dp))
-                                Text("Cancel")
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Cancel", fontWeight = FontWeight.Medium)
                             }
                         }
                     }
@@ -624,9 +722,10 @@ fun MyRequestsScreen(
                 Button(
                     onClick = { selectedRequestForDetails = null },
                     modifier = Modifier.heightIn(min = 48.dp),
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Close")
+                    Text("Close", fontWeight = FontWeight.SemiBold)
                 }
             }
         )
@@ -636,8 +735,22 @@ fun MyRequestsScreen(
         val req = selectedRequestForDetails!!
         AlertDialog(
             onDismissRequest = { showCancelConfirmationDialog = false },
-            title = { Text("Cancel this request?") },
-            text = { Text("Are you sure you want to cancel this emergency blood request? This action cannot be undone.") },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = {
+                Text(
+                    text = "Cancel this request?",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to cancel this emergency blood request? This action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
             confirmButton = {
                 Button(
                     onClick = {
@@ -646,15 +759,15 @@ fun MyRequestsScreen(
                         viewModel.updateStatus(req.id.ifBlank { req.requestId }, RequestStatus.CANCELLED)
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Yes, cancel")
+                    Text("Yes, cancel", fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = {
                 OutlinedButton(
                     onClick = { showCancelConfirmationDialog = false },
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Keep it")
                 }
@@ -710,45 +823,53 @@ private fun MyRequestCard(
         (entry.unitsReceived.toFloat() / entry.unitsNeeded.toFloat()).coerceIn(0f, 1f)
     } else 0f
 
-    OutlinedCard(
+    Card(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.outlinedCardColors(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 BloodGroupBadge(
                     bloodGroup = entry.bloodGroup,
-                    size = 46.dp
+                    size = 48.dp
                 )
 
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(
                         text = entry.hospital,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
                     if (entry.verified) {
                         SuggestionChip(
                             onClick = onClick,
-                            label = { Text("Verified", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelSmall) },
+                            label = {
+                                Text(
+                                    text = "Verified",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
                             colors = SuggestionChipDefaults.suggestionChipColors(
                                 containerColor = Color(0xFFE8F5E9),
                                 labelColor = Color(0xFF2E7D32)
@@ -780,12 +901,12 @@ private fun MyRequestCard(
                         )
                     }
 
-                    // Units Received & Progress Bar (1F)
+                    // Units Received & Progress Bar
                     Text(
                         text = "${entry.unitsReceived} of ${entry.unitsNeeded} units received",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.SemiBold
                     )
 
                     LinearProgressIndicator(
@@ -803,7 +924,12 @@ private fun MyRequestCard(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.Favorite, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(14.dp))
+                            Icon(
+                                imageVector = Icons.Default.Favorite,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(14.dp)
+                            )
                             val etaInfo = if (shortestEtaStr != null) " ($shortestEtaStr)" else ""
                             Text(
                                 text = "$activePledgeCount donor(s) on the way$etaInfo",
@@ -832,7 +958,7 @@ private fun MyRequestCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = { IntentHelpers.shareRequest(context, entry) },
-                        modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                        modifier = Modifier.sizeIn(minWidth = 44.dp, minHeight = 44.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
@@ -843,7 +969,12 @@ private fun MyRequestCard(
 
                     SuggestionChip(
                         onClick = onClick,
-                        label = { Text(effectiveStatus.displayName) },
+                        label = {
+                            Text(
+                                text = effectiveStatus.displayName,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        },
                         colors = SuggestionChipDefaults.suggestionChipColors(
                             containerColor = when (effectiveStatus) {
                                 RequestStatus.PENDING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
@@ -864,6 +995,8 @@ private fun MyRequestCard(
                     )
                 }
             }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -888,7 +1021,7 @@ private fun MyRequestCard(
                 }
 
                 Text(
-                    text = "Tap to view & manage",
+                    text = "Tap to view & manage →",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
