@@ -86,6 +86,31 @@ object BloodRequestValidator {
     }
 
     /**
+     * Validates contact phone number.
+     * Enforces that the phone number contains at least 10 digits and only valid characters
+     * (digits with an optional leading '+', allowing optional formatting like spaces, dashes, or parentheses).
+     *
+     * @param phone Input phone number string.
+     * @return User-readable error message if invalid, or null if valid.
+     */
+    fun validateContactPhone(phone: String?): String? {
+        if (phone.isNullOrBlank()) {
+            return "Contact phone number is required"
+        }
+        val trimmed = phone.trim()
+        val cleaned = trimmed.filterNot { it == ' ' || it == '-' || it == '(' || it == ')' }
+        val hasInvalidChars = cleaned.any { !it.isDigit() && it != '+' } || cleaned.lastIndexOf('+') > 0
+        if (hasInvalidChars) {
+            return "Phone number can only contain digits with an optional leading '+'"
+        }
+        val digitsCount = cleaned.count { it.isDigit() }
+        if (digitsCount < 10) {
+            return "Phone number must contain at least 10 digits"
+        }
+        return null
+    }
+
+    /**
      * Validates hospital or ward contact number.
      * Required; after removing spaces, "-", "(" and ")" it must be 7 to 15 digits with an optional leading "+".
      *
