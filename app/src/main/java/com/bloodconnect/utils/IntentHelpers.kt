@@ -94,12 +94,15 @@ fun openDirections(
  * Top-level helper function to dial a phone number via [Intent.ACTION_DIAL].
  * Pre-fills the system dialer with `tel:<Uri.encode(number)>` without requiring
  * CALL_PHONE runtime permission.
+ *
+ * @return True if the dial intent launched successfully, false on [ActivityNotFoundException],
+ * [SecurityException], or other unexpected failures.
  */
 fun dialNumber(
     context: Context,
     number: String
-) {
-    try {
+): Boolean {
+    return try {
         val uri = Uri.parse("tel:${Uri.encode(number)}")
         val dialIntent = Intent(Intent.ACTION_DIAL, uri).apply {
             if (context !is Activity) {
@@ -107,8 +110,13 @@ fun dialNumber(
             }
         }
         context.startActivity(dialIntent)
+        true
+    } catch (_: ActivityNotFoundException) {
+        false
+    } catch (_: SecurityException) {
+        false
     } catch (_: Exception) {
-        // Safe fail - never crash
+        false
     }
 }
 
@@ -166,8 +174,8 @@ object IntentHelpers {
         )
     }
 
-    fun dialNumber(context: Context, number: String) {
-        com.bloodconnect.utils.dialNumber(context, number)
+    fun dialNumber(context: Context, number: String): Boolean {
+        return com.bloodconnect.utils.dialNumber(context, number)
     }
 }
 
