@@ -8,6 +8,7 @@ if (localPropertiesFile.exists()) {
 
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
@@ -49,6 +50,19 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.21")
+        force("org.jetbrains.kotlinx:kotlinx-metadata-jvm:2.1.0")
+    }
+}
+
 dependencies {
     // AndroidX & Core
     implementation(libs.androidx.core.ktx)
@@ -71,6 +85,8 @@ dependencies {
     // Hilt Dependency Injection
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    ksp("org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.21")
+    ksp("org.jetbrains.kotlinx:kotlinx-metadata-jvm:2.1.0")
     implementation(libs.androidx.hilt.navigation.compose)
 
     // Firebase Foundation
@@ -86,7 +102,9 @@ dependencies {
     // Maps & Location & Utils
     implementation(libs.play.services.location)
     implementation(libs.play.services.auth)
-    implementation(libs.maps.compose)
+    implementation(libs.maps.compose) {
+        exclude(group = "com.google.maps.android", module = "maps-ktx")
+    }
     implementation(libs.play.services.maps)
     implementation(libs.android.maps.utils)
     implementation(libs.kotlinx.coroutines.play.services)
