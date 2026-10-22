@@ -59,7 +59,7 @@ kotlin {
 configurations.all {
     resolutionStrategy {
         force("org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.21")
-        force("org.jetbrains.kotlinx:kotlinx-metadata-jvm:2.1.0")
+        force("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.9.0")
     }
 }
 
@@ -86,7 +86,7 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     ksp("org.jetbrains.kotlin:kotlin-metadata-jvm:2.4.21")
-    ksp("org.jetbrains.kotlinx:kotlinx-metadata-jvm:2.1.0")
+    ksp("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.9.0")
     implementation(libs.androidx.hilt.navigation.compose)
 
     // Firebase Foundation
