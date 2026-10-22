@@ -1,6 +1,7 @@
 package com.bloodconnect.ui.profile
 
 import android.content.Intent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +35,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.VolunteerActivism
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -237,7 +240,8 @@ fun ProfileScreen(
                 title = {
                     Text(
                         text = stringResource(R.string.profile_title),
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
@@ -248,17 +252,18 @@ fun ProfileScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.profile_cd_back),
-                            tint = MaterialTheme.colorScheme.onPrimary
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { innerPadding ->
         Column(
@@ -266,8 +271,8 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (viewModel.isLoading) {
                 Box(
@@ -287,14 +292,15 @@ fun ProfileScreen(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
+                        .padding(22.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     val initials = displayName
                         .split(" ")
@@ -306,16 +312,16 @@ fun ProfileScreen(
 
                     Box(
                         modifier = Modifier
-                            .size(76.dp)
+                            .size(80.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = initials,
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
 
@@ -323,7 +329,8 @@ fun ProfileScreen(
                         text = if (displayName != FALLBACK_NAME) displayName else stringResource(R.string.profile_fallback_name),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
                     )
 
                     Row(
@@ -332,7 +339,7 @@ fun ProfileScreen(
                     ) {
                         BloodGroupBadge(
                             bloodGroup = if (bloodGroup in standardBloodGroups) bloodGroup else "--",
-                            size = 36.dp
+                            size = 38.dp
                         )
                         Text(
                             text = if (bloodGroup in standardBloodGroups) {
@@ -350,11 +357,20 @@ fun ProfileScreen(
                         onClick = {},
                         label = {
                             Text(
-                                if (isDonorAvailable && isEligibleToDonate) {
+                                text = if (isDonorAvailable && isEligibleToDonate) {
                                     stringResource(R.string.profile_status_active_donor)
                                 } else {
                                     stringResource(R.string.profile_status_inactive_cooldown)
-                                }
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = if (isDonorAvailable && isEligibleToDonate) Icons.Default.CheckCircle else Icons.Default.Info,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
                             )
                         },
                         colors = SuggestionChipDefaults.suggestionChipColors(
@@ -367,9 +383,15 @@ fun ProfileScreen(
                                 MaterialTheme.colorScheme.tertiary
                             } else {
                                 MaterialTheme.colorScheme.error
+                            },
+                            iconContentColor = if (isDonorAvailable && isEligibleToDonate) {
+                                MaterialTheme.colorScheme.tertiary
+                            } else {
+                                MaterialTheme.colorScheme.error
                             }
                         ),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        border = null
                     )
                 }
             }
@@ -378,13 +400,15 @@ fun ProfileScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                    containerColor = MaterialTheme.colorScheme.surface
                 ),
-                shape = RoundedCornerShape(16.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -399,6 +423,7 @@ fun ProfileScreen(
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.semantics { heading() }
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = stringResource(R.string.profile_lives_saved_count, donationCount),
                                 style = MaterialTheme.typography.bodyLarge,
@@ -409,12 +434,19 @@ fun ProfileScreen(
 
                         SuggestionChip(
                             onClick = {},
-                            label = { Text(donorTier.displayName) },
+                            label = {
+                                Text(
+                                    text = donorTier.displayName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            },
                             colors = SuggestionChipDefaults.suggestionChipColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 labelColor = MaterialTheme.colorScheme.onPrimary
                             ),
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(8.dp),
+                            border = null
                         )
                     }
 
@@ -427,7 +459,7 @@ fun ProfileScreen(
                     if (nextThreshold != null) {
                         val prevMin = donorTier.minDonations
                         val progress = (donationCount - prevMin).toFloat() / (nextThreshold - prevMin).toFloat()
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             LinearProgressIndicator(
                                 progress = { progress.coerceIn(0f, 1f) },
                                 modifier = Modifier
@@ -435,7 +467,7 @@ fun ProfileScreen(
                                     .height(8.dp)
                                     .clip(RoundedCornerShape(4.dp)),
                                 color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                             )
                             Text(
                                 text = stringResource(R.string.profile_donations_to_next_tier, donationCount, nextThreshold),
@@ -458,13 +490,15 @@ fun ProfileScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surface
                 ),
-                shape = RoundedCornerShape(16.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -478,11 +512,21 @@ fun ProfileScreen(
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.semantics { heading() }
                         )
-                        Text(
-                            text = stringResource(R.string.profile_donation_streak, donationStreak),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.tertiary
+                        SuggestionChip(
+                            onClick = {},
+                            label = {
+                                Text(
+                                    text = stringResource(R.string.profile_donation_streak, donationStreak),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
+                                labelColor = MaterialTheme.colorScheme.tertiary
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            border = null
                         )
                     }
 
@@ -496,15 +540,19 @@ fun ProfileScreen(
                             val isEarned = badge in earnedBadges
                             OutlinedCard(
                                 modifier = Modifier.width(130.dp),
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(14.dp),
                                 colors = CardDefaults.outlinedCardColors(
-                                    containerColor = if (isEarned) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    containerColor = if (isEarned) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
+                                ),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isEarned) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                                 )
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(10.dp),
+                                    modifier = Modifier.padding(12.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Text(
                                         text = badge.emoji,
@@ -514,7 +562,8 @@ fun ProfileScreen(
                                         text = badge.displayName,
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isEarned) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                        color = if (isEarned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        textAlign = TextAlign.Center
                                     )
                                     Text(
                                         text = if (isEarned) stringResource(R.string.profile_badge_unlocked) else badge.description,
@@ -527,7 +576,9 @@ fun ProfileScreen(
                         }
                     }
 
-                    Button(
+                    BloodConnectButton(
+                        text = stringResource(R.string.profile_btn_share_impact),
+                        icon = Icons.Default.Share,
                         onClick = {
                             analyticsHelper.logShareImpact()
                             val shareText = context.getString(
@@ -543,48 +594,31 @@ fun ProfileScreen(
                             val shareIntent = Intent.createChooser(sendIntent, null)
                             context.startActivity(shareIntent)
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .minimumInteractiveComponentSize(),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = stringResource(R.string.profile_cd_share_impact),
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.profile_btn_share_impact))
-                    }
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                    OutlinedButton(
+                    BloodConnectOutlinedButton(
+                        text = stringResource(R.string.profile_btn_donation_history),
+                        icon = Icons.Default.History,
                         onClick = onNavigateToDonationHistory,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .minimumInteractiveComponentSize(),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.profile_btn_donation_history))
-                    }
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
             // 2. Donation Cooldown & Eligibility Action Card
-            OutlinedCard(
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.profile_section_cooldown),
@@ -595,19 +629,41 @@ fun ProfileScreen(
                     )
 
                     if (!isEligibleToDonate && eligibleOnDateStr != null) {
-                        Text(
-                            text = stringResource(R.string.profile_cooldown_active_msg, eligibleOnDateStr),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.profile_cooldown_active_msg, eligibleOnDateStr),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     } else {
-                        Text(
-                            text = stringResource(R.string.profile_eligible_msg),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.tertiary,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.profile_eligible_msg),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                         if (!isDonorAvailable) {
                             Text(
                                 text = stringResource(R.string.profile_cooldown_switch_hint),
@@ -617,31 +673,30 @@ fun ProfileScreen(
                         }
                     }
 
-                    Button(
+                    BloodConnectOutlinedButton(
+                        text = stringResource(R.string.profile_btn_donated_today),
+                        icon = Icons.Default.Favorite,
                         onClick = { showDonatedTodayDialog = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .minimumInteractiveComponentSize(),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.profile_btn_donated_today))
-                    }
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
             // 3. Donor Availability & Privacy Settings Card (3G)
-            OutlinedCard(
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
+                    // Availability Switch
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -652,34 +707,45 @@ fun ProfileScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(
-                                imageVector = if (isDonorAvailable) Icons.Default.Favorite else Icons.Default.Info,
-                                contentDescription = null,
-                                tint = if (isDonorAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                                modifier = Modifier.size(28.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isDonorAvailable) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                        else MaterialTheme.colorScheme.surfaceVariant
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isDonorAvailable) Icons.Default.Favorite else Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = if (isDonorAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                             Column {
-                                 Text(
-                                     text = if (isDonorAvailable) {
-                                         stringResource(R.string.profile_available_to_donate)
-                                     } else {
-                                         stringResource(R.string.profile_currently_unavailable)
-                                     },
-                                     style = MaterialTheme.typography.titleMedium,
-                                     fontWeight = FontWeight.Bold,
-                                     color = if (isDonorAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                     modifier = Modifier.semantics { heading() }
-                                 )
-                                 Text(
-                                     text = if (isDonorAvailable) {
-                                         stringResource(R.string.profile_status_active_label)
-                                     } else {
-                                         stringResource(R.string.profile_status_inactive_label)
-                                     },
-                                     style = MaterialTheme.typography.bodySmall,
-                                     fontWeight = FontWeight.Medium,
-                                     color = if (isDonorAvailable) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
-                                 )
+                                Text(
+                                    text = if (isDonorAvailable) {
+                                        stringResource(R.string.profile_available_to_donate)
+                                    } else {
+                                        stringResource(R.string.profile_currently_unavailable)
+                                    },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDonorAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.semantics { heading() }
+                                )
+                                Text(
+                                    text = if (isDonorAvailable) {
+                                        stringResource(R.string.profile_status_active_label)
+                                    } else {
+                                        stringResource(R.string.profile_status_inactive_label)
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (isDonorAvailable) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+                                )
                             }
                         }
 
@@ -696,7 +762,7 @@ fun ProfileScreen(
                         )
                     }
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                     // Phone Privacy Switch (3G)
                     Row(
@@ -709,12 +775,20 @@ fun ProfileScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Phone,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Phone,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                             Text(
                                 text = stringResource(R.string.profile_share_phone_toggle),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -736,7 +810,7 @@ fun ProfileScreen(
                         )
                     }
 
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                     Text(
                         text = if (isDonorAvailable) {
@@ -754,12 +828,14 @@ fun ProfileScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surface
                 ),
-                shape = RoundedCornerShape(16.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Row(
@@ -783,10 +859,15 @@ fun ProfileScreen(
                                 Icon(
                                     imageVector = Icons.Default.Edit,
                                     contentDescription = stringResource(R.string.profile_cd_edit_profile),
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(stringResource(R.string.profile_btn_edit))
+                                Text(
+                                    text = stringResource(R.string.profile_btn_edit),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                         }
                     }
@@ -805,7 +886,7 @@ fun ProfileScreen(
                             errorMessage = nameError
                         )
 
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
                                 text = stringResource(R.string.profile_label_blood_group_req),
                                 style = MaterialTheme.typography.labelLarge,
@@ -823,11 +904,18 @@ fun ProfileScreen(
                                     FilterChip(
                                         selected = editBloodGroup == group,
                                         onClick = { editBloodGroup = group },
-                                        label = { Text(group) },
+                                        label = {
+                                            Text(
+                                                text = group,
+                                                fontWeight = if (editBloodGroup == group) FontWeight.Bold else FontWeight.Medium
+                                            )
+                                        },
                                         colors = FilterChipDefaults.filterChipColors(
                                             selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                                        )
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                            containerColor = MaterialTheme.colorScheme.surface
+                                        ),
+                                        shape = RoundedCornerShape(10.dp)
                                     )
                                 }
                             }
@@ -861,32 +949,29 @@ fun ProfileScreen(
                             BloodConnectOutlinedButton(
                                 text = stringResource(R.string.profile_btn_cancel),
                                 onClick = { cancelEditing() },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .minimumInteractiveComponentSize()
+                                modifier = Modifier.weight(1f)
                             )
 
                             BloodConnectButton(
                                 text = stringResource(R.string.profile_btn_save_profile),
                                 icon = Icons.Default.Save,
                                 onClick = { validateAndSave() },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .minimumInteractiveComponentSize()
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     } else {
                         OutlinedCard(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = CardDefaults.outlinedCardColors(
                                 containerColor = MaterialTheme.colorScheme.surface
-                            )
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         ) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(14.dp),
+                                    .padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 ProfileInfoItem(
@@ -895,7 +980,7 @@ fun ProfileScreen(
                                     value = if (displayName != FALLBACK_NAME) displayName else stringResource(R.string.profile_fallback_name)
                                 )
 
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -925,7 +1010,7 @@ fun ProfileScreen(
                                     }
                                 }
 
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                                 ProfileInfoItem(
                                     icon = Icons.Default.LocationCity,
@@ -933,7 +1018,7 @@ fun ProfileScreen(
                                     value = if (cityLocality != FALLBACK_CITY) cityLocality else stringResource(R.string.profile_fallback_city)
                                 )
 
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                                 ProfileInfoItem(
                                     icon = Icons.Default.Email,
@@ -947,9 +1032,7 @@ fun ProfileScreen(
                             text = stringResource(R.string.profile_btn_edit_profile_info),
                             icon = Icons.Default.Edit,
                             onClick = { startEditing() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .minimumInteractiveComponentSize()
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
@@ -960,12 +1043,14 @@ fun ProfileScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        containerColor = MaterialTheme.colorScheme.surface
                     ),
-                    shape = RoundedCornerShape(16.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(18.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
@@ -990,9 +1075,13 @@ fun ProfileScreen(
                                 OutlinedButton(
                                     onClick = { viewModel.unblockUser(targetUid) },
                                     modifier = Modifier.minimumInteractiveComponentSize(),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                                    shape = RoundedCornerShape(10.dp)
                                 ) {
-                                    Text(stringResource(R.string.profile_btn_unblock))
+                                    Text(
+                                        text = stringResource(R.string.profile_btn_unblock),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
                         }
@@ -1006,9 +1095,7 @@ fun ProfileScreen(
                     text = stringResource(R.string.profile_btn_sign_out),
                     icon = Icons.AutoMirrored.Filled.ExitToApp,
                     onClick = onSignOut,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .minimumInteractiveComponentSize()
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
@@ -1019,27 +1106,45 @@ fun ProfileScreen(
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = { showSuccessDialog = false },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
             icon = {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(36.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             },
             title = {
                 Text(
                     text = stringResource(R.string.profile_dialog_updated_title),
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
                 )
             },
             text = {
-                Text(text = stringResource(R.string.profile_dialog_updated_msg, displayName, bloodGroup, cityLocality))
+                Text(
+                    text = stringResource(R.string.profile_dialog_updated_msg, displayName, bloodGroup, cityLocality),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
             },
             confirmButton = {
-                TextButton(onClick = { showSuccessDialog = false }) {
-                    Text(stringResource(R.string.profile_dialog_ok))
-                }
+                BloodConnectButton(
+                    text = stringResource(R.string.profile_dialog_ok),
+                    onClick = { showSuccessDialog = false },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         )
     }
@@ -1047,26 +1152,55 @@ fun ProfileScreen(
     if (showDonatedTodayDialog) {
         AlertDialog(
             onDismissRequest = { showDonatedTodayDialog = false },
-            title = { Text(stringResource(R.string.profile_dialog_confirm_donation_title)) },
-            text = { Text(stringResource(R.string.profile_dialog_confirm_donation_msg)) },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.profile_dialog_confirm_donation_title),
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.profile_dialog_confirm_donation_msg),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            },
             confirmButton = {
-                Button(
+                BloodConnectButton(
+                    text = stringResource(R.string.profile_dialog_confirm),
                     onClick = {
                         showDonatedTodayDialog = false
                         viewModel.markDonatedToday()
                     },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text(stringResource(R.string.profile_dialog_confirm))
-                }
+                    modifier = Modifier.fillMaxWidth()
+                )
             },
             dismissButton = {
-                OutlinedButton(
+                BloodConnectOutlinedButton(
+                    text = stringResource(R.string.profile_btn_cancel),
                     onClick = { showDonatedTodayDialog = false },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text(stringResource(R.string.profile_btn_cancel))
-                }
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         )
     }
@@ -1086,9 +1220,9 @@ private fun ProfileInfoItem(
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .size(42.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(

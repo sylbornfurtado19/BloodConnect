@@ -1,5 +1,7 @@
 package com.bloodconnect.ui.profile
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,15 +15,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -30,18 +34,23 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bloodconnect.data.model.Pledge
+import com.bloodconnect.ui.components.BloodConnectButton
+import com.bloodconnect.ui.components.BloodConnectOutlinedButton
 import com.bloodconnect.ui.components.BloodGroupBadge
 import com.bloodconnect.ui.components.EmptyState
 import java.text.SimpleDateFormat
@@ -64,7 +73,8 @@ fun DonationHistoryScreen(
                 title = {
                     Text(
                         text = "Donation History",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
@@ -72,17 +82,18 @@ fun DonationHistoryScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onPrimary
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { innerPadding ->
         Box(
@@ -110,12 +121,20 @@ fun DonationHistoryScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(56.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Failed to load donation history",
@@ -132,9 +151,10 @@ fun DonationHistoryScreen(
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(20.dp))
-                        Button(onClick = { viewModel.loadDonationHistory() }) {
-                            Text("Retry")
-                        }
+                        BloodConnectButton(
+                            text = "Retry",
+                            onClick = { viewModel.loadDonationHistory() }
+                        )
                     }
                 }
 
@@ -155,6 +175,56 @@ fun DonationHistoryScreen(
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
+                        // Hero header card
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(18.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(52.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.History,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Verified Impact Record",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "${uiState.donations.size} confirmed ${if (uiState.donations.size == 1) "donation" else "donations"} recorded on BloodConnect",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                         items(
                             items = uiState.donations,
                             key = { it.requestId.ifBlank { it.createdAt.toString() } }
@@ -194,15 +264,16 @@ fun DonationHistoryCard(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -212,7 +283,7 @@ fun DonationHistoryCard(
                 // Blood group badge
                 BloodGroupBadge(
                     bloodGroup = pledge.bloodGroup.ifBlank { "--" },
-                    size = 46.dp
+                    size = 48.dp
                 )
 
                 Column(
@@ -236,42 +307,52 @@ fun DonationHistoryCard(
                             imageVector = Icons.Default.CalendarToday,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         Text(
                             text = formattedDate,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
+
+                // Confirmed Badge
+                SuggestionChip(
+                    onClick = {},
+                    label = {
+                        Text(
+                            text = "Confirmed",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    },
+                    colors = SuggestionChipDefaults.suggestionChipColors(
+                        containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
+                        labelColor = MaterialTheme.colorScheme.tertiary,
+                        iconContentColor = MaterialTheme.colorScheme.tertiary
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    border = null
+                )
             }
 
             // "Certificate" button
-            Button(
-                onClick = onGenerateCertificate,
+            BloodConnectButton(
+                text = if (isGenerating) "Generating Certificate..." else "Download & Share Certificate",
+                icon = Icons.Default.CardGiftcard,
+                isLoading = isGenerating,
                 enabled = !isGenerating,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp)
-            ) {
-                if (isGenerating) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Generating...")
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.CardGiftcard,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Certificate")
-                }
-            }
+                onClick = onGenerateCertificate,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
