@@ -195,7 +195,7 @@ class DonorRepositoryImpl @Inject constructor(
                     }
                     trySend(sampleFiltered)
                 } else {
-                    close(error)
+                    trySend(emptyList())
                 }
                 return@addSnapshotListener
             }

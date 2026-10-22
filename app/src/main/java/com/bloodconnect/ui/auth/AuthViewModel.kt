@@ -201,10 +201,10 @@ class AuthViewModel @Inject constructor(
                     }
                 } else {
                     val errorMessage = authResult.exceptionOrNull()?.localizedMessage ?: "Google Sign-In failed"
-                    updateState(AuthUiState.Error(errorMessage))
+                    updateState(AuthUiState.Error("Sign in error: $errorMessage"))
                 }
             } catch (e: Exception) {
-                updateState(AuthUiState.Error(e.localizedMessage ?: "Google Sign-In failed due to an exception"))
+                updateState(AuthUiState.Error("Exception: ${e.localizedMessage}"))
             }
         }
     }

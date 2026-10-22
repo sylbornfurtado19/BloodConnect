@@ -38,31 +38,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.bloodconnect.ui.components.BloodConnectOutlinedButton
 import com.bloodconnect.ui.components.BloodGroupBadge
 import com.bloodconnect.ui.components.EmptyState
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.material3.CircularProgressIndicator
+import com.bloodconnect.data.model.DonationEligibility
 
 /**
- * Screen displaying detailed sample information for an individual volunteer donor.
- * Resolves the fictional donor by ID from the shared demonstration dataset.
+ * Screen displaying detailed information for an individual volunteer donor.
+ * Resolves the donor by ID using DonorDetailViewModel.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DonorDetailScreen(
     donorId: String?,
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: DonorDetailViewModel = hiltViewModel()
 ) {
-    val donor = remember(donorId) { getSampleDonorById(donorId) }
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
+                    val titleText = if (uiState is DonorDetailUiState.Success) {
+                        val d = (uiState as DonorDetailUiState.Success).donor
+                        if (d.name.isNotBlank()) d.name else "Donor Details"
+                    } else {
+                        "Donor Details"
+                    }
                     Text(
-                        text = donor?.label ?: "Donor Details",
+                        text = titleText,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -84,20 +96,38 @@ fun DonorDetailScreen(
         },
         modifier = modifier
     ) { innerPadding ->
-        if (donor == null) {
-            // Graceful fallback for unknown / invalid donor identifier
-            EmptyState(
-                title = "Donor Not Found",
-                description = "The requested fictional donor record (#${donorId ?: "Unknown"}) could not be located in the demonstration dataset.",
-                icon = Icons.Default.PersonOff,
-                actionLabel = "Back to Donor Search",
-                onActionClick = onNavigateBack,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            )
-        } else {
-            Column(
+        when (uiState) {
+            is DonorDetailUiState.Loading -> {
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            is DonorDetailUiState.Error -> {
+                val errorMessage = (uiState as DonorDetailUiState.Error).message
+                EmptyState(
+                    title = "Donor Not Found",
+                    description = errorMessage,
+                    icon = Icons.Default.PersonOff,
+                    actionLabel = "Back to Donor Search",
+                    onActionClick = onNavigateBack,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                )
+            }
+            is DonorDetailUiState.Success -> {
+                val donor = (uiState as DonorDetailUiState.Success).donor
+                val isEligible = DonationEligibility.isEligible(donor.lastDonationAt)
+                val eligibilityStatus = if (isEligible) "Eligible" else "Ineligible"
+                val status = if (donor.isAvailable && isEligible) "Active" else "Unavailable"
+                val locality = donor.locality.ifBlank { "Unknown Location" }
+
+                Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
@@ -157,12 +187,12 @@ fun DonorDetailScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         BloodGroupBadge(
-                            bloodGroup = donor.bloodGroup,
+                            bloodGroup = donor.bloodGroup.displayName,
                             size = 64.dp
                         )
 
                         Text(
-                            text = donor.label,
+                            text = donor.name.ifBlank { "Donor ${donor.id.take(4)}" },
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -174,7 +204,7 @@ fun DonorDetailScreen(
                         ) {
                             SuggestionChip(
                                 onClick = {},
-                                label = { Text(donor.status) },
+                                label = { Text(status) },
                                 colors = SuggestionChipDefaults.suggestionChipColors(
                                     containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
                                     labelColor = MaterialTheme.colorScheme.tertiary
@@ -184,7 +214,7 @@ fun DonorDetailScreen(
 
                             SuggestionChip(
                                 onClick = {},
-                                label = { Text(donor.eligibilityStatus) },
+                                label = { Text(eligibilityStatus) },
                                 colors = SuggestionChipDefaults.suggestionChipColors(
                                     containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
                                     labelColor = MaterialTheme.colorScheme.primary
@@ -213,19 +243,18 @@ fun DonorDetailScreen(
                     ) {
                         DetailInfoRow(
                             label = "Locality",
-                            value = donor.location,
+                            value = locality,
                             icon = Icons.Default.Place
                         )
 
                         DetailInfoRow(
-                            label = "Proximity Distance",
-                            value = "Approx. ${donor.distanceKm} km away",
-                            icon = Icons.Default.Info
-                        )
-
-                        DetailInfoRow(
-                            label = "Last Donation (Demo)",
-                            value = donor.lastDonation,
+                            label = "Last Donation",
+                            value = if (donor.lastDonationAt != null && donor.lastDonationAt > 0) {
+                                val sdf = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+                                sdf.format(java.util.Date(donor.lastDonationAt))
+                            } else {
+                                "No record"
+                            },
                             icon = Icons.Default.CheckCircle
                         )
                     }
@@ -276,9 +305,10 @@ fun DonorDetailScreen(
         }
     }
 }
+}
 
 @Composable
-private fun DetailInfoRow(
+fun DetailInfoRow(
     label: String,
     value: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -313,11 +343,8 @@ private fun DetailInfoRow(
 
 @Preview(showBackground = true)
 @Composable
-private fun DonorDetailScreenPreview() {
+fun DonorDetailScreenPreview() {
     BloodConnectTheme {
-        DonorDetailScreen(
-            donorId = "D1",
-            onNavigateBack = {}
-        )
+        // Disabled preview as the screen requires ViewModel and repository access
     }
 }

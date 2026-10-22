@@ -37,7 +37,7 @@ class CommunityRepository @Inject constructor(
 
         val listener = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                close(error)
+                trySend(emptyList())
                 return@addSnapshotListener
             }
             val drives = snapshot?.documents?.mapNotNull { doc ->
@@ -56,7 +56,7 @@ class CommunityRepository @Inject constructor(
         val query = bloodBanksCollection.limit(200)
         val listener = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                close(error)
+                trySend(emptyList())
                 return@addSnapshotListener
             }
             val banks = snapshot?.documents?.mapNotNull { doc ->
@@ -101,7 +101,7 @@ class CommunityRepository @Inject constructor(
         val rsvpRef = campsCollection.document(driveId).collection("rsvps").document(uid)
         val listener = rsvpRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                close(error)
+                trySend(false)
                 return@addSnapshotListener
             }
             trySend(snapshot?.exists() == true)

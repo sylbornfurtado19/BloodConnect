@@ -168,7 +168,9 @@ fun DonorMapScreen(
                 properties = MapProperties(isMyLocationEnabled = permissionGranted),
                 uiSettings = MapUiSettings(
                     zoomControlsEnabled = true,
-                    myLocationButtonEnabled = permissionGranted
+                    myLocationButtonEnabled = permissionGranted,
+                    compassEnabled = true,
+                    mapToolbarEnabled = true
                 )
             ) {
                 // A7 & A8: Donor Markers (Green, Coarse privacy coordinates, stable marker keys)
@@ -177,8 +179,12 @@ fun DonorMapScreen(
                         val coarseLat = donor.latitude.coarse()
                         val coarseLon = donor.longitude.coarse()
                         key(donor.id) {
+                            val markerState = rememberMarkerState(key = donor.id, position = LatLng(coarseLat, coarseLon))
+                            LaunchedEffect(coarseLat, coarseLon) {
+                                markerState.position = LatLng(coarseLat, coarseLon)
+                            }
                             Marker(
-                                state = rememberMarkerState(key = donor.id, position = LatLng(coarseLat, coarseLon)),
+                                state = markerState,
                                 title = "${donor.bloodGroup.displayName} donor",
                                 snippet = donor.locality,
                                 icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)
@@ -192,8 +198,12 @@ fun DonorMapScreen(
                     if (req.latitude != 0.0 && req.longitude != 0.0) {
                         val reqId = req.id.ifBlank { req.requestId }
                         key(reqId) {
+                            val markerState = rememberMarkerState(key = reqId, position = LatLng(req.latitude, req.longitude))
+                            LaunchedEffect(req.latitude, req.longitude) {
+                                markerState.position = LatLng(req.latitude, req.longitude)
+                            }
                             Marker(
-                                state = rememberMarkerState(key = reqId, position = LatLng(req.latitude, req.longitude)),
+                                state = markerState,
                                 title = "${req.bloodGroup} needed - ${req.hospital}",
                                 snippet = "${req.urgency} - ${req.unitsNeeded} unit(s) - ${req.city}",
                                 icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
@@ -261,25 +271,22 @@ fun DonorMapScreen(
 
             // Bottom Counts Caption & Empty State overlay if needed
             if (visibleDonors.isEmpty() && visibleRequests.isEmpty() && !uiState.isLoading) {
-                Box(
+                Card(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .align(Alignment.Center)
                         .padding(24.dp),
-                    contentAlignment = Alignment.Center
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
                 ) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            EmptyState(
-                                title = "No Markers Found",
-                                description = "No donors or emergency requests match the current filters.",
-                                icon = Icons.Default.Info
-                            )
-                        }
+                        EmptyState(
+                            title = "No Markers Found",
+                            description = "No donors or emergency requests match the current filters.",
+                            icon = Icons.Default.Info
+                        )
                     }
                 }
             } else {

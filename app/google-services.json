@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "928966163583",
+    "firebase_url": "https://bloodconnect-7d5dd-default-rtdb.firebaseio.com",
     "project_id": "bloodconnect-7d5dd",
     "storage_bucket": "bloodconnect-7d5dd.firebasestorage.app"
   },
@@ -14,11 +15,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "928966163583-ntouoc3a3ncovddjeh97qt2t3tq76qrg.apps.googleusercontent.com",
+          "client_id": "928966163583-nhfledkjn2063p6kl1b7v23e48dv6t07.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.bloodconnect",
-            "certificate_hash": "8d9b4d477d6377f55b18d91562271688e35d4d5f"
+            "certificate_hash": "776a1f0a9305f34c46d227205efb269ad4648c19"
           }
         },
         {

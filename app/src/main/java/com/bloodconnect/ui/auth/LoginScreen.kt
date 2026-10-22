@@ -82,14 +82,19 @@ fun LoginScreen(
                 }
             } catch (e: ApiException) {
                 val msg = when (e.statusCode) {
-                    10 -> "Google Sign-In Error (10): Developer Error. Please add your debug SHA-1 fingerprint in Firebase Console."
-                    12500 -> "Google Sign-In Error (12500): Sign-in failed. Check OAuth Web Client ID in Firebase."
+                    10 -> "Google Sign-In Error (10): Developer Error. Ensure your SHA-1 is added in Firebase Console."
+                    12500 -> "Google Sign-In Error (12500): Check OAuth Web Client ID in Firebase."
+                    12501 -> "Google Sign-In Error (12501): Sign-in was canceled by the user or system."
                     else -> "Google Sign-In failed with status code ${e.statusCode}"
                 }
                 authViewModel.setError(msg)
                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
             }
-        } else if (result.resultCode != Activity.RESULT_CANCELED) {
+        } else if (result.resultCode == Activity.RESULT_CANCELED) {
+            val msg = "Google Sign-In canceled (Result Code 0). Please check your SHA-1 fingerprint in Firebase and ensure the Web Client ID is correct."
+            authViewModel.setError(msg)
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+        } else {
             val msg = "Google Sign-In returned result code ${result.resultCode}"
             authViewModel.setError(msg)
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -213,7 +218,7 @@ fun LoginScreen(
                         val webClientId = try {
                             context.getString(R.string.default_web_client_id)
                         } catch (e: Exception) {
-                            "928966163583-3d87uegiv2cntog626dp3o9v6nir6d11.apps.googleusercontent.com"
+                            "928966163583-8vuu7m6052fbqpg5k77q89mg08thc3du.apps.googleusercontent.com"
                         }
 
                         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
