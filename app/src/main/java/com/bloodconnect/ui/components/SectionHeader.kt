@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -17,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.bloodconnect.ui.theme.BloodConnectTheme
 
 /**
- * Section title header with optional subtitle and optional trailing action button.
+ * Section title header with bold heading, muted subtitle, and optional coral trailing action button.
  */
 @Composable
 fun SectionHeader(
@@ -30,7 +31,7 @@ fun SectionHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -45,17 +46,22 @@ fun SectionHeader(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
                 )
             }
         }
         if (!actionText.isNullOrBlank() && onActionClick != null) {
-            TextButton(onClick = onActionClick) {
+            TextButton(
+                onClick = onActionClick,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
                 Text(
                     text = actionText,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -76,3 +82,4 @@ private fun SectionHeaderPreview() {
         }
     }
 }
+

@@ -11,17 +11,20 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bloodconnect.ui.theme.BloodConnectTheme
 
 /**
- * Reusable outlined text field with consistent styling, error display, and icon support.
+ * Reusable outlined text field with 16dp rounded corners, white surface background,
+ * subtle outline, coral focus indicator, error display, and icon support.
  */
 @Composable
 fun BloodConnectTextField(
@@ -56,7 +59,24 @@ fun BloodConnectTextField(
             keyboardActions = keyboardActions,
             singleLine = singleLine,
             enabled = enabled,
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                disabledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                errorContainerColor = MaterialTheme.colorScheme.surface,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                errorBorderColor = MaterialTheme.colorScheme.error,
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                errorLabelColor = MaterialTheme.colorScheme.error,
+                focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+                unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                focusedTrailingIconColor = MaterialTheme.colorScheme.primary,
+                unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
             modifier = Modifier.fillMaxWidth()
         )
         if (isError && !errorMessage.isNullOrBlank()) {
@@ -64,7 +84,8 @@ fun BloodConnectTextField(
                 text = errorMessage,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = 12.dp, top = 4.dp)
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(start = 14.dp, top = 4.dp)
             )
         }
     }
@@ -97,3 +118,4 @@ private fun BloodConnectTextFieldErrorPreview() {
         )
     }
 }
+

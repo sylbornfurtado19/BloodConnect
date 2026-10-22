@@ -1,5 +1,6 @@
 package com.bloodconnect.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.bloodconnect.ui.theme.BloodConnectTheme
 
 /**
- * Primary action button for BloodConnect with loading state and optional icon.
+ * Modern pill-shaped primary action button for BloodConnect with loading state and subtle elevation.
  */
 @Composable
 fun BloodConnectButton(
@@ -42,11 +43,20 @@ fun BloodConnectButton(
         enabled = enabled && !isLoading,
         modifier = modifier
             .fillMaxWidth()
-            .height(50.dp),
-        shape = RoundedCornerShape(12.dp),
+            .height(52.dp),
+        shape = RoundedCornerShape(26.dp),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 4.dp,
+            focusedElevation = 3.dp,
+            hoveredElevation = 3.dp,
+            disabledElevation = 0.dp
+        ),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
+            disabledContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
         )
     ) {
         if (isLoading) {
@@ -76,7 +86,7 @@ fun BloodConnectButton(
 }
 
 /**
- * Secondary outlined action button for BloodConnect.
+ * Modern pill-shaped secondary outlined action button for BloodConnect.
  */
 @Composable
 fun BloodConnectOutlinedButton(
@@ -84,30 +94,47 @@ fun BloodConnectOutlinedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    isLoading: Boolean = false,
     icon: ImageVector? = null
 ) {
     OutlinedButton(
         onClick = onClick,
-        enabled = enabled,
+        enabled = enabled && !isLoading,
         modifier = modifier
             .fillMaxWidth()
-            .height(50.dp),
-        shape = RoundedCornerShape(12.dp)
+            .height(52.dp),
+        shape = RoundedCornerShape(26.dp),
+        border = BorderStroke(
+            width = 1.5.dp,
+            color = if (enabled && !isLoading) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+        ),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.primary,
+            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+        )
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(22.dp),
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 2.5.dp
             )
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }
@@ -134,3 +161,4 @@ private fun BloodConnectOutlinedButtonPreview() {
         )
     }
 }
+

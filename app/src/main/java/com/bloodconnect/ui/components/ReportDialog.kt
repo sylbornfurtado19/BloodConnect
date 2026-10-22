@@ -10,12 +10,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,6 +35,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Dialog presenting moderation report category options and optional details.
+ * Features 24dp rounded surface, coral selection accents, and styled input controls.
  */
 @Composable
 fun ReportDialog(
@@ -50,11 +55,14 @@ fun ReportDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(24.dp),
+        containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
         },
         text = {
@@ -83,12 +91,17 @@ fun ReportDialog(
                     ) {
                         RadioButton(
                             selected = (selectedReason == reason),
-                            onClick = null
+                            onClick = null,
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = MaterialTheme.colorScheme.primary,
+                                unselectedColor = MaterialTheme.colorScheme.outline
+                            )
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = reason,
                             style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (selectedReason == reason) FontWeight.SemiBold else FontWeight.Normal,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -102,6 +115,14 @@ fun ReportDialog(
                     label = { Text("Details (optional)") },
                     placeholder = { Text("Add any additional context...") },
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary
+                    ),
                     maxLines = 4,
                     supportingText = {
                         Text(
@@ -118,15 +139,32 @@ fun ReportDialog(
                 onClick = {
                     onSubmit(selectedReason, detailsText.trim())
                     onDismiss()
-                }
+                },
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
-                Text("Submit")
+                Text(
+                    text = "Submit",
+                    fontWeight = FontWeight.Bold
+                )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
+                Text(
+                    text = "Cancel",
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     )
 }
+

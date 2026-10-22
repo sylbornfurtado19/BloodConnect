@@ -1,6 +1,7 @@
 package com.bloodconnect.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -22,7 +23,8 @@ import androidx.compose.ui.unit.sp
 import com.bloodconnect.ui.theme.BloodConnectTheme
 
 /**
- * Compact visual badge for blood groups (e.g., A+, O-, B+, AB-).
+ * Modern compact visual badge for blood groups (e.g., A+, O-, B+, AB-).
+ * Uses soft coral-tinted background, refined rounded squircle shape, and bold readable text.
  */
 @Composable
 fun BloodGroupBadge(
@@ -32,19 +34,32 @@ fun BloodGroupBadge(
     containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
     contentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer
 ) {
+    val cornerRadius = (size * 0.32f).coerceIn(10.dp, 16.dp)
+    val shape = RoundedCornerShape(cornerRadius)
+    val fontSize = when {
+        size < 36.dp -> if (bloodGroup.length > 2) 11.sp else 13.sp
+        size <= 48.dp -> if (bloodGroup.length > 2) 13.sp else 16.sp
+        else -> if (bloodGroup.length > 2) 15.sp else 18.sp
+    }
+
     Box(
         modifier = modifier
             .size(size)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(shape)
             .background(containerColor)
-            .padding(4.dp),
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                shape = shape
+            )
+            .padding(2.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = bloodGroup,
             color = contentColor,
             fontWeight = FontWeight.Bold,
-            fontSize = if (bloodGroup.length > 2) 13.sp else 16.sp,
+            fontSize = fontSize,
             style = MaterialTheme.typography.titleMedium
         )
     }
@@ -65,3 +80,4 @@ private fun BloodGroupBadgePreview() {
         }
     }
 }
+
