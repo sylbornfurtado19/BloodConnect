@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AddAlert
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocalHospital
@@ -81,6 +82,7 @@ fun HomeScreen(
     onNavigateToBloodDrives: () -> Unit = {},
     onNavigateToBloodBanks: () -> Unit = {},
     onNavigateToDemandTrends: () -> Unit = {},
+    onNavigateToAssistant: () -> Unit = {},
     modifier: Modifier = Modifier,
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -482,6 +484,49 @@ fun HomeScreen(
                         }
                     }
                 }
+
+                // Action 8: Ask the assistant
+                OutlinedCard(
+                    onClick = onNavigateToAssistant,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Ask the assistant",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Instant answers on eligibility & prep",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
 
             // C. Blood Group Shortcuts
@@ -677,7 +722,8 @@ private fun HomeScreenPreview() {
             onNavigateToDonorMap = {},
             onNavigateToBloodDrives = {},
             onNavigateToBloodBanks = {},
-            onNavigateToDemandTrends = {}
+            onNavigateToDemandTrends = {},
+            onNavigateToAssistant = {}
         )
     }
 }

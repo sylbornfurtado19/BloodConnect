@@ -20,6 +20,7 @@ import com.bloodconnect.ui.profile.ProfileScreen
 import com.bloodconnect.ui.profile.DonationHistoryScreen
 import com.bloodconnect.ui.community.BloodDrivesScreen
 import com.bloodconnect.ui.community.BloodBanksScreen
+import com.bloodconnect.ui.assistant.AssistantScreen
 
 /**
  * Top-level Navigation Graph for BloodConnect.
@@ -119,6 +120,11 @@ fun BloodConnectNavHost(
                     navController.navigate(Screen.BloodBanks.route) {
                         launchSingleTop = true
                     }
+                },
+                onNavigateToAssistant = {
+                    navController.navigate(Screen.Assistant.route) {
+                        launchSingleTop = true
+                    }
                 }
             )
         }
@@ -214,6 +220,14 @@ fun BloodConnectNavHost(
 
         composable(route = Screen.DonationHistory.route) {
             DonationHistoryScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(route = Screen.Assistant.route) {
+            AssistantScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 }

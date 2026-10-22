@@ -9,7 +9,7 @@ activityCompose = "1.13.0"
 composeBom = "2026.02.01"
 navigationCompose = "2.8.8"
 hiltNavigationCompose = "1.2.0"
-firebaseBom = "33.10.0"
+firebaseBom = "35.0.2"
 googleServices = "4.4.2"
 junit = "4.13.2"
 junitVersion = "1.3.0"
@@ -55,6 +55,7 @@ firebase-appcheck-playintegrity = { group = "com.google.firebase", name = "fireb
 firebase-appcheck-debug = { group = "com.google.firebase", name = "firebase-appcheck-debug" }
 firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
+firebase-ai = { group = "com.google.firebase", name = "firebase-ai" }
 
 # Utilities & Maps
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
