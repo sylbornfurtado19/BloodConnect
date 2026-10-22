@@ -13,9 +13,13 @@ import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val NETWORK_TIMEOUT_MS = 10_000L
 
 @Singleton
 class BloodRequestRepository @Inject constructor(
@@ -113,24 +117,26 @@ class BloodRequestRepository @Inject constructor(
      */
     suspend fun getActiveRequests(): Result<List<BloodRequest>> {
         return try {
-            val snapshot = requestsCollection
-                .whereIn("status", listOf("Pending", "Active", "PENDING", "Partially Fulfilled"))
-                .limit(200)
-                .get()
-                .await()
+            withTimeout(NETWORK_TIMEOUT_MS) {
+                val snapshot = requestsCollection
+                    .whereIn("status", listOf("Pending", "Active", "PENDING", "Partially Fulfilled"))
+                    .limit(200)
+                    .get()
+                    .await()
 
-            val activeList = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(BloodRequest::class.java)?.let { req ->
-                    if (req.id.isBlank()) req.id = doc.id
-                    req.withCanonicalStatus().withCanonicalUrgency()
+                val activeList = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(BloodRequest::class.java)?.let { req ->
+                        if (req.id.isBlank()) req.id = doc.id
+                        req.withCanonicalStatus().withCanonicalUrgency()
+                    }
+                }.filter { it.isActive }
+                 .sortedByDescending { it.createdAt }
+
+                if (activeList.isNotEmpty()) {
+                    Result.success(activeList)
+                } else {
+                    Result.success(sampleRequests)
                 }
-            }.filter { it.isActive }
-             .sortedByDescending { it.createdAt }
-
-            if (activeList.isNotEmpty()) {
-                Result.success(activeList)
-            } else {
-                Result.success(sampleRequests)
             }
         } catch (e: Exception) {
             Result.success(sampleRequests)
@@ -143,22 +149,24 @@ class BloodRequestRepository @Inject constructor(
      */
     suspend fun getRecentRequests(days: Int = 30): Result<List<BloodRequest>> {
         return try {
-            val now = System.currentTimeMillis()
-            val cutoff = now - (days.toLong() * 24L * 60L * 60L * 1000L)
-            val snapshot = requestsCollection
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .limit(500)
-                .get()
-                .await()
+            withTimeout(NETWORK_TIMEOUT_MS) {
+                val now = System.currentTimeMillis()
+                val cutoff = now - (days.toLong() * 24L * 60L * 60L * 1000L)
+                val snapshot = requestsCollection
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(500)
+                    .get()
+                    .await()
 
-            val recentList = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(BloodRequest::class.java)?.let { req ->
-                    if (req.id.isBlank()) req.id = doc.id
-                    req.withCanonicalStatus().withCanonicalUrgency()
-                }
-            }.filter { it.createdAt >= cutoff }
+                val recentList = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(BloodRequest::class.java)?.let { req ->
+                        if (req.id.isBlank()) req.id = doc.id
+                        req.withCanonicalStatus().withCanonicalUrgency()
+                    }
+                }.filter { it.createdAt >= cutoff }
 
-            Result.success(recentList)
+                Result.success(recentList)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -193,24 +201,26 @@ class BloodRequestRepository @Inject constructor(
             }
         }
         awaitClose { listener.remove() }
-    }
+    }.catch { emit(sampleRequests) }
 
     /**
      * Retrieves all requests submitted by a specific requester ID.
      */
     suspend fun getRequestsByRequester(uid: String): Result<List<BloodRequest>> {
         return try {
-            val snapshot = requestsCollection
-                .whereEqualTo("requesterId", uid)
-                .get()
-                .await()
-            val list = snapshot.toObjects(BloodRequest::class.java)
-                .map { req ->
-                    if (req.id.isBlank()) req.id = req.requestId
-                    req.withCanonicalStatus().withCanonicalUrgency()
-                }
-                .sortedByDescending { it.createdAt }
-            Result.success(list)
+            withTimeout(NETWORK_TIMEOUT_MS) {
+                val snapshot = requestsCollection
+                    .whereEqualTo("requesterId", uid)
+                    .get()
+                    .await()
+                val list = snapshot.toObjects(BloodRequest::class.java)
+                    .map { req ->
+                        if (req.id.isBlank()) req.id = req.requestId
+                        req.withCanonicalStatus().withCanonicalUrgency()
+                    }
+                    .sortedByDescending { it.createdAt }
+                Result.success(list)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -218,20 +228,22 @@ class BloodRequestRepository @Inject constructor(
 
     suspend fun getRequestsByStatus(status: RequestStatus): Result<List<BloodRequest>> {
         return try {
-            val snapshot = requestsCollection
-                .whereEqualTo("status", status.displayName)
-                .limit(200)
-                .get()
-                .await()
-            val list = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(BloodRequest::class.java)?.let { req ->
-                    if (req.id.isBlank()) req.id = doc.id
-                    req.withCanonicalStatus().withCanonicalUrgency()
-                }
-            }.filter { it.effectiveStatus == status }
-             .sortedByDescending { it.createdAt }
+            withTimeout(NETWORK_TIMEOUT_MS) {
+                val snapshot = requestsCollection
+                    .whereEqualTo("status", status.displayName)
+                    .limit(200)
+                    .get()
+                    .await()
+                val list = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(BloodRequest::class.java)?.let { req ->
+                        if (req.id.isBlank()) req.id = doc.id
+                        req.withCanonicalStatus().withCanonicalUrgency()
+                    }
+                }.filter { it.effectiveStatus == status }
+                 .sortedByDescending { it.createdAt }
 
-            Result.success(list)
+                Result.success(list)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -243,21 +255,23 @@ class BloodRequestRepository @Inject constructor(
 
     suspend fun getRequestsByUrgency(urgency: String): Result<List<BloodRequest>> {
         return try {
-            val targetUrgency = Urgency.fromStringOrDefault(urgency)
-            val snapshot = requestsCollection
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .limit(100)
-                .get()
-                .await()
+            withTimeout(NETWORK_TIMEOUT_MS) {
+                val targetUrgency = Urgency.fromStringOrDefault(urgency)
+                val snapshot = requestsCollection
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(100)
+                    .get()
+                    .await()
 
-            val list = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(BloodRequest::class.java)?.let { req ->
-                    if (req.id.isBlank()) req.id = doc.id
-                    req.withCanonicalStatus().withCanonicalUrgency()
-                }
-            }.filter { it.urgencyLevel == targetUrgency }
+                val list = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(BloodRequest::class.java)?.let { req ->
+                        if (req.id.isBlank()) req.id = doc.id
+                        req.withCanonicalStatus().withCanonicalUrgency()
+                    }
+                }.filter { it.urgencyLevel == targetUrgency }
 
-            Result.success(list)
+                Result.success(list)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -363,7 +377,7 @@ class BloodRequestRepository @Inject constructor(
                 trySend(pledges)
             }
         awaitClose { listener.remove() }
-    }
+    }.catch { emit(emptyList()) }
 
     fun observeMyPledge(requestId: String, donorUid: String): Flow<Pledge?> = callbackFlow {
         val listener = requestsCollection.document(requestId)
@@ -378,7 +392,7 @@ class BloodRequestRepository @Inject constructor(
                 trySend(pledge)
             }
         awaitClose { listener.remove() }
-    }
+    }.catch { emit(null) }
 
     suspend fun markPledgeDonated(requestId: String, donorUid: String): Result<Unit> {
         return try {
@@ -399,13 +413,15 @@ class BloodRequestRepository @Inject constructor(
 
     suspend fun countMyDonations(uid: String): Result<Int> {
         return try {
-            val countQuery = firestore.collectionGroup("pledges")
-                .whereEqualTo("donorId", uid)
-                .whereEqualTo("status", "Donated")
-                .count()
-                .get(AggregateSource.SERVER)
-                .await()
-            Result.success(countQuery.count.toInt())
+            withTimeout(NETWORK_TIMEOUT_MS) {
+                val countQuery = firestore.collectionGroup("pledges")
+                    .whereEqualTo("donorId", uid)
+                    .whereEqualTo("status", "Donated")
+                    .count()
+                    .get(AggregateSource.SERVER)
+                    .await()
+                Result.success(countQuery.count.toInt())
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -413,22 +429,24 @@ class BloodRequestRepository @Inject constructor(
 
     suspend fun getMyDonatedPledges(uid: String): Result<List<Pledge>> {
         return try {
-            val snapshot = firestore.collectionGroup("pledges")
-                .whereEqualTo("donorId", uid)
-                .whereEqualTo("status", "Donated")
-                .get()
-                .await()
-            val pledges = snapshot.documents.mapNotNull { doc ->
-                doc.toObject(Pledge::class.java)?.let { pledge ->
-                    val resolvedRequestId = if (pledge.requestId.isNotBlank()) {
-                        pledge.requestId
-                    } else {
-                        doc.reference.parent.parent?.id ?: ""
+            withTimeout(NETWORK_TIMEOUT_MS) {
+                val snapshot = firestore.collectionGroup("pledges")
+                    .whereEqualTo("donorId", uid)
+                    .whereEqualTo("status", "Donated")
+                    .get()
+                    .await()
+                val pledges = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(Pledge::class.java)?.let { pledge ->
+                        val resolvedRequestId = if (pledge.requestId.isNotBlank()) {
+                            pledge.requestId
+                        } else {
+                            doc.reference.parent.parent?.id ?: ""
+                        }
+                        pledge.copy(requestId = resolvedRequestId)
                     }
-                    pledge.copy(requestId = resolvedRequestId)
-                }
-            }.sortedByDescending { it.donatedAt ?: it.createdAt }
-            Result.success(pledges)
+                }.sortedByDescending { it.donatedAt ?: it.createdAt }
+                Result.success(pledges)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
