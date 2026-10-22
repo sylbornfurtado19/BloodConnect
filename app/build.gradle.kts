@@ -31,6 +31,10 @@ android {
         manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY", "")
     }
 
+    androidResources {
+        localeFilters += listOf("en", "hi", "mr")
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
