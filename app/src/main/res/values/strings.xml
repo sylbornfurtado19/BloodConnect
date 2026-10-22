@@ -227,6 +227,10 @@
     <string name="request_dialog_cancel">Cancel</string>
     <string name="request_toast_reported">Thanks, we will review it</string>
 
+    <!-- Request Statuses -->
+    <string name="status_cancelled">Cancelled</string>
+    <string name="status_fulfilled">Fulfilled</string>
+
     <!-- My Requests Screen -->
     <string name="my_requests_title">My Requests</string>
     <string name="my_requests_cd_back">Back</string>
