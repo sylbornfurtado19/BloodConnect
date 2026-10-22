@@ -1,6 +1,7 @@
 package com.bloodconnect.ui.search
 
 import android.Manifest
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +15,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -23,12 +26,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,12 +44,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -65,6 +68,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.bloodconnect.data.model.BloodGroup
 import com.bloodconnect.data.model.Donor
 import com.bloodconnect.ui.components.BloodConnectButton
+import com.bloodconnect.ui.components.BloodConnectOutlinedButton
 import com.bloodconnect.ui.components.BloodConnectTextField
 import com.bloodconnect.ui.components.BloodGroupBadge
 import com.bloodconnect.ui.components.EmptyState
@@ -88,6 +92,7 @@ private val distanceOptions = listOf(5, 10, 25, 50)
 
 /**
  * Screen for discovering and searching volunteer blood donors by blood type, location, and radius.
+ * Redesigned in Phase 3 with coral red, pure white, and soft-pink styling.
  * Connected to [DonorSearchViewModel] and [LocationHelper] for location-aware filtering.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
@@ -132,29 +137,37 @@ fun DonorSearchScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Find Donors",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onPrimary
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 1.dp
+            ) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "Find Donors",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                    )
                 )
-            )
+            }
         },
         modifier = modifier
     ) { innerPadding ->
@@ -163,30 +176,69 @@ fun DonorSearchScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+                .padding(horizontal = 16.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header Description
-            Text(
-                text = "Search Volunteer Blood Donors",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "Filter available volunteer donors by blood group, locality, and search radius.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Header Description Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Search Volunteer Donors",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Filter available volunteer donors by blood group, locality, and search radius.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Favorite,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+            }
 
             // Permission / Location Unavailable Notice Banner
             if (!uiState.isDistanceFilterAvailable) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f)
                     ),
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiaryContainer)
                 ) {
                     Row(
                         modifier = Modifier
@@ -198,8 +250,8 @@ fun DonorSearchScreen(
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(24.dp)
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.size(22.dp)
                         )
 
                         Column(modifier = Modifier.weight(1f)) {
@@ -207,46 +259,52 @@ fun DonorSearchScreen(
                                 text = if (!hasLocationPermission) "Location Permission Denied" else "Location Unavailable",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                             Text(
                                 text = "Distance filtering and radius sorting are unavailable. You can still search donors by blood group and locality.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
                             )
                         }
 
                         if (!hasLocationPermission) {
-                            OutlinedButton(
+                            Button(
                                 onClick = { locationPermissionsState.launchMultiplePermissionRequest() },
-                                shape = RoundedCornerShape(8.dp)
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                )
                             ) {
-                                Text("Grant")
+                                Text("Grant", style = MaterialTheme.typography.labelMedium)
                             }
                         }
                     }
                 }
             }
 
-            // Search Filters Card
+            // Search & Filters Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    containerColor = MaterialTheme.colorScheme.surface
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Blood Group Selector
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = "Blood Group",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "Blood Group Required",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
 
                         Row(
@@ -258,10 +316,14 @@ fun DonorSearchScreen(
                             FilterChip(
                                 selected = uiState.selectedBloodGroup == null,
                                 onClick = { viewModel.setBloodGroup(null as BloodGroup?) },
-                                label = { Text("All") },
+                                label = { Text("All", fontWeight = FontWeight.SemiBold) },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, if (uiState.selectedBloodGroup == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    labelColor = MaterialTheme.colorScheme.onSurface
                                 )
                             )
 
@@ -276,30 +338,46 @@ fun DonorSearchScreen(
                                             viewModel.setBloodGroup(group)
                                         }
                                     },
-                                    label = { Text(group) },
+                                    label = { Text(group, fontWeight = FontWeight.SemiBold) },
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        labelColor = MaterialTheme.colorScheme.onSurface
                                     )
                                 )
                             }
                         }
 
                         if (uiState.selectedBloodGroup != null) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text(
-                                    text = "Include compatible donor groups",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Switch(
-                                    checked = uiState.includeCompatible,
-                                    onCheckedChange = { viewModel.setIncludeCompatible(it) }
-                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Include compatible donor groups",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Switch(
+                                        checked = uiState.includeCompatible,
+                                        onCheckedChange = { viewModel.setIncludeCompatible(it) },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                            checkedTrackColor = MaterialTheme.colorScheme.primary
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
@@ -316,16 +394,16 @@ fun DonorSearchScreen(
                     )
 
                     // Distance Radius Selector
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = if (uiState.isDistanceFilterAvailable) {
                                 "Maximum Radius: ${uiState.maxDistanceKm} km"
                             } else {
                                 "Maximum Radius: ${uiState.maxDistanceKm} km (Distance filter unavailable)"
                             },
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
 
                         Row(
@@ -333,14 +411,19 @@ fun DonorSearchScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             distanceOptions.forEach { radius ->
+                                val isSelected = uiState.maxDistanceKm == radius
                                 FilterChip(
-                                    selected = uiState.maxDistanceKm == radius,
+                                    selected = isSelected,
                                     onClick = { viewModel.setMaxDistanceKm(radius) },
-                                    label = { Text("${radius} km") },
+                                    label = { Text("${radius} km", fontWeight = FontWeight.SemiBold) },
                                     modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        labelColor = MaterialTheme.colorScheme.onSurface
                                     )
                                 )
                             }
@@ -359,13 +442,11 @@ fun DonorSearchScreen(
                             modifier = Modifier.weight(1f)
                         )
 
-                        OutlinedButton(
+                        BloodConnectOutlinedButton(
+                            text = "Clear",
                             onClick = { viewModel.clearFilters() },
-                            modifier = Modifier.height(50.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Clear")
-                        }
+                            modifier = Modifier.width(100.dp)
+                        )
                     }
                 }
             }
@@ -388,14 +469,16 @@ fun DonorSearchScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surface
                 ),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -412,8 +495,8 @@ fun DonorSearchScreen(
                         Text(
                             text = "Sort:",
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -425,9 +508,13 @@ fun DonorSearchScreen(
                             selected = uiState.sortMode == SortMode.BEST_MATCH,
                             onClick = { viewModel.setSortMode(SortMode.BEST_MATCH) },
                             label = { Text("Best match", style = MaterialTheme.typography.labelSmall) },
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, if (uiState.sortMode == SortMode.BEST_MATCH) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                labelColor = MaterialTheme.colorScheme.onSurface
                             )
                         )
 
@@ -435,9 +522,13 @@ fun DonorSearchScreen(
                             selected = uiState.sortMode == SortMode.NEAREST,
                             onClick = { viewModel.setSortMode(SortMode.NEAREST) },
                             label = { Text("Nearest", style = MaterialTheme.typography.labelSmall) },
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, if (uiState.sortMode == SortMode.NEAREST) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                labelColor = MaterialTheme.colorScheme.onSurface
                             )
                         )
 
@@ -445,9 +536,13 @@ fun DonorSearchScreen(
                             selected = uiState.sortMode == SortMode.FARTHEST,
                             onClick = { viewModel.setSortMode(SortMode.FARTHEST) },
                             label = { Text("Farthest", style = MaterialTheme.typography.labelSmall) },
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, if (uiState.sortMode == SortMode.FARTHEST) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                labelColor = MaterialTheme.colorScheme.onSurface
                             )
                         )
                     }
@@ -467,9 +562,10 @@ fun DonorSearchScreen(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
+                        containerColor = MaterialTheme.colorScheme.errorContainer
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
                 ) {
                     Row(
                         modifier = Modifier
@@ -501,9 +597,13 @@ fun DonorSearchScreen(
 
                         Button(
                             onClick = { viewModel.loadDonors() },
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            )
                         ) {
-                            Text("Retry")
+                            Text("Retry", fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
@@ -516,7 +616,7 @@ fun DonorSearchScreen(
                     onActionClick = { viewModel.clearFilters() }
                 )
             } else {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     uiState.donors.forEachIndexed { index, donor ->
                         DonorResultCard(
                             donor = donor,
@@ -552,33 +652,35 @@ private fun DonorResultCard(
     onViewDetails: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedCard(
+    Card(
         onClick = onViewDetails,
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.outlinedCardColors(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        )
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 BloodGroupBadge(
                     bloodGroup = donor.bloodGroup.displayName,
-                    size = 48.dp
+                    size = 52.dp
                 )
 
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -587,14 +689,14 @@ private fun DonorResultCard(
                         Text(
                             text = donor.name,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         if (isBestMatch) {
                             Surface(
-                                shape = RoundedCornerShape(4.dp),
+                                shape = RoundedCornerShape(6.dp),
                                 color = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                contentColor = MaterialTheme.colorScheme.primary
                             ) {
                                 Text(
                                     text = "Best match",
@@ -614,7 +716,7 @@ private fun DonorResultCard(
                             imageVector = Icons.Default.Place,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp)
+                            modifier = Modifier.size(15.dp)
                         )
                         Text(
                             text = donor.locality,
@@ -641,15 +743,18 @@ private fun DonorResultCard(
                     )
                 }
 
-                SuggestionChip(
-                    onClick = onViewDetails,
-                    label = { Text(if (donor.isAvailable) "Available" else "Unavailable") },
-                    colors = SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
-                        labelColor = MaterialTheme.colorScheme.tertiary
-                    ),
-                    shape = RoundedCornerShape(8.dp)
-                )
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (donor.isAvailable) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = if (donor.isAvailable) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                ) {
+                    Text(
+                        text = if (donor.isAvailable) "Available" else "Unavailable",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
 
             Row(
@@ -663,10 +768,9 @@ private fun DonorResultCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
 
-                TextButton(
-                    onClick = onViewDetails,
-                    modifier = Modifier.sizeIn(minHeight = 48.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
                         text = "View Details",
@@ -674,7 +778,6 @@ private fun DonorResultCard(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(modifier = Modifier.size(4.dp))
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
