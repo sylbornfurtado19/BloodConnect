@@ -27,9 +27,16 @@ fun openDirections(
     city: String
 ) {
     val nonZeroCoords = latitude != 0.0 && longitude != 0.0
-    if (nonZeroCoords) {
+    val queryStr = listOf(hospital.trim(), city.trim())
+        .filter { it.isNotEmpty() }
+        .joinToString(", ")
+
+    // Prefer hospital name text query for accurate routing over raw GPS coords (which might just be the requester's current location)
+    val navTarget = if (queryStr.isNotBlank()) Uri.encode(queryStr) else if (nonZeroCoords) "$latitude,$longitude" else ""
+
+    if (navTarget.isNotBlank()) {
         try {
-            val navUri = Uri.parse("google.navigation:q=$latitude,$longitude")
+            val navUri = Uri.parse("google.navigation:q=$navTarget")
             val navIntent = Intent(Intent.ACTION_VIEW, navUri).apply {
                 setPackage("com.google.android.apps.maps")
                 if (context !is Activity) {
@@ -43,48 +50,40 @@ fun openDirections(
         } catch (_: Exception) {
             // Fall back to geo intent below
         }
-    }
 
-    val query = listOf(hospital.trim(), city.trim())
-        .filter { it.isNotEmpty() }
-        .joinToString(", ")
-        .ifEmpty {
-            if (nonZeroCoords) "$latitude,$longitude" else ""
-        }
-    val encoded = Uri.encode(query)
-
-    try {
-        val geoUri = Uri.parse("geo:0,0?q=$encoded")
-        val geoIntent = Intent(Intent.ACTION_VIEW, geoUri).apply {
-            if (context !is Activity) {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            val geoUri = Uri.parse("geo:0,0?q=$navTarget")
+            val geoIntent = Intent(Intent.ACTION_VIEW, geoUri).apply {
+                if (context !is Activity) {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
             }
+            context.startActivity(geoIntent)
+            return
+        } catch (_: ActivityNotFoundException) {
+            // Fall back to browser below
+        } catch (_: Exception) {
+            // Fall back to browser below
         }
-        context.startActivity(geoIntent)
-        return
-    } catch (_: ActivityNotFoundException) {
-        // Fall back to browser below
-    } catch (_: Exception) {
-        // Fall back to browser below
-    }
 
-    try {
-        val webUri = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=$encoded")
-        val webIntent = Intent(Intent.ACTION_VIEW, webUri).apply {
-            if (context !is Activity) {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            val webUri = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=$navTarget")
+            val webIntent = Intent(Intent.ACTION_VIEW, webUri).apply {
+                if (context !is Activity) {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
             }
+            context.startActivity(webIntent)
+            return
+        } catch (_: ActivityNotFoundException) {
+            // Fall back to toast below
+        } catch (_: Exception) {
+            // Fall back to toast below
         }
-        context.startActivity(webIntent)
-        return
-    } catch (_: ActivityNotFoundException) {
-        // Fall back to toast below
-    } catch (_: Exception) {
-        // Fall back to toast below
     }
 
     try {
-        Toast.makeText(context, "No maps app found", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "No maps app found or destination empty", Toast.LENGTH_SHORT).show()
     } catch (_: Exception) {
         // Safe fail - never crash
     }
