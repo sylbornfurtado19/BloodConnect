@@ -2,6 +2,7 @@ package com.bloodconnect.ui.map
 
 import android.Manifest
 import android.util.Log
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -148,23 +149,24 @@ fun DonorMapScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Nearby Map", fontWeight = FontWeight.Bold) },
+                title = { Text("Nearby Map", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onPrimary
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
     ) { innerPadding ->
@@ -219,9 +221,10 @@ fun DonorMapScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(12.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                shadowElevation = 4.dp
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                shadowElevation = 2.dp
             ) {
                 Column(
                     modifier = Modifier.padding(10.dp),
@@ -277,7 +280,8 @@ fun DonorMapScreen(
                         .align(Alignment.Center)
                         .padding(24.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -296,8 +300,9 @@ fun DonorMapScreen(
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 24.dp),
                     shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                    shadowElevation = 4.dp
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shadowElevation = 2.dp
                 ) {
                     Text(
                         text = "${visibleDonors.size} donors · ${visibleRequests.size} requests",

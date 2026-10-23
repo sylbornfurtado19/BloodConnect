@@ -41,7 +41,9 @@ fun BloodConnectTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     singleLine: Boolean = true,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    containerColor: androidx.compose.ui.graphics.Color? = null,
+    borderColor: androidx.compose.ui.graphics.Color? = null
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
@@ -61,12 +63,12 @@ fun BloodConnectTextField(
             enabled = enabled,
             shape = RoundedCornerShape(16.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                disabledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                errorContainerColor = MaterialTheme.colorScheme.surface,
+                focusedContainerColor = containerColor ?: MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = containerColor ?: MaterialTheme.colorScheme.surface,
+                disabledContainerColor = (containerColor ?: MaterialTheme.colorScheme.surface).copy(alpha = 0.5f),
+                errorContainerColor = containerColor ?: MaterialTheme.colorScheme.surface,
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                unfocusedBorderColor = borderColor ?: MaterialTheme.colorScheme.outline,
                 errorBorderColor = MaterialTheme.colorScheme.error,
                 focusedLabelColor = MaterialTheme.colorScheme.primary,
                 unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,

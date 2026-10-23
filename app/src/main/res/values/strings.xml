@@ -30,6 +30,15 @@
     <string name="login_btn_sign_in">Sign In</string>
     <string name="login_btn_google">Sign in with Google Account</string>
     <string name="login_btn_register">New donor? Create an account</string>
+    <string name="login_city_badge">MUMBAI</string>
+    <string name="login_stitch_subtitle">Sign in to save lives or request emergency blood</string>
+    <string name="login_forgot_password">Forgot Password?</string>
+    <string name="login_or_continue_with">or continue with</string>
+    <string name="login_btn_continue_google">Continue with Google</string>
+    <string name="login_prompt_no_account">Don\'t have an account?</string>
+    <string name="login_action_register_donor">Register as Donor</string>
+    <string name="login_sbtc_helpline_footer">SBTC 24x7 Helpline: 104 / 1910</string>
+    <string name="login_sbtc_tollfree_label">Toll Free</string>
     <string name="login_error_token_null">Google Sign-In Error: ID Token was null. Ensure Google Sign-In is enabled in Firebase Console and Web Client ID is configured.</string>
     <string name="login_error_dev">Google Sign-In Error (10): Developer Error. Ensure your SHA-1 is added in Firebase Console.</string>
     <string name="login_error_oauth">Google Sign-In Error (12500): Check OAuth Web Client ID in Firebase.</string>
@@ -49,8 +58,12 @@
     <string name="register_label_password">Password</string>
     <string name="register_cd_hide_password">Hide password</string>
     <string name="register_cd_show_password">Show password</string>
-    <string name="register_btn_register">Register</string>
+    <string name="register_btn_register">Register as Donor</string>
     <string name="register_btn_sign_in">Already registered? Sign In</string>
+    <string name="register_stitch_subtitle">Join Mumbai\'s verified emergency blood donor network</string>
+    <string name="register_select_blood_group">Select Blood Group</string>
+    <string name="register_already_have_account">Already registered?</string>
+    <string name="register_action_sign_in">Sign In</string>
 
     <!-- Auth ViewModel / Common -->
     <string name="auth_error_fill_all_fields">Please fill in all fields</string>
@@ -93,6 +106,32 @@
     <string name="home_cd_call_emergency">Call emergency, 112</string>
     <string name="home_emergency_112">Emergency 112</string>
     <string name="home_btn_sign_out">Sign Out</string>
+
+    <!-- Stitch Home Screen Additions -->
+    <string name="home_location_label">Mumbai (Parel / Dadar)</string>
+    <string name="home_sbtc_header">STATE BLOOD COUNCIL (SBTC) 24X7</string>
+    <string name="home_sbtc_number">Helpline: 104 / 1910 (Toll Free)</string>
+    <string name="home_sbtc_call">Call</string>
+    <string name="home_urgent_request_title">Request Blood Urgently</string>
+    <string name="home_urgent_request_desc">Search nearest donors &amp; hospital blood banks in 15 mins</string>
+    <string name="home_urgent_request_btn">Create Emergency Request</string>
+    <string name="home_urgent_badge">URGENT</string>
+    <string name="home_donate_title">Donate Blood</string>
+    <string name="home_donate_desc">Register as a voluntary donor &amp; save lives across Mumbai</string>
+    <string name="home_donate_active_city">ACTIVE CITY</string>
+    <string name="home_donate_btn">Register Availability</string>
+    <string name="home_quick_check_title">Quick Blood Group Check</string>
+    <string name="home_quick_check_subtitle">Tap to filter city-wide verified availability</string>
+    <string name="home_view_all">View All</string>
+    <string name="home_urgent_hospital_title">Urgent Hospital Requests</string>
+    <string name="home_urgent_hospital_active">3 active in Mumbai</string>
+    <string name="home_status_critical">CRITICAL</string>
+    <string name="home_status_available">Available</string>
+    <string name="home_status_low">Low</string>
+    <string name="home_tab_home">Home</string>
+    <string name="home_tab_banks">Banks</string>
+    <string name="home_tab_requests">Requests</string>
+    <string name="home_tab_profile">Profile</string>
 
     <!-- Profile Screen -->
     <string name="profile_title">Donor Profile</string>

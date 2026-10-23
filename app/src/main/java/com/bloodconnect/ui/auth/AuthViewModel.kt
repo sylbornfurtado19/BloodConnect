@@ -223,6 +223,27 @@ class AuthViewModel @Inject constructor(
     }
 
     /**
+     * Sends a password reset email via Firebase Auth.
+     */
+    fun sendPasswordReset(email: String, onComplete: (Boolean, String) -> Unit) {
+        val trimmed = email.trim()
+        if (trimmed.isBlank()) {
+            onComplete(false, "Please enter your email address")
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = authRepository.sendPasswordResetEmail(trimmed)
+            withContext(Dispatchers.Main) {
+                if (result.isSuccess) {
+                    onComplete(true, "Password reset link sent to $trimmed")
+                } else {
+                    onComplete(false, result.exceptionOrNull()?.localizedMessage ?: "Failed to send reset email")
+                }
+            }
+        }
+    }
+
+    /**
      * Alias for [signUp] for API consistency.
      */
     fun register(

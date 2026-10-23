@@ -3,6 +3,8 @@ package com.bloodconnect.ui.auth
 import android.Manifest
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,8 +38,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -56,20 +60,28 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bloodconnect.R
-import com.bloodconnect.ui.components.BloodConnectButton
+import com.bloodconnect.ui.components.BloodConnectGradientButton
 import com.bloodconnect.ui.components.BloodConnectTextField
 import com.bloodconnect.ui.theme.BloodConnectTheme
+import com.bloodconnect.ui.theme.PureWhite
+import com.bloodconnect.ui.theme.StitchCrimson
+import com.bloodconnect.ui.theme.StitchGreen
+import com.bloodconnect.utils.dialNumber
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 /**
- * Register Screen connected to [AuthViewModel].
- * Redesigned in Phase 2 with modern coral, white, and soft-pink styling.
- * Captures donor information and executes real registration against Firebase Auth & Firestore.
- * Requests location permissions via Accompanist so user coordinates can be recorded non-blockingly upon sign-up.
- * Displays loading indicators and error feedback, navigating to Home upon success.
+ * Redesigned Register Screen adhering to Google Stitch UI specifications:
+ * - Deep obsidian dark theme with glowing crimson blood-drop emblem.
+ * - Regional "MUMBAI" capsule badge.
+ * - Intuitive 8-group interactive blood type selection chips (A+, A-, B+, B-, O+, O-, AB+, AB-).
+ * - High-contrast form fields with custom dark input container fills and subtle borders.
+ * - Vivid crimson gradient "Register as Donor" CTA button with loading feedback.
+ * - Seamless navigation switcher back to Sign In.
+ * - SBTC 24x7 Emergency helpline direct dial footer.
  */
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -85,7 +97,9 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+
     val uiState by authViewModel.uiStateFlow.collectAsState()
+    val context = LocalContext.current
 
     val locationPermissionState = rememberMultiplePermissionsState(
         permissions = listOf(
@@ -110,59 +124,83 @@ fun RegisterScreen(
                 .padding(innerPadding)
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 28.dp),
+                .padding(horizontal = 24.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // App Branding Icon
+            // 1. Top Section - Glowing Blood Drop Emblem
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(70.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
+                    .background(StitchCrimson.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(30.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(StitchCrimson.copy(alpha = 0.22f))
+                        .border(1.5.dp, StitchCrimson.copy(alpha = 0.65f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = null,
+                        tint = StitchCrimson,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // App Title
+            // 2. App Title with MUMBAI Regional Pill Badge
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = "Blood",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = "Connect",
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = StitchCrimson,
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = StitchCrimson
+                ) {
+                    Text(
+                        text = stringResource(R.string.login_city_badge),
+                        color = PureWhite,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
+            // 3. Subtitle
             Text(
-                text = stringResource(R.string.register_subtitle),
+                text = stringResource(R.string.register_stitch_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Main White Registration Card
+            // 4. Main Elevated Registration Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -175,7 +213,7 @@ fun RegisterScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(22.dp),
+                        .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
@@ -185,7 +223,7 @@ fun RegisterScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Spacer(modifier = Modifier.height(18.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Full Name Field
                     BloodConnectTextField(
@@ -201,32 +239,121 @@ fun RegisterScreen(
                             imeAction = ImeAction.Next
                         ),
                         singleLine = true,
-                        enabled = uiState !is AuthUiState.Loading
+                        enabled = uiState !is AuthUiState.Loading,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        borderColor = MaterialTheme.colorScheme.outlineVariant
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    // Blood Group Field
-                    BloodConnectTextField(
-                        value = bloodGroup,
-                        onValueChange = {
-                            bloodGroup = it
-                            if (uiState is AuthUiState.Error) authViewModel.clearError()
-                        },
-                        label = stringResource(R.string.register_label_blood_group),
-                        placeholder = "e.g. A+, B+, O-, AB+",
-                        leadingIcon = Icons.Default.Favorite,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Next
-                        ),
-                        singleLine = true,
-                        enabled = uiState !is AuthUiState.Loading
-                    )
+                    // Blood Group Quick-Select Chips Section
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.register_select_blood_group),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            if (bloodGroup.isNotBlank()) {
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = StitchCrimson.copy(alpha = 0.18f),
+                                    border = BorderStroke(1.dp, StitchCrimson.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = "Selected: $bloodGroup",
+                                        color = StitchCrimson,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    // Phone Number Field
+                        val availableGroups = listOf("A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-")
+                        val row1 = availableGroups.take(4)
+                        val row2 = availableGroups.drop(4)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            row1.forEach { group ->
+                                val isSelected = bloodGroup.equals(group, ignoreCase = true)
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) StitchCrimson else MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isSelected) StitchCrimson else MaterialTheme.colorScheme.outlineVariant
+                                    ),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable(enabled = uiState !is AuthUiState.Loading) {
+                                            bloodGroup = group
+                                            if (uiState is AuthUiState.Error) authViewModel.clearError()
+                                        }
+                                ) {
+                                    Text(
+                                        text = group,
+                                        color = if (isSelected) PureWhite else MaterialTheme.colorScheme.onSurface,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 10.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            row2.forEach { group ->
+                                val isSelected = bloodGroup.equals(group, ignoreCase = true)
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isSelected) StitchCrimson else MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isSelected) StitchCrimson else MaterialTheme.colorScheme.outlineVariant
+                                    ),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable(enabled = uiState !is AuthUiState.Loading) {
+                                            bloodGroup = group
+                                            if (uiState is AuthUiState.Error) authViewModel.clearError()
+                                        }
+                                ) {
+                                    Text(
+                                        text = group,
+                                        color = if (isSelected) PureWhite else MaterialTheme.colorScheme.onSurface,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 10.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Phone Field
                     BloodConnectTextField(
                         value = phone,
                         onValueChange = {
@@ -240,10 +367,12 @@ fun RegisterScreen(
                             imeAction = ImeAction.Next
                         ),
                         singleLine = true,
-                        enabled = uiState !is AuthUiState.Loading
+                        enabled = uiState !is AuthUiState.Loading,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        borderColor = MaterialTheme.colorScheme.outlineVariant
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     // Email Address Field
                     BloodConnectTextField(
@@ -259,10 +388,12 @@ fun RegisterScreen(
                             imeAction = ImeAction.Next
                         ),
                         singleLine = true,
-                        enabled = uiState !is AuthUiState.Loading
+                        enabled = uiState !is AuthUiState.Loading,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        borderColor = MaterialTheme.colorScheme.outlineVariant
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     val hidePasswordDesc = stringResource(R.string.register_cd_hide_password)
                     val showPasswordDesc = stringResource(R.string.register_cd_show_password)
@@ -296,12 +427,16 @@ fun RegisterScreen(
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     imageVector = image,
-                                    contentDescription = description
+                                    contentDescription = description,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                        }
+                        },
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        borderColor = MaterialTheme.colorScheme.outlineVariant
                     )
 
+                    // Error Notification Banner
                     if (uiState is AuthUiState.Error) {
                         val errorState = uiState as AuthUiState.Error
                         val displayText = if (errorState.messageResId != null) {
@@ -340,9 +475,10 @@ fun RegisterScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(22.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                    BloodConnectButton(
+                    // Primary Action: Crimson Gradient Button
+                    BloodConnectGradientButton(
                         text = stringResource(R.string.register_btn_register),
                         onClick = {
                             authViewModel.signUp(fullName, bloodGroup, email, password, phone, onNavigateToHome)
@@ -350,20 +486,77 @@ fun RegisterScreen(
                         isLoading = uiState is AuthUiState.Loading,
                         enabled = uiState !is AuthUiState.Loading
                     )
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-                    TextButton(
-                        onClick = {
-                            authViewModel.clearError()
-                            onNavigateToLogin()
-                        },
-                        enabled = uiState !is AuthUiState.Loading
+            // 5. Switcher back to Sign In
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = uiState !is AuthUiState.Loading) {
+                        authViewModel.clearError()
+                        onNavigateToLogin()
+                    }
+                    .padding(vertical = 8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.register_already_have_account),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = stringResource(R.string.register_action_sign_in),
+                    color = StitchCrimson,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 6. Emergency SBTC Helpline Footer
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .clickable { dialNumber(context, "104") }
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Phone,
+                        contentDescription = null,
+                        tint = StitchGreen,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.login_sbtc_helpline_footer),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = StitchGreen.copy(alpha = 0.15f)
                     ) {
                         Text(
-                            text = stringResource(R.string.register_btn_sign_in),
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
+                            text = stringResource(R.string.login_sbtc_tollfree_label),
+                            color = StitchGreen,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                         )
                     }
                 }
@@ -372,10 +565,21 @@ fun RegisterScreen(
     }
 }
 
+@Preview(showBackground = true, backgroundColor = 0xFF0B0F17)
+@Composable
+private fun RegisterScreenDarkPreview() {
+    BloodConnectTheme(darkTheme = true) {
+        RegisterScreen(
+            onNavigateToLogin = {},
+            onNavigateToHome = {}
+        )
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
-private fun RegisterScreenPreview() {
-    BloodConnectTheme {
+private fun RegisterScreenLightPreview() {
+    BloodConnectTheme(darkTheme = false) {
         RegisterScreen(
             onNavigateToLogin = {},
             onNavigateToHome = {}

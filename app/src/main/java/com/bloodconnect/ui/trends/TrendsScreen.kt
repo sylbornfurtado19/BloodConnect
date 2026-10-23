@@ -1,5 +1,6 @@
 package com.bloodconnect.ui.trends
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,10 +18,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingFlat
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -62,7 +63,8 @@ fun TrendsScreen(
                 title = {
                     Text(
                         text = "Demand Trends",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
@@ -70,17 +72,18 @@ fun TrendsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onPrimary
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
     ) { innerPadding ->
         Box(
@@ -169,8 +172,9 @@ fun TrendsScreen(
                                     .fillMaxWidth()
                                     .padding(vertical = 12.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    containerColor = MaterialTheme.colorScheme.surface
                                 ),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Row(
@@ -209,9 +213,10 @@ fun GroupTrendRow(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -253,8 +258,8 @@ fun GroupTrendRow(
                         .clip(RoundedCornerShape(8.dp))
                         .background(
                             when (trend.direction) {
-                                Direction.RISING -> Color(0xFFFFEBEE)
-                                Direction.FALLING -> Color(0xFFE8F5E9)
+                                Direction.RISING -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                                Direction.FALLING -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
                                 Direction.STABLE -> MaterialTheme.colorScheme.surfaceVariant
                             }
                         )
@@ -265,28 +270,28 @@ fun GroupTrendRow(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.TrendingUp,
                                 contentDescription = "Rising demand",
-                                tint = Color(0xFFC62828),
+                                tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
                                 text = "Rising",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFC62828)
+                                color = MaterialTheme.colorScheme.error
                             )
                         }
                         Direction.FALLING -> {
                             Icon(
-                                imageVector = Icons.Default.TrendingDown,
+                                imageVector = Icons.AutoMirrored.Filled.TrendingDown,
                                 contentDescription = "Falling demand",
-                                tint = Color(0xFF2E7D32),
+                                tint = MaterialTheme.colorScheme.tertiary,
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
                                 text = "Falling",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF2E7D32)
+                                color = MaterialTheme.colorScheme.tertiary
                             )
                         }
                         Direction.STABLE -> {
@@ -316,8 +321,8 @@ fun GroupTrendRow(
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp)),
                 color = when (trend.direction) {
-                    Direction.RISING -> Color(0xFFD32F2F)
-                    Direction.FALLING -> Color(0xFF388E3C)
+                    Direction.RISING -> MaterialTheme.colorScheme.error
+                    Direction.FALLING -> MaterialTheme.colorScheme.tertiary
                     Direction.STABLE -> MaterialTheme.colorScheme.primary
                 },
                 trackColor = MaterialTheme.colorScheme.surfaceVariant

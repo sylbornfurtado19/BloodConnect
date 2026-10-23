@@ -1,5 +1,6 @@
 package com.bloodconnect.ui.community
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -75,12 +76,14 @@ fun BloodBanksScreen(
     val uiState = viewModel.uiState
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         text = "Blood Banks",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
@@ -88,14 +91,14 @@ fun BloodBanksScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onPrimary
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
@@ -273,10 +276,11 @@ fun BloodBankCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -417,7 +421,8 @@ fun BloodBankCard(
                     onClick = onCall,
                     enabled = bank.phone.isNotBlank(),
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Phone,
@@ -431,7 +436,7 @@ fun BloodBankCard(
                 Button(
                     onClick = onDirections,
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(10.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Directions,
@@ -453,11 +458,10 @@ fun StockChip(
     level: StockLevel,
     modifier: Modifier = Modifier
 ) {
-    // Red when count < 5, green when >= 5, grey when missing (null)
     val (backgroundColor, textColor) = when (level) {
-        StockLevel.LOW -> Pair(Color(0xFFFFEBEE), Color(0xFFC62828))
-        StockLevel.OK -> Pair(Color(0xFFE8F5E9), Color(0xFF2E7D32))
-        StockLevel.UNKNOWN -> Pair(Color(0xFFEEEEEE), Color(0xFF757575))
+        StockLevel.LOW -> Pair(MaterialTheme.colorScheme.error.copy(alpha = 0.15f), MaterialTheme.colorScheme.error)
+        StockLevel.OK -> Pair(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f), MaterialTheme.colorScheme.tertiary)
+        StockLevel.UNKNOWN -> Pair(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
     Box(

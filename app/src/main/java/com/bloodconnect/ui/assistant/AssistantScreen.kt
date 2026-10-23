@@ -1,5 +1,6 @@
 package com.bloodconnect.ui.assistant
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -81,12 +82,13 @@ fun AssistantScreen(
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(22.dp)
                         )
                         Text(
                             text = "Eligibility Assistant",
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
@@ -95,17 +97,18 @@ fun AssistantScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onPrimary
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         },
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             Column(
                 modifier = Modifier
@@ -229,8 +232,10 @@ fun AssistantScreen(
                                 modifier = Modifier.fillMaxWidth(0.9f),
                                 shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                                )
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                             ) {
                                 Column(
                                     modifier = Modifier.padding(16.dp),
@@ -275,7 +280,8 @@ fun AssistantScreen(
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(18.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                color = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                 modifier = Modifier.padding(vertical = 4.dp)
                             ) {
                                 Row(
@@ -356,15 +362,17 @@ fun ChatBubble(message: ChatMessage) {
                 bottomEnd = if (isUser) 4.dp else 18.dp
             ),
             color = if (isUser) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.surfaceVariant,
+            else MaterialTheme.colorScheme.surface,
+            border = if (isUser) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            shadowElevation = if (isUser) 1.dp else 0.dp,
             modifier = Modifier
-                .padding(vertical = 2.dp)
+                .padding(vertical = 3.dp)
                 .fillMaxWidth(if (message.text.length > 40) 0.85f else 0.7f)
         ) {
             Text(
                 text = message.text,
                 color = if (isUser) MaterialTheme.colorScheme.onPrimary
-                else MaterialTheme.colorScheme.onSurfaceVariant,
+                else MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
             )

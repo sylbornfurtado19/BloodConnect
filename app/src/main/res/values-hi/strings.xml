@@ -30,6 +30,15 @@
     <string name="login_btn_sign_in">साइन इन करें</string>
     <string name="login_btn_google">Google खाते से साइन इन करें</string>
     <string name="login_btn_register">नए डोनर हैं? खाता बनाएं</string>
+    <string name="login_city_badge">मुंबई</string>
+    <string name="login_stitch_subtitle">जिंदगी बचाने या आपातकालीन रक्त मांगने के लिए साइन इन करें</string>
+    <string name="login_forgot_password">पासवर्ड भूल गए?</string>
+    <string name="login_or_continue_with">या इसके साथ जारी रखें</string>
+    <string name="login_btn_continue_google">Google के साथ जारी रखें</string>
+    <string name="login_prompt_no_account">खाता नहीं है?</string>
+    <string name="login_action_register_donor">डोनर के रूप में रजिस्टर करें</string>
+    <string name="login_sbtc_helpline_footer">SBTC 24x7 हेल्पलाइन: 104 / 1910</string>
+    <string name="login_sbtc_tollfree_label">टोल फ्री</string>
     <string name="login_error_token_null">Google साइन-इन में गड़बड़ी: ID टोकन नहीं मिला। Firebase Console में Google साइन-इन और Web Client ID जांचें।</string>
     <string name="login_error_dev">Google साइन-इन गड़बड़ी (10): डेवलपर गड़बड़ी। Firebase में SHA-1 जोड़ें।</string>
     <string name="login_error_oauth">Google साइन-इन गड़बड़ी (12500): Firebase में OAuth Web Client ID जांचें।</string>
@@ -49,8 +58,12 @@
     <string name="register_label_password">पासवर्ड</string>
     <string name="register_cd_hide_password">पासवर्ड छिपाएं</string>
     <string name="register_cd_show_password">पासवर्ड दिखाएं</string>
-    <string name="register_btn_register">रजिस्टर करें</string>
+    <string name="register_btn_register">डोनर के रूप में रजिस्टर करें</string>
     <string name="register_btn_sign_in">पहले से रजिस्टर हैं? साइन इन करें</string>
+    <string name="register_stitch_subtitle">मुंबई के सत्यापित आपातकालीन रक्तदाता नेटवर्क से जुड़ें</string>
+    <string name="register_select_blood_group">ब्लड ग्रुप चुनें</string>
+    <string name="register_already_have_account">पहले से खाता है?</string>
+    <string name="register_action_sign_in">साइन इन करें</string>
 
     <!-- Auth ViewModel / Common -->
     <string name="auth_error_fill_all_fields">कृपया सभी जानकारी भरें</string>
@@ -93,6 +106,32 @@
     <string name="home_cd_call_emergency">इमरजेंसी 112 पर कॉल करें</string>
     <string name="home_emergency_112">इमरजेंसी 112</string>
     <string name="home_btn_sign_out">साइन आउट</string>
+
+    <!-- Stitch Home Screen Additions -->
+    <string name="home_location_label">मुंबई (परेल / दादर)</string>
+    <string name="home_sbtc_header">राज्य रक्त परिषद (SBTC) 24X7</string>
+    <string name="home_sbtc_number">हेल्पलाइन: 104 / 1910 (टोल फ्री)</string>
+    <string name="home_sbtc_call">कॉल करें</string>
+    <string name="home_urgent_request_title">तत्काल रक्त का अनुरोध करें</string>
+    <string name="home_urgent_request_desc">15 मिनट में नजदीकी डोनर्स और ब्लड बैंक खोजें</string>
+    <string name="home_urgent_request_btn">आपातकालीन अनुरोध बनाएं</string>
+    <string name="home_urgent_badge">तत्काल</string>
+    <string name="home_donate_title">रक्तदान करें</string>
+    <string name="home_donate_desc">स्वैच्छिक डोनर के रूप में रजिस्टर करें और मुंबई भर में जानें बचाएं</string>
+    <string name="home_donate_active_city">सक्रिय शहर</string>
+    <string name="home_donate_btn">उपलब्धता दर्ज करें</string>
+    <string name="home_quick_check_title">त्वरित रक्त समूह जांच</string>
+    <string name="home_quick_check_subtitle">शहर भर में सत्यापित उपलब्धता देखने के लिए टैप करें</string>
+    <string name="home_view_all">सभी देखें</string>
+    <string name="home_urgent_hospital_title">अस्पतालों के तत्काल अनुरोध</string>
+    <string name="home_urgent_hospital_active">मुंबई में 3 सक्रिय</string>
+    <string name="home_status_critical">गंभीर</string>
+    <string name="home_status_available">उपलब्ध</string>
+    <string name="home_status_low">कम</string>
+    <string name="home_tab_home">होम</string>
+    <string name="home_tab_banks">बैंक</string>
+    <string name="home_tab_requests">अनुरोध</string>
+    <string name="home_tab_profile">प्रोफाइल</string>
 
     <!-- Profile Screen -->
     <string name="profile_title">डोनर प्रोफाइल</string>

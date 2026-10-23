@@ -28,6 +28,32 @@ val DarkSurfaceVariant = Color(0xFF2B2022)
 val DarkOnSurfaceVariant = Color(0xFFC7B6B7)
 val DarkBorder = Color(0xFF3F3133)
 
+// Stitch Dark Obsidian & Crimson Design System Tokens
+val StitchObsidianBg = Color(0xFF0B0F17)      // Deep obsidian dark background
+val StitchCardBg = Color(0xFF161F2E)          // Elevated dark card background
+val StitchCardBorder = Color(0xFF223049)      // Card border stroke
+val StitchCrimson = Color(0xFFE53935)         // Primary crimson accent
+val StitchCrimsonDark = Color(0xFFB71C1C)     // Dark gradient crimson
+val StitchTextPrimary = Color(0xFFF8FAFC)     // Crisp white text
+val StitchTextSecondary = Color(0xFF94A3B8)   // Muted slate text
+val StitchInputBg = Color(0xFF101726)         // Input field fill
+val StitchInputBorder = Color(0xFF1E293B)     // Input field border
+val StitchGoogleBg = Color(0xFF161F2E)        // Google auth button container
+val StitchGoogleBorder = Color(0xFF2E3E57)    // Google auth button border
+val StitchGlowRed = Color(0x33E53935)         // Crimson drop glow
+val StitchAmber = Color(0xFFF59E0B)           // Warning / low stock
+val StitchGreen = Color(0xFF10B981)           // Available status / helpline
+
+// Stitch Light Design System Tokens (Crisp, clean, high-contrast)
+val StitchLightBg = Color(0xFFF8FAFC)            // Premium soft slate-50 background
+val StitchLightCardBg = Color(0xFFFFFFFF)        // Pure white card surface
+val StitchLightCardBorder = Color(0xFFE2E8F0)    // Crisp subtle border
+val StitchLightInputBg = Color(0xFFF1F5F9)       // Soft input fill
+val StitchLightInputBorder = Color(0xFFCBD5E1)   // Input border
+val StitchLightTextPrimary = Color(0xFF0F172A)   // Deep slate text
+val StitchLightTextSecondary = Color(0xFF64748B) // Neutral secondary slate text
+val StitchLightGlowRed = Color(0x1AE53935)       // Soft crimson glow for light mode
+
 // Backward Compatibility Aliases for Legacy Code
 val BloodRed = CoralPrimary
 val BloodRedDark = CoralDarkPrimary
