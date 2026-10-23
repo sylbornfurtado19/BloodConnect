@@ -225,6 +225,35 @@ fun BloodDrivesScreen(
 
                 // Content list
                 else -> {
+                    var rsvpConfirmDriveId by remember { mutableStateOf<String?>(null) }
+                    
+                    if (rsvpConfirmDriveId != null) {
+                        AlertDialog(
+                            onDismissRequest = { rsvpConfirmDriveId = null },
+                            title = { Text("Confirm Attendance") },
+                            text = { 
+                                Text(
+                                    "By confirming your attendance, your name, blood group, and phone number will be securely shared with the hospital organizing this drive for their registration guest list."
+                                ) 
+                            },
+                            confirmButton = {
+                                Button(
+                                    onClick = { 
+                                        viewModel.toggleRsvp(rsvpConfirmDriveId!!)
+                                        rsvpConfirmDriveId = null
+                                    }
+                                ) {
+                                    Text("Confirm")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { rsvpConfirmDriveId = null }) {
+                                    Text("Cancel")
+                                }
+                            }
+                        )
+                    }
+
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -232,13 +261,20 @@ fun BloodDrivesScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(uiState.drives, key = { it.id }) { drive ->
+                            val isGoing = uiState.rsvpStatus[drive.id] ?: false
                             BloodDriveCard(
                                 drive = drive,
-                                isGoing = uiState.rsvpStatus[drive.id] ?: false,
+                                isGoing = isGoing,
                                 rsvpCount = uiState.rsvpCounts[drive.id] ?: 0,
                                 canDelete = uiState.isHospitalAdmin,
                                 onDelete = { viewModel.deleteDrive(drive.id) },
-                                onToggleRsvp = { viewModel.toggleRsvp(drive.id) },
+                                onToggleRsvp = { 
+                                    if (!isGoing) {
+                                        rsvpConfirmDriveId = drive.id
+                                    } else {
+                                        viewModel.toggleRsvp(drive.id)
+                                    }
+                                },
                                 onCall = {
                                     IntentHelpers.dialNumber(context, drive.contactNumber)
                                 },

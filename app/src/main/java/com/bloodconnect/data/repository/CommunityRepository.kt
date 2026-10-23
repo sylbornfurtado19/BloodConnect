@@ -70,18 +70,35 @@ class CommunityRepository @Inject constructor(
 
     /**
      * Adds or removes an RSVP record for the currently signed-in user on the specified blood camp.
+     * When going is true and userProfile is provided, stores the user's name, blood group, and phone
+     * so the hospital organizer can manage the attendee guest list.
      */
-    suspend fun setRsvp(driveId: String, going: Boolean): Result<Unit> {
+    suspend fun setRsvp(driveId: String, going: Boolean, userProfile: com.bloodconnect.data.model.User? = null): Result<Unit> {
         return try {
             val uid = auth.currentUser?.uid
                 ?: return Result.failure(IllegalStateException("User must be signed in to RSVP"))
 
             val rsvpRef = campsCollection.document(driveId).collection("rsvps").document(uid)
-            if (going) {
-                rsvpRef.set(mapOf("createdAt" to System.currentTimeMillis())).await()
-            } else {
-                rsvpRef.delete().await()
-            }
+            val attendeeRef = campsCollection.document(driveId).collection("attendees").document(uid)
+            
+            firestore.runBatch { batch ->
+                if (going) {
+                    batch.set(rsvpRef, mapOf("createdAt" to System.currentTimeMillis()))
+                    if (userProfile != null) {
+                        val attendeeData = mapOf(
+                            "uid" to uid,
+                            "name" to userProfile.displayName.ifBlank { userProfile.fullName },
+                            "bloodGroup" to userProfile.bloodGroup,
+                            "phone" to userProfile.phone,
+                            "createdAt" to System.currentTimeMillis()
+                        )
+                        batch.set(attendeeRef, attendeeData)
+                    }
+                } else {
+                    batch.delete(rsvpRef)
+                    batch.delete(attendeeRef)
+                }
+            }.await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

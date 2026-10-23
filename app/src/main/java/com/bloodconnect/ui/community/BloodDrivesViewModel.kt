@@ -154,6 +154,12 @@ class BloodDrivesViewModel @Inject constructor(
     }
 
     fun toggleRsvp(driveId: String) {
+        val uid = authRepository.currentUserId
+        if (uid == null) {
+            uiState = uiState.copy(errorMessage = "You must be signed in to RSVP")
+            return
+        }
+
         val currentGoing = uiState.rsvpStatus[driveId] ?: false
         val newGoing = !currentGoing
         val currentCount = uiState.rsvpCounts[driveId] ?: 0
@@ -166,19 +172,32 @@ class BloodDrivesViewModel @Inject constructor(
         )
 
         viewModelScope.launch {
-            val result = communityRepository.setRsvp(driveId, newGoing)
-            if (result.isFailure) {
-                // Rollback optimistic update on failure
+            try {
+                var userProfile: User? = null
+                if (newGoing) {
+                    userProfile = userRepository.getUser(uid).getOrNull()
+                }
+
+                val result = communityRepository.setRsvp(driveId, newGoing, userProfile)
+                if (result.isFailure) {
+                    // Rollback optimistic update on failure
+                    uiState = uiState.copy(
+                        rsvpStatus = uiState.rsvpStatus + (driveId to currentGoing),
+                        rsvpCounts = uiState.rsvpCounts + (driveId to currentCount),
+                        errorMessage = "Failed to update RSVP. Please try again."
+                    )
+                } else {
+                    // Refresh authoritative server count
+                    val serverCount = communityRepository.rsvpCount(driveId)
+                    uiState = uiState.copy(
+                        rsvpCounts = uiState.rsvpCounts + (driveId to serverCount)
+                    )
+                }
+            } catch (e: Exception) {
                 uiState = uiState.copy(
                     rsvpStatus = uiState.rsvpStatus + (driveId to currentGoing),
                     rsvpCounts = uiState.rsvpCounts + (driveId to currentCount),
-                    errorMessage = "Failed to update RSVP. Please try again."
-                )
-            } else {
-                // Refresh authoritative server count
-                val serverCount = communityRepository.rsvpCount(driveId)
-                uiState = uiState.copy(
-                    rsvpCounts = uiState.rsvpCounts + (driveId to serverCount)
+                    errorMessage = "Error connecting to server. Please try again."
                 )
             }
         }
