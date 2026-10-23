@@ -191,9 +191,16 @@ fun DonorMapScreen(
                     if (donor.latitude != null && donor.longitude != null) {
                         val coarseLat = donor.latitude.coarse()
                         val coarseLon = donor.longitude.coarse()
+                        
+                        // Apply a deterministic small jitter (~100-300m) to prevent exact overlapping
+                        val jitterLat = (donor.id.hashCode() % 1000) * 0.000005
+                        val jitterLon = (donor.id.reversed().hashCode() % 1000) * 0.000005
+                        val finalLat = coarseLat + jitterLat
+                        val finalLon = coarseLon + jitterLon
+
                         key(donor.id) {
                             Marker(
-                                state = rememberMarkerState(position = LatLng(coarseLat, coarseLon)),
+                                state = rememberMarkerState(position = LatLng(finalLat, finalLon)),
                                 title = "${donor.bloodGroup.displayName} donor",
                                 snippet = donor.locality
                             )
@@ -205,9 +212,16 @@ fun DonorMapScreen(
                 visibleRequests.forEach { req ->
                     if (req.latitude != 0.0 && req.longitude != 0.0) {
                         val reqId = req.id.ifBlank { req.requestId }
+
+                        // Apply a tiny jitter for requests at the exact same hospital
+                        val jitterLat = (reqId.hashCode() % 100) * 0.000002
+                        val jitterLon = (reqId.reversed().hashCode() % 100) * 0.000002
+                        val finalLat = req.latitude + jitterLat
+                        val finalLon = req.longitude + jitterLon
+
                         key(reqId) {
                             Marker(
-                                state = rememberMarkerState(position = LatLng(req.latitude, req.longitude)),
+                                state = rememberMarkerState(position = LatLng(finalLat, finalLon)),
                                 title = "${req.bloodGroup} needed - ${req.hospital}",
                                 snippet = "${req.urgency} - ${req.unitsNeeded} unit(s) - ${req.city}"
                             )
