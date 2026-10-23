@@ -92,6 +92,7 @@ import com.bloodconnect.ui.components.EmptyState
 import com.bloodconnect.ui.components.ReportDialog
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
+import com.bloodconnect.utils.EncryptionHelper
 import com.bloodconnect.utils.IntentHelpers
 import kotlinx.coroutines.launch
 
@@ -126,6 +127,7 @@ private fun dismissRequest(context: Context, requestId: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BloodRequestsScreen(
+    targetRequestId: String? = null,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BloodRequestsViewModel = hiltViewModel()
@@ -134,8 +136,18 @@ fun BloodRequestsScreen(
     var dismissedIds by remember { mutableStateOf(getDismissedRequests(context)) }
 
     val rawRequests = viewModel.requests
-    val requests = remember(rawRequests, dismissedIds) {
-        rawRequests.filter { it.id !in dismissedIds && it.requestId !in dismissedIds }
+    val requests = remember(rawRequests, dismissedIds, targetRequestId) {
+        val filtered = rawRequests.filter { it.id !in dismissedIds && it.requestId !in dismissedIds }
+        if (targetRequestId != null) {
+            val target = filtered.find { it.id == targetRequestId || it.requestId == targetRequestId }
+            if (target != null) {
+                listOf(target) + filtered.filter { it.id != targetRequestId && it.requestId != targetRequestId }
+            } else {
+                filtered
+            }
+        } else {
+            filtered
+        }
     }
 
     val isLoading = viewModel.isLoading
@@ -235,7 +247,7 @@ fun BloodRequestsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Request Blood",
+                        text = if (targetRequestId != null) "Emergency Request" else "Request Blood",
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -267,306 +279,308 @@ fun BloodRequestsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Header card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(18.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+            if (targetRequestId == null) {
+                // Header card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(50.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.padding(18.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.AddAlert,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
+                        Box(
+                            modifier = Modifier
+                                .size(50.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AddAlert,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
 
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text(
+                                text = "Broadcast Emergency Need",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Fill in the details below to broadcast live to volunteer donors across the network.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                // New Request Form Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                ) {
                     Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
-                            text = "Broadcast Emergency Need",
+                            text = "New Blood Request",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Text(
-                            text = "Fill in the details below to broadcast live to volunteer donors across the network.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
 
-            // New Request Form Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "New Blood Request",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                        // Blood Group selection
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "Blood Group Required *",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
 
-                    // Blood Group selection
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = "Blood Group Required *",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                bloodGroups.forEach { group ->
+                                    val isSelected = selectedBloodGroup == group
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = {
+                                            selectedBloodGroup = group
+                                            bloodGroupError = null
+                                        },
+                                        label = {
+                                            Text(
+                                                text = group,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                            )
+                                        },
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            containerColor = MaterialTheme.colorScheme.surface,
+                                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                                        ),
+                                        border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                    )
+                                }
+                            }
 
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            bloodGroups.forEach { group ->
-                                val isSelected = selectedBloodGroup == group
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = {
-                                        selectedBloodGroup = group
-                                        bloodGroupError = null
-                                    },
-                                    label = {
-                                        Text(
-                                            text = group,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                        )
-                                    },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        containerColor = MaterialTheme.colorScheme.surface,
-                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                                    ),
-                                    border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            if (bloodGroupError != null) {
+                                Text(
+                                    text = bloodGroupError!!,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(start = 4.dp, top = 2.dp)
                                 )
                             }
                         }
 
-                        if (bloodGroupError != null) {
-                            Text(
-                                text = bloodGroupError!!,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(start = 4.dp, top = 2.dp)
-                            )
-                        }
-                    }
-
-                    // Units needed
-                    BloodConnectTextField(
-                        value = unitsNeeded,
-                        onValueChange = {
-                            unitsNeeded = it
-                            unitsError = null
-                        },
-                        label = "Units Needed (1 to 20) *",
-                        placeholder = "e.g., 1, 2, 3",
-                        isError = unitsError != null,
-                        errorMessage = unitsError,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-
-                    // Hospital
-                    BloodConnectTextField(
-                        value = hospital,
-                        onValueChange = {
-                            hospital = it
-                            hospitalError = null
-                        },
-                        label = "Hospital / Medical Facility *",
-                        placeholder = "e.g., City General Hospital",
-                        leadingIcon = Icons.Default.LocalHospital,
-                        isError = hospitalError != null,
-                        errorMessage = hospitalError
-                    )
-
-                    // City / Locality
-                    BloodConnectTextField(
-                        value = cityLocality,
-                        onValueChange = {
-                            cityLocality = it
-                            cityError = null
-                        },
-                        label = "City / Locality *",
-                        placeholder = "e.g., Central Sector, Downtown",
-                        leadingIcon = Icons.Default.LocationCity,
-                        isError = cityError != null,
-                        errorMessage = cityError
-                    )
-
-                    // Hospital contact number
-                    BloodConnectTextField(
-                        value = contactNumber,
-                        onValueChange = {
-                            contactNumber = it
-                            contactNumberError = null
-                        },
-                        label = "Hospital / ward contact number *",
-                        placeholder = "e.g., +91 98765 43210 or 022-2345-6789",
-                        leadingIcon = Icons.Default.Call,
-                        isError = contactNumberError != null,
-                        errorMessage = contactNumberError,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
-                    )
-
-                    // Doctor / patient reference
-                    BloodConnectTextField(
-                        value = patientReference,
-                        onValueChange = {
-                            patientReference = it
-                            patientReferenceError = null
-                        },
-                        label = "Doctor name or patient ID (Optional)",
-                        placeholder = "e.g., Dr. Sharma / Case #402",
-                        isError = patientReferenceError != null,
-                        errorMessage = patientReferenceError
-                    )
-
-                    // Urgency Level selection
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = "Urgency Level *",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        // Units needed
+                        BloodConnectTextField(
+                            value = unitsNeeded,
+                            onValueChange = {
+                                unitsNeeded = it
+                                unitsError = null
+                            },
+                            label = "Units Needed (1 to 20) *",
+                            placeholder = "e.g., 1, 2, 3",
+                            isError = unitsError != null,
+                            errorMessage = unitsError,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
 
+                        // Hospital
+                        BloodConnectTextField(
+                            value = hospital,
+                            onValueChange = {
+                                hospital = it
+                                hospitalError = null
+                            },
+                            label = "Hospital / Medical Facility *",
+                            placeholder = "e.g., City General Hospital",
+                            leadingIcon = Icons.Default.LocalHospital,
+                            isError = hospitalError != null,
+                            errorMessage = hospitalError
+                        )
+
+                        // City / Locality
+                        BloodConnectTextField(
+                            value = cityLocality,
+                            onValueChange = {
+                                cityLocality = it
+                                cityError = null
+                            },
+                            label = "City / Locality *",
+                            placeholder = "e.g., Central Sector, Downtown",
+                            leadingIcon = Icons.Default.LocationCity,
+                            isError = cityError != null,
+                            errorMessage = cityError
+                        )
+
+                        // Hospital contact number
+                        BloodConnectTextField(
+                            value = contactNumber,
+                            onValueChange = {
+                                contactNumber = it
+                                contactNumberError = null
+                            },
+                            label = "Hospital / ward contact number *",
+                            placeholder = "e.g., +91 98765 43210 or 022-2345-6789",
+                            leadingIcon = Icons.Default.Call,
+                            isError = contactNumberError != null,
+                            errorMessage = contactNumberError,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                        )
+
+                        // Doctor / patient reference
+                        BloodConnectTextField(
+                            value = patientReference,
+                            onValueChange = {
+                                patientReference = it
+                                patientReferenceError = null
+                            },
+                            label = "Doctor name or patient ID (Optional)",
+                            placeholder = "e.g., Dr. Sharma / Case #402",
+                            isError = patientReferenceError != null,
+                            errorMessage = patientReferenceError
+                        )
+
+                        // Urgency Level selection
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "Urgency Level *",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                urgencyLevels.forEach { level ->
+                                    val chipUrgency = Urgency.fromString(level)
+                                    val isSelected = selectedUrgency == level
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = {
+                                            selectedUrgency = level
+                                            urgencyError = null
+                                        },
+                                        label = {
+                                            Text(
+                                                text = level,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            containerColor = MaterialTheme.colorScheme.surface,
+                                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            selectedContainerColor = when (chipUrgency) {
+                                                Urgency.CRITICAL -> MaterialTheme.colorScheme.primary
+                                                Urgency.URGENT -> MaterialTheme.colorScheme.primaryContainer
+                                                else -> MaterialTheme.colorScheme.secondaryContainer
+                                            },
+                                            selectedLabelColor = when (chipUrgency) {
+                                                Urgency.CRITICAL -> MaterialTheme.colorScheme.onPrimary
+                                                Urgency.URGENT -> MaterialTheme.colorScheme.onPrimaryContainer
+                                                else -> MaterialTheme.colorScheme.onSecondaryContainer
+                                            }
+                                        ),
+                                        border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                                    )
+                                }
+                            }
+
+                            if (urgencyError != null) {
+                                Text(
+                                    text = urgencyError!!,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(start = 2.dp)
+                                )
+                            }
+                        }
+
+                        // Notes
+                        BloodConnectTextField(
+                            value = additionalNotes,
+                            onValueChange = { additionalNotes = it },
+                            label = "Additional Notes (Optional)",
+                            placeholder = "e.g., Patient Bed #12, Blood bank contact desk",
+                            singleLine = false
+                        )
+
+                        // Action buttons
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            urgencyLevels.forEach { level ->
-                                val chipUrgency = Urgency.fromString(level)
-                                val isSelected = selectedUrgency == level
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = {
-                                        selectedUrgency = level
-                                        urgencyError = null
-                                    },
-                                    label = {
-                                        Text(
-                                            text = level,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                        )
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        containerColor = MaterialTheme.colorScheme.surface,
-                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        selectedContainerColor = when (chipUrgency) {
-                                            Urgency.CRITICAL -> MaterialTheme.colorScheme.primary
-                                            Urgency.URGENT -> MaterialTheme.colorScheme.primaryContainer
-                                            else -> MaterialTheme.colorScheme.secondaryContainer
-                                        },
-                                        selectedLabelColor = when (chipUrgency) {
-                                            Urgency.CRITICAL -> MaterialTheme.colorScheme.onPrimary
-                                            Urgency.URGENT -> MaterialTheme.colorScheme.onPrimaryContainer
-                                            else -> MaterialTheme.colorScheme.onSecondaryContainer
-                                        }
-                                    ),
-                                    border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                                )
-                            }
-                        }
+                            BloodConnectButton(
+                                text = if (isSubmitting) "Broadcasting..." else "Review Request",
+                                icon = Icons.Default.AddAlert,
+                                onClick = { validateAndSubmit() },
+                                enabled = !isSubmitting,
+                                modifier = Modifier.weight(1f)
+                            )
 
-                        if (urgencyError != null) {
-                            Text(
-                                text = urgencyError!!,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(start = 2.dp)
+                            BloodConnectOutlinedButton(
+                                text = "Reset",
+                                onClick = { resetForm() },
+                                enabled = !isSubmitting,
+                                modifier = Modifier.width(100.dp)
                             )
                         }
-                    }
 
-                    // Notes
-                    BloodConnectTextField(
-                        value = additionalNotes,
-                        onValueChange = { additionalNotes = it },
-                        label = "Additional Notes (Optional)",
-                        placeholder = "e.g., Patient Bed #12, Blood bank contact desk",
-                        singleLine = false
-                    )
+                        if (isSubmitting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .align(Alignment.CenterHorizontally),
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 3.dp
+                            )
+                        }
 
-                    // Action buttons
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        BloodConnectButton(
-                            text = if (isSubmitting) "Broadcasting..." else "Review Request",
-                            icon = Icons.Default.AddAlert,
-                            onClick = { validateAndSubmit() },
-                            enabled = !isSubmitting,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        BloodConnectOutlinedButton(
-                            text = "Reset",
-                            onClick = { resetForm() },
-                            enabled = !isSubmitting,
-                            modifier = Modifier.width(100.dp)
-                        )
-                    }
-
-                    if (isSubmitting) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .align(Alignment.CenterHorizontally),
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 3.dp
-                        )
-                    }
-
-                    if (errorMessage != null) {
-                        Text(
-                            text = errorMessage,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        if (errorMessage != null) {
+                            Text(
+                                text = errorMessage,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
             }
@@ -574,8 +588,8 @@ fun BloodRequestsScreen(
             // Active Requests Section
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 SectionHeader(
-                    title = "Active Blood Requests",
-                    subtitle = "Live emergency broadcasts from the network"
+                    title = if (targetRequestId != null) "Focused Request" else "Active Blood Requests",
+                    subtitle = if (targetRequestId != null) "Emergency notification details" else "Live emergency broadcasts from the network"
                 )
 
                 if (isLoading && requests.isEmpty()) {
@@ -608,6 +622,7 @@ fun BloodRequestsScreen(
                                 request = request,
                                 currentUser = currentUserProfile,
                                 viewModel = viewModel,
+                                isHighlighted = request.id == targetRequestId || request.requestId == targetRequestId,
                                 onDismiss = {
                                     val reqId = request.id.ifBlank { request.requestId }
                                     dismissRequest(context, reqId)
@@ -846,6 +861,7 @@ private fun LiveRequestCard(
     currentUser: User?,
     viewModel: BloodRequestsViewModel,
     onDismiss: () -> Unit,
+    isHighlighted: Boolean = false,
     onShowSnackbar: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -877,10 +893,10 @@ private fun LiveRequestCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isHighlighted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isHighlighted) 4.dp else 1.dp),
+        border = BorderStroke(if (isHighlighted) 2.dp else 1.dp, if (isHighlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(
             modifier = Modifier
@@ -948,7 +964,7 @@ private fun LiveRequestCard(
 
                     if (request.notes.isNotBlank()) {
                         Text(
-                            text = "Notes: ${request.notes}",
+                            text = "Notes: ${EncryptionHelper.decrypt(request.notes)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
                         )

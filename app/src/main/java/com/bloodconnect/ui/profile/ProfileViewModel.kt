@@ -57,6 +57,16 @@ class ProfileViewModel @Inject constructor(
         private set
 
     init {
+        val uid = authRepository.currentUserId
+        if (uid != null) {
+            viewModelScope.launch {
+                userRepository.observeUser(uid).collect { liveUser ->
+                    if (liveUser != null) {
+                        user = liveUser
+                    }
+                }
+            }
+        }
         loadUserProfile()
         observeBlockedUsers()
     }
@@ -132,11 +142,28 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun updateAvailability(isAvailable: Boolean) {
+    fun resetDonationCooldown() {
         val uid = authRepository.currentUserId ?: return
         viewModelScope.launch {
-            userRepository.updateAvailability(uid, isAvailable)
+            userRepository.resetDonationCooldown(uid)
             loadUserProfile()
+        }
+    }
+
+    fun updateUserRole(role: String, organizationName: String, onComplete: () -> Unit = {}) {
+        val uid = authRepository.currentUserId ?: return
+        viewModelScope.launch {
+            userRepository.updateUserRole(uid, role, organizationName)
+            loadUserProfile()
+            onComplete()
+        }
+    }
+
+    fun updateAvailability(isAvailable: Boolean) {
+        val uid = authRepository.currentUserId ?: return
+        user = user?.copy(isAvailable = isAvailable)
+        viewModelScope.launch {
+            userRepository.updateAvailability(uid, isAvailable)
         }
     }
 

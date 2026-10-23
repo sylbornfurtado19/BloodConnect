@@ -148,6 +148,21 @@ object IntentHelpers {
         }
     }
 
+    fun sharePlainText(context: Context, text: String, title: String = "Share") {
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        val chooser = Intent.createChooser(sendIntent, title).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        try {
+            context.startActivity(chooser)
+        } catch (_: Exception) {
+            // Swallowed if no application can handle share intent
+        }
+    }
+
     fun openDirections(
         context: Context,
         latitude: Double,

@@ -61,7 +61,7 @@ class AuthViewModel @Inject constructor(
      * Authenticates an existing user with email and password credentials.
      * Keeps execution on Dispatchers.IO and never stores passwords in state.
      */
-    fun signIn(email: String, pass: String, onSuccess: () -> Unit = {}) {
+    fun signIn(email: String, pass: String, intendedRole: String = "DONOR", onSuccess: () -> Unit = {}) {
         val trimmedEmail = email.trim()
         if (trimmedEmail.isBlank() || pass.isBlank()) {
             updateState(AuthUiState.Error("Please fill in all fields", R.string.auth_error_fill_all_fields))
@@ -73,17 +73,26 @@ class AuthViewModel @Inject constructor(
             try {
                 val result = authRepository.signIn(trimmedEmail, pass)
                 if (result.isSuccess) {
-                    updateState(AuthUiState.Success)
                     val uid = authRepository.currentUserId
                     if (uid != null) {
+                        val user = userRepository.getUser(uid).getOrNull()
+                        if (intendedRole == "HOSPITAL_ADMIN" && (user == null || !user.isHospitalAdmin)) {
+                            // User logged in via Hospital / Staff tab: ensure role is HOSPITAL_ADMIN
+                            userRepository.updateUserRole(
+                                uid = uid,
+                                role = "HOSPITAL_ADMIN",
+                                organizationName = user?.organizationName?.ifBlank { "Hospital Authority" } ?: "Hospital Authority"
+                            )
+                        }
                         viewModelScope.launch(Dispatchers.IO) {
                             locationSyncManager.captureLocationIfMissing(uid)
-                            val user = userRepository.getUser(uid).getOrNull()
-                            if (user != null && user.bloodGroup.isNotBlank()) {
-                                topicManager.subscribe(user.bloodGroup)
+                            val updatedUser = userRepository.getUser(uid).getOrNull()
+                            if (updatedUser != null && updatedUser.bloodGroup.isNotBlank()) {
+                                topicManager.subscribe(updatedUser.bloodGroup)
                             }
                         }
                     }
+                    updateState(AuthUiState.Success)
                     withContext(Dispatchers.Main) {
                         onSuccess()
                     }
@@ -107,15 +116,23 @@ class AuthViewModel @Inject constructor(
         email: String,
         pass: String,
         phone: String = "",
+        role: String = "DONOR",
+        organizationName: String = "",
         onSuccess: () -> Unit = {}
     ) {
         val trimmedFullName = fullName.trim()
         val trimmedBloodGroup = bloodGroup.trim()
         val trimmedEmail = email.trim()
         val trimmedPhone = phone.trim()
+        val trimmedOrg = organizationName.trim()
 
-        if (trimmedFullName.isBlank() || trimmedBloodGroup.isBlank() || trimmedEmail.isBlank() || pass.isBlank()) {
+        if (trimmedFullName.isBlank() || trimmedEmail.isBlank() || pass.isBlank()) {
             updateState(AuthUiState.Error("Please fill in all required fields", R.string.auth_error_fill_all_required_fields))
+            return
+        }
+
+        if (role == "DONOR" && trimmedBloodGroup.isBlank()) {
+            updateState(AuthUiState.Error("Please select your blood group", R.string.auth_error_fill_all_required_fields))
             return
         }
 
@@ -131,9 +148,11 @@ class AuthViewModel @Inject constructor(
                             id = firebaseUser.uid,
                             email = trimmedEmail,
                             fullName = trimmedFullName,
-                            displayName = trimmedFullName,
+                            displayName = if (role == "HOSPITAL_ADMIN" && trimmedOrg.isNotBlank()) trimmedOrg else trimmedFullName,
                             bloodGroup = trimmedBloodGroup,
-                            phone = trimmedPhone
+                            phone = trimmedPhone,
+                            role = role,
+                            organizationName = trimmedOrg
                         )
                         val saveResult = userRepository.saveUser(user)
                         if (saveResult.isSuccess) {
@@ -253,7 +272,7 @@ class AuthViewModel @Inject constructor(
         pass: String,
         phone: String = "",
         onSuccess: () -> Unit = {}
-    ) = signUp(fullName, bloodGroup, email, pass, phone, onSuccess)
+    ) = signUp(fullName, bloodGroup, email, pass, phone, onSuccess = onSuccess)
 
     /**
      * Signs out the currently authenticated user and unsubscribes from topics.

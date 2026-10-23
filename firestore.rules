@@ -111,7 +111,12 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
     match /camps/{id} {
       allow read: if isSignedIn();
-      allow write: if false;
+      allow create, update: if isSignedIn() &&
+        request.resource.data.title is string &&
+        request.resource.data.title.size() >= 2 &&
+        request.resource.data.city is string &&
+        request.resource.data.contactNumber is string;
+      allow delete: if isSignedIn();
 
       match /rsvps/{uid} {
         allow read: if isSignedIn();
@@ -125,7 +130,7 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
     match /blood_banks/{id} {
       allow read: if isSignedIn();
-      allow write: if false;
+      allow write: if isSignedIn();
     }
 
     // Default Deny

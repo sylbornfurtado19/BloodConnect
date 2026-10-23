@@ -11,7 +11,11 @@ sealed class Screen(val route: String) {
     data object DonorDetail : Screen("donor_detail/{donorId}") {
         fun createRoute(donorId: String): String = "donor_detail/$donorId"
     }
-    data object BloodRequests : Screen("blood_requests")
+    data object BloodRequests : Screen("blood_requests?requestId={requestId}") {
+        fun createRoute(requestId: String? = null): String {
+            return if (requestId != null) "blood_requests?requestId=$requestId" else "blood_requests"
+        }
+    }
     data object MyRequests : Screen("my_requests")
     data object Profile : Screen("profile")
     data object DonorMap : Screen("donor_map")
@@ -20,4 +24,6 @@ sealed class Screen(val route: String) {
     data object DonationHistory : Screen("donation_history")
     data object Trends : Screen("demand_trends")
     data object Assistant : Screen("assistant")
+    data object Notifications : Screen("notifications")
+    data object HospitalDashboard : Screen("hospital_dashboard")
 }

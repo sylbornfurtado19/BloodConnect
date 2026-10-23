@@ -144,6 +144,9 @@
     <string name="profile_blood_group_not_specified">ब्लड ग्रुप दर्ज नहीं है</string>
     <string name="profile_status_active_donor">एक्टिव डोनर</string>
     <string name="profile_status_inactive_cooldown">इनएक्टिव / ब्रेक पर</string>
+    <string name="profile_status_inactive_offline">इनएक्टिव / ऑफलाइन</string>
+    <string name="profile_status_cooldown_active">कूलडाउन एक्टिव</string>
+    <string name="profile_btn_reset_cooldown">कूलडाउन रीसेट करें</string>
     <string name="profile_donor_tier">डोनर लेवल: %1$s</string>
     <string name="profile_lives_saved_count">बचाई गई जानें: %1$d</string>
     <string name="profile_lives_saved_footnote">* हर एक रक्तदान 1 जान बचाने के बराबर माना जाता है।</string>

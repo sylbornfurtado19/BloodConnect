@@ -21,6 +21,8 @@ import com.bloodconnect.ui.profile.DonationHistoryScreen
 import com.bloodconnect.ui.community.BloodDrivesScreen
 import com.bloodconnect.ui.community.BloodBanksScreen
 import com.bloodconnect.ui.assistant.AssistantScreen
+import com.bloodconnect.ui.notifications.NotificationsScreen
+import com.bloodconnect.ui.hospital.HospitalDashboardScreen
 
 /**
  * Top-level Navigation Graph for BloodConnect.
@@ -36,7 +38,7 @@ fun BloodConnectNavHost(
 ) {
     LaunchedEffect(pendingRequestId) {
         if (!pendingRequestId.isNullOrBlank()) {
-            navController.navigate(Screen.BloodRequests.route) {
+            navController.navigate(Screen.BloodRequests.createRoute(pendingRequestId)) {
                 launchSingleTop = true
             }
             onPendingRequestIdHandled()
@@ -92,7 +94,7 @@ fun BloodConnectNavHost(
                     }
                 },
                 onNavigateToBloodRequests = {
-                    navController.navigate(Screen.BloodRequests.route) {
+                    navController.navigate(Screen.BloodRequests.createRoute(null)) {
                         launchSingleTop = true
                     }
                 },
@@ -123,6 +125,16 @@ fun BloodConnectNavHost(
                 },
                 onNavigateToAssistant = {
                     navController.navigate(Screen.Assistant.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToNotifications = {
+                    navController.navigate(Screen.Notifications.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToHospitalDashboard = {
+                    navController.navigate(Screen.HospitalDashboard.route) {
                         launchSingleTop = true
                     }
                 }
@@ -159,8 +171,19 @@ fun BloodConnectNavHost(
             )
         }
 
-        composable(route = Screen.BloodRequests.route) {
+        composable(
+            route = Screen.BloodRequests.route,
+            arguments = listOf(
+                navArgument("requestId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val targetRequestId = backStackEntry.arguments?.getString("requestId")
             BloodRequestsScreen(
+                targetRequestId = targetRequestId,
                 onNavigateBack = {
                     navController.popBackStack()
                 }
@@ -228,6 +251,32 @@ fun BloodConnectNavHost(
 
         composable(route = Screen.Assistant.route) {
             AssistantScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(route = Screen.Notifications.route) {
+            NotificationsScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToBloodRequests = { requestId ->
+                    navController.navigate(Screen.BloodRequests.createRoute(requestId)) {
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToBloodDrives = {
+                    navController.navigate(Screen.BloodDrives.route) {
+                        launchSingleTop = true
+                    }
+                }
+            )
+        }
+
+        composable(route = Screen.HospitalDashboard.route) {
+            HospitalDashboardScreen(
                 onNavigateBack = {
                     navController.popBackStack()
                 }

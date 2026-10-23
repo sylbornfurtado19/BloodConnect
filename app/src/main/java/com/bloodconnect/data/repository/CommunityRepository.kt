@@ -110,18 +110,74 @@ class CommunityRepository @Inject constructor(
     }
 
     /**
-     * Retrieves the current server-side count of attendees RSVP'd for this drive.
+     * Retrieves the total count of attendees who RSVP'd for the specified drive.
      */
     suspend fun rsvpCount(driveId: String): Int {
         return try {
-            val countSnapshot = campsCollection.document(driveId)
-                .collection("rsvps")
+            val snapshot = campsCollection.document(driveId).collection("rsvps")
                 .count()
                 .get(AggregateSource.SERVER)
                 .await()
-            countSnapshot.count.toInt()
+            snapshot.count.toInt()
         } catch (_: Exception) {
             0
+        }
+    }
+
+    /**
+     * Schedules and publishes a new blood donation drive into the camps collection.
+     */
+    suspend fun scheduleBloodDrive(drive: BloodDrive): Result<String> {
+        return try {
+            val docRef = if (drive.id.isNotBlank()) campsCollection.document(drive.id) else campsCollection.document()
+            val newDrive = drive.copy(id = docRef.id)
+            docRef.set(newDrive).await()
+            Result.success(docRef.id)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Deletes a blood drive by ID.
+     */
+    suspend fun deleteBloodDrive(driveId: String): Result<Unit> {
+        return try {
+            campsCollection.document(driveId).delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Updates real-time stock counts for a specific blood bank.
+     */
+    suspend fun updateBloodBankStock(bankId: String, stock: Map<String, Int>): Result<Unit> {
+        return try {
+            bloodBanksCollection.document(bankId).update(
+                mapOf(
+                    "stock" to stock,
+                    "updatedAt" to System.currentTimeMillis()
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Creates or updates a blood bank facility record in Firestore.
+     */
+    suspend fun upsertBloodBank(bloodBank: BloodBank): Result<String> {
+        return try {
+            val docRef = if (bloodBank.id.isNotBlank()) bloodBanksCollection.document(bloodBank.id) else bloodBanksCollection.document()
+            val toSave = bloodBank.copy(id = docRef.id, updatedAt = System.currentTimeMillis())
+            docRef.set(toSave).await()
+            Result.success(docRef.id)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 }

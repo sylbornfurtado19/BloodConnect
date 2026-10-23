@@ -32,8 +32,14 @@ class HomeViewModel @Inject constructor(
     private val locationSyncManager: LocationSyncManager,
     private val topicManager: TopicManager,
     private val donationSyncManager: DonationSyncManager,
+    private val notificationRepository: com.bloodconnect.data.repository.NotificationRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
+
+    private val _currentUser = kotlinx.coroutines.flow.MutableStateFlow<com.bloodconnect.data.model.User?>(null)
+    val currentUser: kotlinx.coroutines.flow.StateFlow<com.bloodconnect.data.model.User?> = _currentUser
+
+    val unreadNotificationCount: kotlinx.coroutines.flow.StateFlow<Int> = notificationRepository.unreadCount
 
     var permissionRequested by mutableStateOf(false)
         private set
@@ -44,6 +50,11 @@ class HomeViewModel @Inject constructor(
     init {
         val uid = authRepository.currentUserId
         if (uid != null) {
+            viewModelScope.launch {
+                userRepository.observeUser(uid).collect { user ->
+                    _currentUser.value = user
+                }
+            }
             viewModelScope.launch(Dispatchers.IO) {
                 try {
                     donationSyncManager.syncFromPledges(uid)

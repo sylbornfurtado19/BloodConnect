@@ -3,6 +3,7 @@ package com.bloodconnect.ui.profile
 import android.content.Intent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,8 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
+import android.widget.Toast
+import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
@@ -52,6 +55,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
@@ -71,6 +75,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -83,10 +88,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bloodconnect.R
 import com.bloodconnect.utils.AnalyticsHelper
+import com.bloodconnect.ui.theme.PureWhite
+import com.bloodconnect.ui.theme.StitchCrimson
 
 import com.bloodconnect.data.model.Badge
 import com.bloodconnect.data.model.DonationEligibility
 import com.bloodconnect.data.model.DonorTier
+import com.bloodconnect.ui.components.AuthRoleSegmentedSwitcher
 import com.bloodconnect.ui.components.BloodConnectButton
 import com.bloodconnect.ui.components.BloodConnectOutlinedButton
 import com.bloodconnect.ui.components.BloodConnectTextField
@@ -134,6 +142,17 @@ fun ProfileScreen(
 
     var showSuccessDialog by remember { mutableStateOf(false) }
     var showDonatedTodayDialog by remember { mutableStateOf(false) }
+    var showRoleDialog by remember { mutableStateOf(false) }
+    var roleDialogHospitalName by remember { mutableStateOf("") }
+    var selectedRoleInDialog by remember { mutableStateOf("DONOR") }
+
+    val profileUser = viewModel.user
+    LaunchedEffect(profileUser) {
+        if (profileUser != null) {
+            roleDialogHospitalName = profileUser.organizationName
+            selectedRoleInDialog = if (profileUser.isHospitalAdmin) "HOSPITAL_ADMIN" else "DONOR"
+        }
+    }
 
     val lastDonationAt = viewModel.user?.lastDonationAt
     val isEligibleToDonate = DonationEligibility.isEligible(lastDonationAt)
@@ -232,6 +251,72 @@ fun ProfileScreen(
             isEditing = false
             showSuccessDialog = true
         }
+    }
+
+    if (showRoleDialog) {
+        AlertDialog(
+            onDismissRequest = { showRoleDialog = false },
+            title = {
+                Text(
+                    text = "Account Role & Access",
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        text = "Hospital accounts have authority to schedule, publish, and manage community blood donation drives across the network.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Role Switcher Tabs (Donor vs Hospital)
+                    AuthRoleSegmentedSwitcher(
+                        selectedRole = selectedRoleInDialog,
+                        onRoleSelected = { selectedRoleInDialog = it },
+                        donorLabel = "Donor",
+                        hospitalLabel = "Hospital"
+                    )
+
+                    if (selectedRoleInDialog == "HOSPITAL_ADMIN") {
+                        OutlinedTextField(
+                            value = roleDialogHospitalName,
+                            onValueChange = { roleDialogHospitalName = it },
+                            label = { Text("Hospital / Facility Name *") },
+                            placeholder = { Text("e.g. Lilavati Hospital & Research Centre") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val org = if (selectedRoleInDialog == "HOSPITAL_ADMIN") roleDialogHospitalName.trim() else ""
+                        viewModel.updateUserRole(selectedRoleInDialog, org) {
+                            showRoleDialog = false
+                            Toast.makeText(
+                                context,
+                                if (selectedRoleInDialog == "HOSPITAL_ADMIN") "Switched to Hospital Admin account!" else "Switched to Voluntary Donor account!",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    },
+                    enabled = selectedRoleInDialog == "DONOR" || roleDialogHospitalName.isNotBlank()
+                ) {
+                    Text("Save Changes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRoleDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -353,46 +438,144 @@ fun ProfileScreen(
                         )
                     }
 
-                    SuggestionChip(
-                        onClick = {},
-                        label = {
-                            Text(
-                                text = if (isDonorAvailable && isEligibleToDonate) {
-                                    stringResource(R.string.profile_status_active_donor)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        SuggestionChip(
+                            onClick = {
+                                val next = !isDonorAvailable
+                                isDonorAvailable = next
+                                viewModel.updateAvailability(next)
+                            },
+                            label = {
+                                Text(
+                                    text = if (isDonorAvailable) {
+                                        stringResource(R.string.profile_status_active_donor)
+                                    } else {
+                                        if (!isEligibleToDonate) {
+                                            stringResource(R.string.profile_status_inactive_cooldown)
+                                        } else {
+                                            stringResource(R.string.profile_status_inactive_offline)
+                                        }
+                                    },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = if (isDonorAvailable) Icons.Default.CheckCircle else Icons.Default.Info,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = if (isDonorAvailable) {
+                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
                                 } else {
-                                    stringResource(R.string.profile_status_inactive_cooldown)
+                                    MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
                                 },
+                                labelColor = if (isDonorAvailable) {
+                                    MaterialTheme.colorScheme.tertiary
+                                } else {
+                                    MaterialTheme.colorScheme.error
+                                },
+                                iconContentColor = if (isDonorAvailable) {
+                                    MaterialTheme.colorScheme.tertiary
+                                } else {
+                                    MaterialTheme.colorScheme.error
+                                }
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            border = null
+                        )
+
+                        Switch(
+                            checked = isDonorAvailable,
+                            onCheckedChange = {
+                                isDonorAvailable = it
+                                viewModel.updateAvailability(it)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
+
+                    if (!isEligibleToDonate) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "Cooldown active" + (eligibleOnDateStr?.let { " (until $it)" } ?: ""),
                                 style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        },
-                        icon = {
+                            Text(
+                                text = "• " + stringResource(R.string.profile_btn_reset_cooldown),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.clickable { viewModel.resetDonationCooldown() }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Account Role & Hospital Mode Switcher
+                    val isHospitalAdmin = profileUser?.isHospitalAdmin == true
+                    val hospitalName = profileUser?.organizationName?.ifBlank { "Hospital Authority" } ?: "Hospital Authority"
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isHospitalAdmin) StitchCrimson.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .clickable { showRoleDialog = true }
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
                             Icon(
-                                imageVector = if (isDonorAvailable && isEligibleToDonate) Icons.Default.CheckCircle else Icons.Default.Info,
+                                imageVector = if (isHospitalAdmin) Icons.Default.LocalHospital else Icons.Default.Person,
                                 contentDescription = null,
-                                modifier = Modifier.size(14.dp)
+                                tint = if (isHospitalAdmin) StitchCrimson else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
                             )
-                        },
-                        colors = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = if (isDonorAvailable && isEligibleToDonate) {
-                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
-                            } else {
-                                MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
-                            },
-                            labelColor = if (isDonorAvailable && isEligibleToDonate) {
-                                MaterialTheme.colorScheme.tertiary
-                            } else {
-                                MaterialTheme.colorScheme.error
-                            },
-                            iconContentColor = if (isDonorAvailable && isEligibleToDonate) {
-                                MaterialTheme.colorScheme.tertiary
-                            } else {
-                                MaterialTheme.colorScheme.error
+                            Column {
+                                Text(
+                                    text = if (isHospitalAdmin) hospitalName else "Voluntary Donor Account",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (isHospitalAdmin) "Hospital Authority • Tap to switch/edit" else "Tap to switch to Hospital Account",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        border = null
-                    )
+                        }
+
+                        Text(
+                            text = if (isHospitalAdmin) "Manage" else "Switch",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = StitchCrimson
+                        )
+                    }
                 }
             }
 

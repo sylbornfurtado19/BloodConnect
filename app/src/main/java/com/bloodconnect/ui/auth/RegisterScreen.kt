@@ -30,8 +30,10 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -63,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bloodconnect.R
+import com.bloodconnect.ui.components.AuthRoleSegmentedSwitcher
 import com.bloodconnect.ui.components.BloodConnectGradientButton
 import com.bloodconnect.ui.components.BloodConnectTextField
 import com.bloodconnect.ui.theme.BloodConnectTheme
@@ -97,6 +100,8 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var role by remember { mutableStateOf("DONOR") }
+    var organizationName by remember { mutableStateOf("") }
 
     val uiState by authViewModel.uiStateFlow.collectAsState()
     val context = LocalContext.current
@@ -217,22 +222,59 @@ fun RegisterScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = stringResource(R.string.register_title),
+                        text = if (role == "HOSPITAL_ADMIN") "Register Hospital Account" else stringResource(R.string.register_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Segmented Role Switcher: Donor vs Hospital Authority
+                    AuthRoleSegmentedSwitcher(
+                        selectedRole = role,
+                        onRoleSelected = {
+                            role = it
+                            if (it == "HOSPITAL_ADMIN" && bloodGroup.isBlank()) bloodGroup = "O+"
+                            if (uiState is AuthUiState.Error) authViewModel.clearError()
+                        },
+                        donorLabel = "Donor",
+                        hospitalLabel = "Hospital"
+                    )
+
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Full Name Field
+                    if (role == "HOSPITAL_ADMIN") {
+                        // Organization Name Field
+                        BloodConnectTextField(
+                            value = organizationName,
+                            onValueChange = {
+                                organizationName = it
+                                if (uiState is AuthUiState.Error) authViewModel.clearError()
+                            },
+                            label = "Hospital / Facility Name",
+                            leadingIcon = Icons.Default.LocalHospital,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Next
+                            ),
+                            singleLine = true,
+                            enabled = uiState !is AuthUiState.Loading,
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            borderColor = MaterialTheme.colorScheme.outlineVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+
+                    // Full Name Field (or Coordinator Name)
                     BloodConnectTextField(
                         value = fullName,
                         onValueChange = {
                             fullName = it
                             if (uiState is AuthUiState.Error) authViewModel.clearError()
                         },
-                        label = stringResource(R.string.register_label_full_name),
+                        label = if (role == "HOSPITAL_ADMIN") "Coordinator / Admin Name" else stringResource(R.string.register_label_full_name),
                         leadingIcon = Icons.Default.Person,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Text,
@@ -246,8 +288,7 @@ fun RegisterScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Blood Group Quick-Select Chips Section
-                    Column(modifier = Modifier.fillMaxWidth()) {
+                    if (role == "DONOR") {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -417,7 +458,7 @@ fun RegisterScreen(
                         keyboardActions = KeyboardActions(
                             onDone = {
                                 if (uiState !is AuthUiState.Loading) {
-                                    authViewModel.signUp(fullName, bloodGroup, email, password, phone, onNavigateToHome)
+                                    authViewModel.signUp(fullName, bloodGroup, email, password, phone, role, organizationName, onNavigateToHome)
                                 }
                             }
                         ),
@@ -479,9 +520,9 @@ fun RegisterScreen(
 
                     // Primary Action: Crimson Gradient Button
                     BloodConnectGradientButton(
-                        text = stringResource(R.string.register_btn_register),
+                        text = if (role == "HOSPITAL_ADMIN") "Register Hospital Account" else stringResource(R.string.register_btn_register),
                         onClick = {
-                            authViewModel.signUp(fullName, bloodGroup, email, password, phone, onNavigateToHome)
+                            authViewModel.signUp(fullName, bloodGroup, email, password, phone, role, organizationName, onNavigateToHome)
                         },
                         isLoading = uiState is AuthUiState.Loading,
                         enabled = uiState !is AuthUiState.Loading

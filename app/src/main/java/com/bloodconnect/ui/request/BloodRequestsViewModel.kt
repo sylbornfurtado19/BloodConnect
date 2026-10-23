@@ -15,6 +15,7 @@ import com.bloodconnect.data.repository.BloodRequestRepository
 import com.bloodconnect.data.repository.ReportRepository
 import com.bloodconnect.data.repository.UserRepository
 import com.bloodconnect.utils.AnalyticsHelper
+import com.bloodconnect.utils.EncryptionHelper
 import com.bloodconnect.utils.LocationHelper
 import com.google.firebase.firestore.FirebaseFirestoreException
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -293,9 +294,9 @@ class BloodRequestsViewModel @Inject constructor(
                     status = RequestStatus.PENDING.displayName,
                     createdAt = now,
                     expiresAt = expiresAt,
-                    notes = notes,
-                    contactNumber = contactNumber,
-                    patientReference = patientReference,
+                    notes = EncryptionHelper.encrypt(notes.trim()),
+                    contactNumber = contactNumber.trim(),
+                    patientReference = EncryptionHelper.encrypt(patientReference.trim()),
                     verified = false
                 )
                 val result = requestRepository.createRequest(request)

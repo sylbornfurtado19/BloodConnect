@@ -87,6 +87,7 @@ import com.bloodconnect.ui.components.EmptyState
 import com.bloodconnect.ui.components.ReportDialog
 import com.bloodconnect.ui.components.SectionHeader
 import com.bloodconnect.ui.theme.BloodConnectTheme
+import com.bloodconnect.utils.EncryptionHelper
 import com.bloodconnect.utils.IntentHelpers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -533,13 +534,13 @@ fun MyRequestsScreen(
                                 RequestDetailRow(label = "Contact Number", value = req.contactNumber)
                             }
                             if (req.patientReference.isNotBlank()) {
-                                RequestDetailRow(label = "Doctor / Patient ID", value = req.patientReference)
+                                RequestDetailRow(label = "Doctor / Patient ID", value = EncryptionHelper.decrypt(req.patientReference))
                             }
                             RequestDetailRow(label = "Locality", value = req.city)
                             RequestDetailRow(label = "Urgency", value = req.urgencyLevel.displayName)
                             RequestDetailRow(label = "Expiration", value = formatTimeRemaining(req.expiresAt))
                             if (req.notes.isNotBlank()) {
-                                RequestDetailRow(label = "Notes", value = req.notes)
+                                RequestDetailRow(label = "Notes", value = EncryptionHelper.decrypt(req.notes))
                             }
                         }
                     }
@@ -839,140 +840,69 @@ private fun MyRequestCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Header Row: Left has Blood Badge + Hospital & City; Right has Status Chip & Share
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                BloodGroupBadge(
-                    bloodGroup = entry.bloodGroup,
-                    size = 48.dp
-                )
-
-                Column(
+                Row(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = entry.hospital,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                    BloodGroupBadge(
+                        bloodGroup = entry.bloodGroup,
+                        size = 46.dp
                     )
 
-                    if (entry.verified) {
-                        SuggestionChip(
-                            onClick = onClick,
-                            label = {
-                                Text(
-                                    text = "Verified",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            },
-                            colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = Color(0xFFE8F5E9),
-                                labelColor = Color(0xFF2E7D32)
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                    } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            text = "Not yet verified",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            text = entry.hospital,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                    }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocationCity,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = entry.city.ifBlank { "Unspecified Location" },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    // Units Received & Progress Bar
-                    Text(
-                        text = "${entry.unitsReceived} of ${entry.unitsNeeded} units received",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-
-                    if (activePledgeCount > 0) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Favorite,
+                                imageVector = Icons.Default.LocationCity,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.size(14.dp)
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(13.dp)
                             )
-                            val etaInfo = if (shortestEtaStr != null) " ($shortestEtaStr)" else ""
                             Text(
-                                text = "$activePledgeCount donor(s) on the way$etaInfo",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.tertiary,
-                                fontWeight = FontWeight.Bold
+                                text = entry.city.ifBlank { "Unspecified Location" },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            if (entry.verified) {
+                                Text("•", color = MaterialTheme.colorScheme.outlineVariant)
+                                Text(
+                                    text = "Verified",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF2E7D32),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
-                    }
-
-                    Text(
-                        text = timeRemainingStr,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (effectiveStatus == RequestStatus.EXPIRED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    if (entry.notes.isNotBlank()) {
-                        Text(
-                            text = "Notes: ${entry.notes}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
-                        )
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = { IntentHelpers.shareRequest(context, entry) },
-                        modifier = Modifier.sizeIn(minWidth = 44.dp, minHeight = 44.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share request",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
                     SuggestionChip(
                         onClick = onClick,
                         label = {
                             Text(
                                 text = effectiveStatus.displayName,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.labelSmall
                             )
                         },
                         colors = SuggestionChipDefaults.suggestionChipColors(
@@ -993,7 +923,88 @@ private fun MyRequestCard(
                         ),
                         shape = RoundedCornerShape(8.dp)
                     )
+
+                    IconButton(
+                        onClick = { IntentHelpers.shareRequest(context, entry) },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Share request",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
+            }
+
+            // Units Received & Full Width Progress Bar
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${entry.unitsReceived} of ${entry.unitsNeeded} units received",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = timeRemainingStr,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (effectiveStatus == RequestStatus.EXPIRED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
+
+            if (activePledgeCount > 0) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.08f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    val etaInfo = if (shortestEtaStr != null) " ($shortestEtaStr)" else ""
+                    Text(
+                        text = "$activePledgeCount donor(s) on the way$etaInfo",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            if (entry.notes.isNotBlank()) {
+                val decryptedNotes = EncryptionHelper.decrypt(entry.notes)
+                Text(
+                    text = "Notes: $decryptedNotes",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f)
+                )
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))

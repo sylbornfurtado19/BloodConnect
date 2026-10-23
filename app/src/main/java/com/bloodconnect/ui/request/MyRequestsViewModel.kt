@@ -51,15 +51,12 @@ class MyRequestsViewModel @Inject constructor(
         errorMessage = null
         viewModelScope.launch {
             try {
-                val result = requestRepository.getRequestsByRequester(uid)
-                if (result.isSuccess) {
-                    requests = result.getOrDefault(emptyList())
-                } else {
-                    errorMessage = result.exceptionOrNull()?.localizedMessage ?: "Failed to load your requests"
+                requestRepository.observeRequestsByRequester(uid).collect { list ->
+                    requests = list
+                    isLoading = false
                 }
             } catch (e: Exception) {
                 errorMessage = e.localizedMessage ?: "Failed to load your requests"
-            } finally {
                 isLoading = false
             }
         }

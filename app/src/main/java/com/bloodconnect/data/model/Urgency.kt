@@ -27,12 +27,10 @@ enum class Urgency(val displayName: String) {
             return when {
                 base.equals("Routine", ignoreCase = true) || base.equals("ROUTINE", ignoreCase = true) -> ROUTINE
                 base.equals("Normal", ignoreCase = true) || base.equals("NORMAL", ignoreCase = true) -> ROUTINE
-                base.equals("Standard", ignoreCase = true) || base.equals("Low", ignoreCase = true) -> ROUTINE
+                base.equals("Standard", ignoreCase = true) -> ROUTINE
                 base.equals("Urgent", ignoreCase = true) || base.equals("URGENT", ignoreCase = true) -> URGENT
-                base.equals("Medium", ignoreCase = true) -> URGENT
                 base.equals("Critical", ignoreCase = true) || base.equals("CRITICAL", ignoreCase = true) -> CRITICAL
                 base.equals("Emergency", ignoreCase = true) || base.equals("EMERGENCY", ignoreCase = true) -> CRITICAL
-                base.equals("High", ignoreCase = true) -> CRITICAL
                 else -> entries.find {
                     it.displayName.equals(base, ignoreCase = true) ||
                     it.name.equals(base, ignoreCase = true) ||

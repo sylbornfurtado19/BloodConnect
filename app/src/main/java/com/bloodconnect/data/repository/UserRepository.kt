@@ -42,25 +42,30 @@ class UserRepository @Inject constructor(
         }
     }
 
+    private fun parseUserSnapshot(snapshot: com.google.firebase.firestore.DocumentSnapshot, uid: String): User? {
+        if (!snapshot.exists()) return null
+        return snapshot.toObject(User::class.java)?.let { parsed ->
+            if (snapshot.contains("isAvailable")) {
+                val modernVal = snapshot.getBoolean("isAvailable")
+                if (modernVal != null) {
+                    parsed.applyModernAvailability(modernVal)
+                    parsed.copy(isAvailable = modernVal)
+                } else parsed
+            } else if (snapshot.contains("available")) {
+                val legacyVal = snapshot.getBoolean("available")
+                if (legacyVal != null) {
+                    parsed.copy(isAvailable = legacyVal)
+                } else parsed
+            } else {
+                parsed
+            }
+        }
+    }
+
     suspend fun getUser(uid: String): Result<User?> {
         return try {
             val snapshot = usersCollection.document(uid).get().await()
-            var user = snapshot.toObject(User::class.java)?.let { parsed ->
-                if (snapshot.contains("isAvailable")) {
-                    val modernVal = snapshot.getBoolean("isAvailable")
-                    if (modernVal != null) {
-                        parsed.applyModernAvailability(modernVal)
-                        parsed.copy(isAvailable = modernVal)
-                    } else parsed
-                } else if (snapshot.contains("available")) {
-                    val legacyVal = snapshot.getBoolean("available")
-                    if (legacyVal != null) {
-                        parsed.copy(isAvailable = legacyVal)
-                    } else parsed
-                } else {
-                    parsed
-                }
-            }
+            var user = parseUserSnapshot(snapshot, uid)
 
             // Fill in phone for current user from private subcollection or migrate from root doc
             if (user != null && uid == auth.currentUser?.uid) {
@@ -96,9 +101,59 @@ class UserRepository @Inject constructor(
         }
     }
 
+    /**
+     * Real-time stream of the user's profile and availability status.
+     */
+    fun observeUser(uid: String): Flow<User?> = callbackFlow {
+        val listener = usersCollection.document(uid).addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                trySend(null)
+                return@addSnapshotListener
+            }
+            if (snapshot != null && snapshot.exists()) {
+                val user = parseUserSnapshot(snapshot, uid)
+                trySend(user)
+            } else {
+                trySend(null)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
     suspend fun updateAvailability(uid: String, isAvailable: Boolean): Result<Unit> {
         return try {
-            usersCollection.document(uid).update("isAvailable", isAvailable).await()
+            val updates = mapOf<String, Any>(
+                "isAvailable" to isAvailable,
+                "available" to isAvailable
+            )
+            usersCollection.document(uid).set(updates, SetOptions.merge()).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun resetDonationCooldown(uid: String): Result<Unit> {
+        return try {
+            val updates = mapOf<String, Any?>(
+                "lastDonationAt" to null,
+                "isAvailable" to true,
+                "available" to true
+            )
+            usersCollection.document(uid).set(updates, SetOptions.merge()).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateUserRole(uid: String, role: String, organizationName: String): Result<Unit> {
+        return try {
+            val updates = mapOf(
+                "role" to role,
+                "organizationName" to organizationName
+            )
+            usersCollection.document(uid).set(updates, SetOptions.merge()).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

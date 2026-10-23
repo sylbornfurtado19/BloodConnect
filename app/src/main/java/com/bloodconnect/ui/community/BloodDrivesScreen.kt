@@ -15,9 +15,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.EventBusy
@@ -25,32 +29,42 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bloodconnect.data.model.BloodDrive
 import com.bloodconnect.ui.components.EmptyState
 import com.bloodconnect.utils.IntentHelpers
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -63,6 +77,33 @@ fun BloodDrivesScreen(
 ) {
     val context = LocalContext.current
     val uiState = viewModel.uiState
+    var showScheduleDialog by remember { mutableStateOf(false) }
+
+    if (showScheduleDialog) {
+        ScheduleBloodDriveDialog(
+            defaultOrganizer = uiState.currentHospitalName,
+            onDismiss = { showScheduleDialog = false },
+            onConfirm = { title, org, address, city, startAt, endAt, contact, desc ->
+                viewModel.scheduleDrive(
+                    title = title,
+                    organizer = org,
+                    address = address,
+                    city = city,
+                    startAt = startAt,
+                    endAt = endAt,
+                    contactNumber = contact,
+                    description = desc,
+                    onSuccess = {
+                        showScheduleDialog = false
+                        Toast.makeText(context, "Blood drive scheduled successfully!", Toast.LENGTH_SHORT).show()
+                    },
+                    onError = { err ->
+                        Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                    }
+                )
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -83,12 +124,34 @@ fun BloodDrivesScreen(
                         )
                     }
                 },
+                actions = {
+                    if (uiState.isHospitalAdmin) {
+                        IconButton(onClick = { showScheduleDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Schedule Blood Drive",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
+        },
+        floatingActionButton = {
+            if (uiState.isHospitalAdmin) {
+                ExtendedFloatingActionButton(
+                    onClick = { showScheduleDialog = true },
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text("Schedule Drive") },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            }
         },
         containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
@@ -150,8 +213,13 @@ fun BloodDrivesScreen(
                 !uiState.isLoading && uiState.drives.isEmpty() -> {
                     EmptyState(
                         title = "No upcoming drives",
-                        description = "There are no upcoming blood donation drives scheduled at this time. Please check back later.",
-                        icon = Icons.Default.EventBusy
+                        description = if (uiState.isHospitalAdmin)
+                            "No blood donation drives scheduled. As a hospital authority, you can schedule and publish upcoming camps for donors."
+                        else
+                            "There are no upcoming blood donation drives scheduled at this time. Please check back later.",
+                        icon = Icons.Default.EventBusy,
+                        actionLabel = if (uiState.isHospitalAdmin) "Schedule a Drive" else null,
+                        onActionClick = if (uiState.isHospitalAdmin) { { showScheduleDialog = true } } else null
                     )
                 }
 
@@ -168,6 +236,8 @@ fun BloodDrivesScreen(
                                 drive = drive,
                                 isGoing = uiState.rsvpStatus[drive.id] ?: false,
                                 rsvpCount = uiState.rsvpCounts[drive.id] ?: 0,
+                                canDelete = uiState.isHospitalAdmin,
+                                onDelete = { viewModel.deleteDrive(drive.id) },
                                 onToggleRsvp = { viewModel.toggleRsvp(drive.id) },
                                 onCall = {
                                     IntentHelpers.dialNumber(context, drive.contactNumber)
@@ -198,7 +268,9 @@ fun BloodDriveCard(
     onToggleRsvp: () -> Unit,
     onCall: () -> Unit,
     onDirections: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    canDelete: Boolean = false,
+    onDelete: () -> Unit = {}
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -213,20 +285,42 @@ fun BloodDriveCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Title and Organizer
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    text = drive.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                if (drive.organizer.isNotBlank()) {
+            // Title, Organizer, and Admin Delete
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
                     Text(
-                        text = "Organized by ${drive.organizer}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        text = drive.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+                    if (drive.organizer.isNotBlank()) {
+                        Text(
+                            text = "Organized by ${drive.organizer}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                if (canDelete) {
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "Delete Drive",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
 
@@ -382,4 +476,151 @@ fun formatDriveDateTime(startAt: Long, endAt: Long): String {
     } else {
         "$startDate, $startTime"
     }
+}
+
+@Composable
+fun ScheduleBloodDriveDialog(
+    defaultOrganizer: String,
+    onDismiss: () -> Unit,
+    onConfirm: (
+        title: String,
+        organizer: String,
+        address: String,
+        city: String,
+        startAt: Long,
+        endAt: Long,
+        contactNumber: String,
+        description: String
+    ) -> Unit
+) {
+    var title by remember { mutableStateOf("") }
+    var organizer by remember { mutableStateOf(defaultOrganizer) }
+    var address by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("Mumbai") }
+    var contactNumber by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var daysInFuture by remember { mutableStateOf("1") }
+
+    val scrollState = rememberScrollState()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Schedule Blood Drive",
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Publish an upcoming blood donation camp for voluntary donors.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Drive / Camp Name *") },
+                    placeholder = { Text("e.g. City Hospital Annual Blood Camp") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = organizer,
+                    onValueChange = { organizer = it },
+                    label = { Text("Hospital / Organizer Name *") },
+                    placeholder = { Text("e.g. Lilavati Hospital & Research Centre") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("Venue / Address *") },
+                    placeholder = { Text("e.g. Ground Floor Auditorium, Bandra West") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = city,
+                    onValueChange = { city = it },
+                    label = { Text("City *") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = daysInFuture,
+                    onValueChange = { if (it.all { ch -> ch.isDigit() }) daysInFuture = it },
+                    label = { Text("Days from today") },
+                    placeholder = { Text("1") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = contactNumber,
+                    onValueChange = { contactNumber = it },
+                    label = { Text("Hospital Helpline / Contact Number") },
+                    placeholder = { Text("+91 98765 43210") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Details / Eligibility / Refreshments") },
+                    placeholder = { Text("e.g. Free health checkup and certificates for all donors.") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val days = daysInFuture.toIntOrNull() ?: 1
+                    val cal = Calendar.getInstance().apply {
+                        add(Calendar.DAY_OF_YEAR, days)
+                        set(Calendar.HOUR_OF_DAY, 9)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                    }
+                    val startAt = cal.timeInMillis
+                    cal.set(Calendar.HOUR_OF_DAY, 17)
+                    val endAt = cal.timeInMillis
+
+                    onConfirm(
+                        title,
+                        organizer,
+                        address,
+                        city,
+                        startAt,
+                        endAt,
+                        contactNumber,
+                        description
+                    )
+                },
+                enabled = title.isNotBlank() && address.isNotBlank() && city.isNotBlank()
+            ) {
+                Text("Schedule Drive")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

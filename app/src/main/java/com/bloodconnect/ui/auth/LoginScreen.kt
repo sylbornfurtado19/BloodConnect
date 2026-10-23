@@ -66,11 +66,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bloodconnect.R
+import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.Person
+import com.bloodconnect.ui.components.AuthRoleSegmentedSwitcher
 import com.bloodconnect.ui.components.BloodConnectGradientButton
 import com.bloodconnect.ui.components.BloodConnectGoogleButton
 import com.bloodconnect.ui.components.BloodConnectTextField
 import com.bloodconnect.ui.theme.BloodConnectTheme
 import com.bloodconnect.ui.theme.PureWhite
+import com.bloodconnect.ui.theme.StitchAmber
 import com.bloodconnect.ui.theme.StitchCrimson
 import com.bloodconnect.ui.theme.StitchGreen
 import com.bloodconnect.utils.dialNumber
@@ -100,6 +104,7 @@ fun LoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
     var showForgotPasswordDialog by remember { mutableStateOf(false) }
     var forgotPasswordEmail by remember { mutableStateOf("") }
+    var selectedRole by remember { mutableStateOf("DONOR") }
 
     val uiState by authViewModel.uiStateFlow.collectAsState()
     val context = LocalContext.current
@@ -242,6 +247,48 @@ fun LoginScreen(
                         .padding(22.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // Segmented Role Switcher: Donor vs Hospital Authority
+                    AuthRoleSegmentedSwitcher(
+                        selectedRole = selectedRole,
+                        onRoleSelected = {
+                            selectedRole = it
+                            if (uiState is AuthUiState.Error) authViewModel.clearError()
+                        },
+                        donorLabel = "Donor",
+                        hospitalLabel = "Hospital"
+                    )
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    if (selectedRole == "HOSPITAL_ADMIN") {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = StitchAmber.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, StitchAmber.copy(alpha = 0.4f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocalHospital,
+                                    contentDescription = null,
+                                    tint = StitchAmber,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Hospital portal to schedule blood drives & manage inventories",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = StitchAmber
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                    }
+
                     // Email Field
                     BloodConnectTextField(
                         value = email,
@@ -249,7 +296,7 @@ fun LoginScreen(
                             email = it
                             if (uiState is AuthUiState.Error) authViewModel.clearError()
                         },
-                        label = stringResource(R.string.login_email_label),
+                        label = if (selectedRole == "HOSPITAL_ADMIN") "Hospital / Staff Email" else stringResource(R.string.login_email_label),
                         leadingIcon = Icons.Default.Email,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Email,
@@ -285,7 +332,7 @@ fun LoginScreen(
                         keyboardActions = KeyboardActions(
                             onDone = {
                                 if (uiState !is AuthUiState.Loading) {
-                                    authViewModel.signIn(email, password, onNavigateToHome)
+                                    authViewModel.signIn(email, password, intendedRole = selectedRole, onSuccess = onNavigateToHome)
                                 }
                             }
                         ),
@@ -368,9 +415,9 @@ fun LoginScreen(
 
                     // Primary Action: Crimson Gradient Button
                     BloodConnectGradientButton(
-                        text = stringResource(R.string.login_btn_sign_in),
+                        text = if (selectedRole == "HOSPITAL_ADMIN") "Sign In as Hospital Authority" else stringResource(R.string.login_btn_sign_in),
                         onClick = {
-                            authViewModel.signIn(email, password, onNavigateToHome)
+                            authViewModel.signIn(email, password, intendedRole = selectedRole, onSuccess = onNavigateToHome)
                         },
                         isLoading = uiState is AuthUiState.Loading,
                         enabled = uiState !is AuthUiState.Loading

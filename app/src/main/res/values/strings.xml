@@ -144,6 +144,9 @@
     <string name="profile_blood_group_not_specified">Blood Group Not Specified</string>
     <string name="profile_status_active_donor">Active Donor</string>
     <string name="profile_status_inactive_cooldown">Inactive / Cooldown</string>
+    <string name="profile_status_inactive_offline">Inactive / Offline</string>
+    <string name="profile_status_cooldown_active">Cooldown Active</string>
+    <string name="profile_btn_reset_cooldown">Reset Cooldown</string>
     <string name="profile_donor_tier">Donor Tier: %1$s</string>
     <string name="profile_lives_saved_count">Lives Saved: %1$d</string>
     <string name="profile_lives_saved_footnote">* Each confirmed donation counts as 1 life saved.</string>

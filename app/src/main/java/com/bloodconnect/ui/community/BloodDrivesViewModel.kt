@@ -13,17 +13,25 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import com.bloodconnect.data.model.User
+import com.bloodconnect.data.repository.AuthRepository
+import com.bloodconnect.data.repository.UserRepository
+
 data class BloodDrivesUiState(
     val isLoading: Boolean = true,
     val drives: List<BloodDrive> = emptyList(),
     val rsvpStatus: Map<String, Boolean> = emptyMap(),
     val rsvpCounts: Map<String, Int> = emptyMap(),
+    val isHospitalAdmin: Boolean = false,
+    val currentHospitalName: String = "",
     val errorMessage: String? = null
 )
 
 @HiltViewModel
 class BloodDrivesViewModel @Inject constructor(
-    private val communityRepository: CommunityRepository
+    private val communityRepository: CommunityRepository,
+    private val authRepository: AuthRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     var uiState by mutableStateOf(BloodDrivesUiState())
@@ -33,7 +41,70 @@ class BloodDrivesViewModel @Inject constructor(
     private val rsvpJobs = mutableMapOf<String, Job>()
 
     init {
+        observeCurrentUser()
         loadDrives()
+    }
+
+    private fun observeCurrentUser() {
+        val uid = authRepository.currentUserId ?: return
+        viewModelScope.launch {
+            userRepository.observeUser(uid).collect { user ->
+                if (user != null) {
+                    uiState = uiState.copy(
+                        isHospitalAdmin = user.isHospitalAdmin,
+                        currentHospitalName = user.organizationName.ifBlank { user.displayName }
+                    )
+                }
+            }
+        }
+    }
+
+    fun scheduleDrive(
+        title: String,
+        organizer: String,
+        address: String,
+        city: String,
+        startAt: Long,
+        endAt: Long,
+        contactNumber: String,
+        description: String,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        val trimmedTitle = title.trim()
+        val trimmedOrg = organizer.trim().ifBlank { uiState.currentHospitalName }
+        val trimmedAddr = address.trim()
+        val trimmedCity = city.trim().ifBlank { "Mumbai" }
+
+        if (trimmedTitle.isBlank() || trimmedAddr.isBlank()) {
+            onError("Please fill in drive title and address")
+            return
+        }
+
+        viewModelScope.launch {
+            val drive = BloodDrive(
+                title = trimmedTitle,
+                organizer = trimmedOrg.ifBlank { "Hospital Authority" },
+                address = trimmedAddr,
+                city = trimmedCity,
+                startAt = if (startAt > 0) startAt else System.currentTimeMillis() + 86400000L,
+                endAt = if (endAt > startAt) endAt else (if (startAt > 0) startAt else System.currentTimeMillis()) + 86400000L + 28800000L,
+                contactNumber = contactNumber.trim(),
+                description = description.trim()
+            )
+            val result = communityRepository.scheduleBloodDrive(drive)
+            if (result.isSuccess) {
+                onSuccess()
+            } else {
+                onError(result.exceptionOrNull()?.localizedMessage ?: "Failed to schedule blood drive")
+            }
+        }
+    }
+
+    fun deleteDrive(driveId: String) {
+        viewModelScope.launch {
+            communityRepository.deleteBloodDrive(driveId)
+        }
     }
 
     fun loadDrives() {

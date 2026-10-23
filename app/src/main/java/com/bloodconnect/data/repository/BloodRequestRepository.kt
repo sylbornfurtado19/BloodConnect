@@ -204,6 +204,28 @@ class BloodRequestRepository @Inject constructor(
     }.catch { emit(sampleRequests) }
 
     /**
+     * Real-time stream of requests submitted by a specific requester ID.
+     */
+    fun observeRequestsByRequester(uid: String): Flow<List<BloodRequest>> = callbackFlow {
+        val listener = requestsCollection
+            .whereEqualTo("requesterId", uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(BloodRequest::class.java)?.let { req ->
+                        if (req.id.isBlank()) req.id = doc.id
+                        req.withCanonicalStatus().withCanonicalUrgency()
+                    }
+                }?.sortedByDescending { it.createdAt } ?: emptyList()
+                trySend(list)
+            }
+        awaitClose { listener.remove() }
+    }.catch { emit(emptyList()) }
+
+    /**
      * Retrieves all requests submitted by a specific requester ID.
      */
     suspend fun getRequestsByRequester(uid: String): Result<List<BloodRequest>> {

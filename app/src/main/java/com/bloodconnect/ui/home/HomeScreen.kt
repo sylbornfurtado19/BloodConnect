@@ -61,6 +61,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -117,6 +118,8 @@ fun HomeScreen(
     onNavigateToBloodBanks: () -> Unit = {},
     onNavigateToDemandTrends: () -> Unit = {},
     onNavigateToAssistant: () -> Unit = {},
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToHospitalDashboard: () -> Unit = {},
     modifier: Modifier = Modifier,
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -153,12 +156,18 @@ fun HomeScreen(
         }
     }
 
+    val currentUser by homeViewModel.currentUser.collectAsState()
+    val unreadNotificationCount by homeViewModel.unreadNotificationCount.collectAsState()
+    val userInitials = currentUser?.effectiveInitials ?: "U"
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             StitchHomeTopBar(
                 onProfileClick = onNavigateToProfile,
-                onNotificationClick = onNavigateToBloodRequests
+                onNotificationClick = onNavigateToNotifications,
+                userInitials = userInitials,
+                unreadCount = unreadNotificationCount
             )
         },
         bottomBar = {
@@ -185,6 +194,14 @@ fun HomeScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // 0. Hospital Authority Management Portal Hero Card (Visible to Hospital Admins)
+            if (currentUser?.isHospitalAdmin == true) {
+                StitchHospitalPortalCard(
+                    hospitalName = currentUser?.organizationName?.ifBlank { currentUser?.fullName } ?: "Hospital Authority",
+                    onOpenPortal = onNavigateToHospitalDashboard
+                )
+            }
+
             // 1. SBTC 24x7 Helpline Card
             StitchHelplineCard(
                 onCallClick = { dialNumber(context, "104") }
@@ -217,7 +234,10 @@ fun HomeScreen(
                 onNavigateToBloodBanks = onNavigateToBloodBanks,
                 onNavigateToBloodDrives = onNavigateToBloodDrives,
                 onNavigateToDemandTrends = onNavigateToDemandTrends,
-                onNavigateToAssistant = onNavigateToAssistant
+                onNavigateToAssistant = onNavigateToAssistant,
+                onNavigateToNotifications = onNavigateToNotifications,
+                onNavigateToHospitalDashboard = onNavigateToHospitalDashboard,
+                isHospitalAdmin = currentUser?.isHospitalAdmin == true
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -231,7 +251,9 @@ fun HomeScreen(
 @Composable
 private fun StitchHomeTopBar(
     onProfileClick: () -> Unit,
-    onNotificationClick: () -> Unit
+    onNotificationClick: () -> Unit,
+    userInitials: String = "U",
+    unreadCount: Int = 0
 ) {
     Surface(
         color = MaterialTheme.colorScheme.background,
@@ -330,7 +352,7 @@ private fun StitchHomeTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Notification Bell with unread dot
+                // Notification Bell with unread count
                 Box(
                     modifier = Modifier
                         .size(38.dp)
@@ -346,18 +368,28 @@ private fun StitchHomeTopBar(
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(19.dp)
                     )
-                    // Notification dot
-                    Box(
-                        modifier = Modifier
-                            .size(7.dp)
-                            .align(Alignment.TopEnd)
-                            .padding(end = 1.dp, top = 1.dp)
-                            .clip(CircleShape)
-                            .background(StitchCrimson)
-                    )
+                    // Notification count badge
+                    if (unreadCount > 0) {
+                        Surface(
+                            shape = CircleShape,
+                            color = StitchCrimson,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(16.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = if (unreadCount > 9) "9+" else unreadCount.toString(),
+                                    color = PureWhite,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
 
-                // User Avatar Circle (RK initials)
+                // User Avatar Circle (User initials)
                 Box(
                     modifier = Modifier
                         .size(38.dp)
@@ -368,10 +400,126 @@ private fun StitchHomeTopBar(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "RK",
+                        text = userInitials,
                         color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Prominent Hospital Authority Portal Card visible to Hospital Admins.
+ */
+@Composable
+private fun StitchHospitalPortalCard(
+    hospitalName: String,
+    onOpenPortal: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.5.dp, StitchAmber.copy(alpha = 0.6f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(StitchAmber.copy(alpha = 0.18f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocalHospital,
+                            contentDescription = null,
+                            tint = StitchAmber,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "HOSPITAL AUTHORITY",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = StitchAmber,
+                            fontSize = 10.sp
+                        )
+                        Text(
+                            text = hospitalName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = StitchGreen.copy(alpha = 0.15f),
+                    border = BorderStroke(1.dp, StitchGreen.copy(alpha = 0.35f))
+                ) {
+                    Text(
+                        text = "ADMIN",
+                        color = StitchGreen,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                        fontSize = 9.sp
+                    )
+                }
+            }
+
+            Text(
+                text = "Manage your facility's live blood bank inventory, schedule voluntary blood camps, and broadcast urgent surgical needs across Mumbai.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Button(
+                onClick = onOpenPortal,
+                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = StitchAmber,
+                    contentColor = Color(0xFF0F172A)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Open Hospital Dashboard & Inventory",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF0F172A)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = Color(0xFF0F172A),
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
@@ -1015,15 +1163,22 @@ private fun StitchServicesRow(
     onNavigateToBloodBanks: () -> Unit,
     onNavigateToBloodDrives: () -> Unit,
     onNavigateToDemandTrends: () -> Unit,
-    onNavigateToAssistant: () -> Unit
+    onNavigateToAssistant: () -> Unit,
+    onNavigateToNotifications: () -> Unit,
+    onNavigateToHospitalDashboard: () -> Unit,
+    isHospitalAdmin: Boolean
 ) {
-    val serviceItems = listOf(
-        ServiceShortcut("Map", Icons.Default.Map, onNavigateToDonorMap),
-        ServiceShortcut("Banks", Icons.Default.LocalHospital, onNavigateToBloodBanks),
-        ServiceShortcut("Drives", Icons.Default.DateRange, onNavigateToBloodDrives),
-        ServiceShortcut("Trends", Icons.AutoMirrored.Filled.ShowChart, onNavigateToDemandTrends),
-        ServiceShortcut("AI Assistant", Icons.Default.AutoAwesome, onNavigateToAssistant)
-    )
+    val serviceItems = buildList {
+        if (isHospitalAdmin) {
+            add(ServiceShortcut("Hospital Portal", Icons.Default.LocalHospital, onNavigateToHospitalDashboard))
+        }
+        add(ServiceShortcut("Alerts", Icons.Default.Notifications, onNavigateToNotifications))
+        add(ServiceShortcut("Map", Icons.Default.Map, onNavigateToDonorMap))
+        add(ServiceShortcut("Banks", Icons.Default.LocalHospital, onNavigateToBloodBanks))
+        add(ServiceShortcut("Drives", Icons.Default.DateRange, onNavigateToBloodDrives))
+        add(ServiceShortcut("Trends", Icons.AutoMirrored.Filled.ShowChart, onNavigateToDemandTrends))
+        add(ServiceShortcut("AI Assistant", Icons.Default.AutoAwesome, onNavigateToAssistant))
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
